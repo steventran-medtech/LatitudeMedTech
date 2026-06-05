@@ -174,6 +174,35 @@ class ConnectionManager:
 manager = ConnectionManager()
 running_agents = set()  # Prevent duplicate runs
 
+_shutting_down = False           # set True once /api/shutdown is called
+_goodbye_task  = None            # asyncio.Task — delayed goodbye after WS disconnect
+
+
+async def _ws_goodbye():
+    """Play TTS farewell 3 s after all WebSocket clients disconnect.
+
+    The 3-second window absorbs page-refresh reconnects without triggering TTS.
+    Guarded by _shutting_down so the in-app exit button never double-speaks.
+    """
+    import asyncio as _asyncio
+    await _asyncio.sleep(3)
+    if manager.active or _shutting_down:
+        return
+    stop_script = ATHENA / "ui" / "stop_athena.ps1"
+    phrase = _random.choice(_GOODBYES)
+    await _asyncio.get_event_loop().run_in_executor(None, _speak_phrase, phrase)
+    try:
+        flags = (getattr(subprocess, "CREATE_NO_WINDOW", 0) |
+                 getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
+        subprocess.Popen(
+            ["powershell.exe", "-ExecutionPolicy", "Bypass", "-NoProfile",
+             "-File", str(stop_script)],
+            creationflags=flags, close_fds=True,
+        )
+    except Exception:
+        pass
+    import os as _os; _os._exit(0)
+
 
 # ── Agent runner ──────────────────────────────────────────────────────────────
 
@@ -1073,12 +1102,18 @@ def open_document(filename: str):
 
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
+    global _goodbye_task
+    # Cancel any pending goodbye — client is reconnecting (e.g. page refresh).
+    if _goodbye_task and not _goodbye_task.done():
+        _goodbye_task.cancel()
     await manager.connect(ws)
     try:
         while True:
             await ws.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(ws)
+        if not manager.active and not _shutting_down:
+            _goodbye_task = asyncio.get_event_loop().create_task(_ws_goodbye())
 
 
 @app.websocket("/ws/voice")
@@ -1629,7 +1664,7 @@ def _pick_greeting() -> str:
 _phrase_cache: dict = {}   # phrase text → raw WAV bytes pre-synthesized at startup
 
 
-def _kokoro_synth(text: str) -> bytes | None:
+def _kokoro_synth(text: str) -> Optional[bytes]:
     """Fetch WAV bytes from the Kokoro TTS server. Returns None on any failure."""
     try:
         import urllib.request, json
@@ -1720,6 +1755,8 @@ async def shutdown_app(background_tasks: BackgroundTasks):
     finishes speaking. The stop script and os._exit run as a background task
     so they fire after the response has been fully sent to the client.
     """
+    global _shutting_down
+    _shutting_down = True      # prevent WS-disconnect from double-speaking
     phrase = _random.choice(_GOODBYES)
     stop_script = ATHENA / "ui" / "stop_athena.ps1"
 
