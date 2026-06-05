@@ -103,7 +103,7 @@ function Sidebar({active,setActive,runningAgents,pendingReview,version,onAbout,t
       </div>
 
       {/* Nav */}
-      <nav style={{flex:1,padding:"16px 0",overflowY:"auto"}}>
+      <nav style={{flex:1,padding:"16px 0",overflowY:"auto",minHeight:0}}>
         {grouped.map(g=>(
           <div key={g.key} style={{marginBottom:4}}>
             <div style={{fontFamily:F.sans,fontSize:8,fontWeight:700,letterSpacing:"0.16em",textTransform:"uppercase",color:"rgba(255,255,255,0.28)",padding:"10px 22px 5px"}}>{g.label}</div>
@@ -1398,7 +1398,8 @@ function WorkQueuePanel({ taskQueue, onNavigate }) {
   };
 
   return (
-    <div style={{borderTop:"1px solid rgba(255,255,255,0.08)",padding:"12px 16px 4px"}}>
+    <div style={{borderTop:"1px solid rgba(255,255,255,0.08)",flexShrink:0,
+      maxHeight:220,overflowY:"auto",padding:"12px 16px 4px"}}>
       <div style={{fontFamily:F.sans,fontSize:8,fontWeight:700,letterSpacing:"0.16em",
         textTransform:"uppercase",color:"rgba(255,255,255,0.28)",marginBottom:8}}>
         Working On
