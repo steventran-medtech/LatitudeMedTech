@@ -316,9 +316,11 @@ WORKFORCE_ROSTER = [
     ("iso",             "ISO Coach Agent",       "Manager"),
     ("coaching",        "Coaching Brief Agent",  "Manager"),
     ("fda",             "FDA Agent",             "Manager"),
+    ("eu_mdr",          "EU MDR Agent",          "Manager"),
     ("rag",             "RAG Ingestion Agent",   "Senior Associate"),
     ("consulting",      "Consulting Agent",      "Senior Manager"),
     ("ma_intelligence", "M&A Intelligence Agent","Senior Manager"),
+    ("hr",              "HR / L&D Manager Agent","Business Function"),
     ("voice_bridge",    "Voice Assistant",       "Associate"),
 ]
 
@@ -1284,14 +1286,15 @@ def dashboard_history(days: int = 30):
 
 
 @app.get("/api/dashboard/timeseries")
-def dashboard_timeseries():
-    """Time-resolved token usage: today vs yesterday totals + per-hour breakdown for today.
+def dashboard_timeseries(day: str = "today"):
+    """Time-resolved token usage: today vs yesterday totals + per-hour breakdown.
 
+    `day` selects which day the hourly breakdown covers: "today" or "yesterday".
     Timestamps in api_calls are stored as local-time ISO strings (datetime.now().isoformat()),
     so all date math uses SQLite's 'localtime' modifier to stay in the user's timezone.
     """
     if not mem:
-        return {"today": {}, "yesterday": {}, "hourly": []}
+        return {"today": {}, "yesterday": {}, "hourly": [], "hourly_day": day}
 
     def _day_totals(day_expr):
         row = mem.conn.execute(
@@ -1308,13 +1311,14 @@ def dashboard_timeseries():
     today["date"]     = datetime.now().strftime("%Y-%m-%d")
     yesterday["date"] = (datetime.now() - __import__("datetime").timedelta(days=1)).strftime("%Y-%m-%d")
 
-    # Per-hour breakdown for today, zero-filled across all 24 hours.
+    # Per-hour breakdown for the selected day, zero-filled across all 24 hours.
+    hour_day_expr = "date('now','localtime','-1 day')" if day == "yesterday" else "date('now','localtime')"
     rows = mem.conn.execute(
         "SELECT strftime('%H', timestamp) AS hour, "
         "       COUNT(*) AS calls, "
         "       COALESCE(SUM(total_tokens),0) AS tokens, "
         "       COALESCE(SUM(cost_usd),0)     AS cost "
-        "FROM api_calls WHERE date(timestamp)=date('now','localtime') "
+        "FROM api_calls WHERE date(timestamp)=" + hour_day_expr + " "
         "GROUP BY hour"
     ).fetchall()
     by_hour = {r["hour"]: dict(r) for r in rows}
@@ -1325,7 +1329,7 @@ def dashboard_timeseries():
     for slot in hourly:
         slot["hour"] = f"{int(slot['hour']):02d}"
 
-    return {"today": today, "yesterday": yesterday, "hourly": hourly}
+    return {"today": today, "yesterday": yesterday, "hourly": hourly, "hourly_day": day}
 
 
 # ── Voice greeting + shutdown ─────────────────────────────────────────────────
