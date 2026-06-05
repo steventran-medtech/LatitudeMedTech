@@ -163,6 +163,16 @@ cd Athena\voice; venv\Scripts\activate         # Activate main venv
 
 ---
 
+## Version Control *(Git)*
+**Repo:** private GitHub `steventran-medtech/LatitudeMedTech` · branch `main` · root `C:\Users\huann\LatitudeMedTech`. Auth: Git Credential Manager (browser sign-in, cached).
+**Push when necessary** — after any code change, agent addition, or end-of-session CLAUDE.md update, commit and push so the cloud backup stays current:
+```powershell
+cd "C:\Users\huann\LatitudeMedTech"; git add -A; git commit -m "<what changed>"; git push
+```
+**Secrets stay out of Git** — `.gitignore` excludes `*.pfx`, `.env`, `.athena.key`, venvs, `node_modules/`, logs. `StevenTran.pfx` / `voice/.env` / `voice/.athena.key` live local-only and are backed up separately; restore them manually on a fresh clone. Always glance at `git status` before committing to confirm no secret is staged.
+
+---
+
 ## Current Phase
 **Phase 1A — Coaching Core (Active, near-complete)**
 - ✅ **LangGraph orchestration** — `agents/orchestrator.py`. Coaching graph: intake → generate_brief → **human-gate `interrupt()`** → finalize. Durable SQLite checkpointer (`memory/orchestrator_checkpoints.sqlite`); paused runs survive restart, resumed by `thread_id`. Endpoints: `POST /api/orchestrate/coaching` (start); review approve/reject auto-resume the linked thread. Other agents still run via subprocess.
