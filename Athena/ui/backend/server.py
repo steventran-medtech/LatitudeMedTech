@@ -205,12 +205,34 @@ async def _ws_goodbye():
 
 # ── Agent runner ──────────────────────────────────────────────────────────────
 
+# Agents whose deliverables go through the Human Review Queue. Maps the runner's
+# agent_name to the source label used in mem.submit_for_review(), so a finished
+# run can be reported as "awaiting_review" rather than a misleading "ready".
+_REVIEW_GATED = {
+    "ma_intelligence_agent": "ma_intelligence",
+    "consulting_agent":      "consulting",
+    "content_agent":         "content_agent",
+}
+
+def _latest_pending_review_id(source: str) -> int:
+    """Highest pending review id for a given agent source (0 if none / no mem)."""
+    if not mem:
+        return 0
+    try:
+        return max((r["id"] for r in mem.get_pending_reviews()
+                    if r.get("agent") == source), default=0)
+    except Exception:
+        return 0
+
 async def run_agent(agent_name: str, script: str, args: list = None, context: str = ""):
     """Run an agent script and stream output via WebSocket."""
     if agent_name in running_agents:
         await manager.broadcast({"type": "agent_log", "agent": agent_name, "line": f"[SKIPPED] {agent_name} already running"})
         return
     running_agents.add(agent_name)
+    # Snapshot the review queue so we can tell if THIS run submits a new deliverable.
+    review_src = _REVIEW_GATED.get(agent_name)
+    prior_review_id = _latest_pending_review_id(review_src) if review_src else 0
     msg = {"type": "agent_start", "agent": agent_name, "ts": datetime.now().isoformat()}
     if context:
         msg["context"] = context
@@ -233,8 +255,16 @@ async def run_agent(agent_name: str, script: str, args: list = None, context: st
     await proc.wait()
     running_agents.discard(agent_name)
     status = "success" if proc.returncode == 0 else "error"
-    await manager.broadcast({"type": "agent_done", "agent": agent_name, "status": status, "ts": datetime.now().isoformat()})
-    return {"status": status, "lines": lines}
+    done = {"type": "agent_done", "agent": agent_name, "status": status, "ts": datetime.now().isoformat()}
+    # If a review-gated agent just queued a new deliverable, it's pending human
+    # review — not "ready". Surface that so the UI routes to the Review queue.
+    if status == "success" and review_src:
+        new_id = _latest_pending_review_id(review_src)
+        if new_id > prior_review_id:
+            done["status"] = "awaiting_review"
+            done["review_id"] = new_id
+    await manager.broadcast(done)
+    return {"status": done["status"], "lines": lines}
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -1103,14 +1133,30 @@ def generate_docx(title: str, content: str, doc_type: str) -> Path:
 
 @app.get("/api/documents")
 def list_documents():
-    docs_dir = ATHENA / 'documents'
-    if not docs_dir.exists():
-        return {"documents": []}
-    files = sorted(docs_dir.glob('*.docx'), key=lambda f: f.stat().st_mtime, reverse=True)
-    return {"documents": [
-        {"filename": f.name, "path": str(f), "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat()}
-        for f in files[:20]
-    ]}
+    # The document queue aggregates exported Word docs plus the markdown reports
+    # that agents (M&A, Consulting) write to their ops folders, so completed
+    # agent runs surface here instead of being stranded on disk.
+    sources = [
+        ("documents",       ATHENA / 'documents',               '*.docx'),
+        ("ma_intelligence", ATHENA / 'ops' / 'ma_intelligence', '*.md'),
+        ("consulting",      ATHENA / 'ops' / 'consulting',      '*.md'),
+    ]
+    items = []
+    for folder, base, pattern in sources:
+        if not base.exists():
+            continue
+        for f in base.glob(pattern):
+            items.append({
+                "filename": f.name,
+                "folder": folder,
+                "path": str(f),
+                "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
+                "mtime": f.stat().st_mtime,
+            })
+    items.sort(key=lambda d: d["mtime"], reverse=True)
+    for d in items:
+        d.pop("mtime", None)
+    return {"documents": items[:30]}
 
 
 @app.get("/api/documents/open/{filename}")
