@@ -131,14 +131,27 @@ def generate_brief(client_input: dict) -> str:
         for p in PROGRAMS.values()
     )
 
-    if client_input["type"] == "linkedin":
+    if client_input["type"] == "topic":
+        prompt = _topic_prompt(client_input["topic"], programs_text)
+    elif client_input["type"] == "linkedin":
         context = f"LinkedIn profile URL: {client_input['url']}\nName inferred from URL: {client_input['name']}"
         instructions = "The LinkedIn URL is provided but you cannot browse it. Generate the brief based on the name and URL slug, noting that full profile context is unavailable. Ask sharp discovery questions that will surface the information you need."
-    else:
+        prompt = _person_prompt(context, instructions, programs_text)
+    else:  # name
         context = f"Client name: {client_input['name']}"
-        instructions = "No LinkedIn or additional context provided. Generate discovery questions that efficiently surface background, experience level, goals, and fit."
+        instructions = "Only a name is provided — no LinkedIn or other context. You have essentially no profile signal, so keep hypotheses minimal and tie each one to a discovery question rather than asserting it as fact."
+        prompt = _person_prompt(context, instructions, programs_text)
 
-    prompt = f"""You are preparing a discovery call brief for the founder of Latitude MedTech LLC — a San Diego-based MedTech coaching company.
+    resp = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=1200,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return resp.content[0].text.strip()
+
+
+def _person_prompt(context: str, instructions: str, programs_text: str) -> str:
+    return f"""You are preparing a discovery call brief for the founder of Latitude MedTech LLC — a San Diego-based MedTech coaching company.
 
 Client information:
 {context}
@@ -154,10 +167,10 @@ Generate a concise discovery call prep brief with these sections:
 (Summarize available context. Be honest about what is unknown.)
 
 ## Likely Profile
-(Based on name/URL, hypothesize: career stage, likely background, probable pain points. Mark these as assumptions.)
+(Hypotheses ONLY — career stage, possible background, probable pain points. Label as assumptions and phrase each as something to confirm, not a fact. If you have only a name, say so plainly and keep this short.)
 
 ## Recommended Program Match
-(Which program tier is the most likely fit and why. Include a second option if close.)
+(Which program tier is the most likely fit and why. Include a second option if close. Frame as conditional on what the call confirms.)
 
 ## Discovery Call Objectives
 (3-4 specific things to learn during the call to confirm fit and program match.)
@@ -176,33 +189,79 @@ Tone: like a smart colleague prepping you, not a formal report.
 
 IMPORTANT: Do NOT include a document title or heading at the top of your response. Start directly with "## What We Know". The title is added by the system automatically."""
 
-    resp = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=1200,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return resp.content[0].text.strip()
+
+def _topic_prompt(topic: str, programs_text: str) -> str:
+    """Topic-mode brief: no client identity, so we do NOT invent a persona. We prep
+    the coach to run discovery around the topic itself and identify who it implies."""
+    return f"""You are preparing a discovery call prep brief for the founder of Latitude MedTech LLC — a San Diego-based MedTech coaching company.
+
+This lead came in as a TOPIC SIGNAL, not a person. There is NO name, LinkedIn, company, or role — only the topic the inquiry was tagged to:
+
+TOPIC: {topic}
+
+Critical honesty rule: you have ZERO information about the individual. Do NOT fabricate a persona, background, experience level, or pain points as if they were known. Build the brief around the TOPIC and the questions that will reveal who this person actually is.
+
+Latitude MedTech Programs:
+{programs_text}
+
+Generate a concise topic-prep brief with these sections:
+
+## What We Know
+(Only the topic signal. State plainly that no client identity was provided and that everything else must be learned on the call.)
+
+## What This Topic Tells Us
+(Substantive: what does "{topic}" mean in MedTech QA/RA? Why would someone seek coaching on it? What range of roles/experience levels typically engage with it — stated as a RANGE of possibilities, not an assumption about this person.)
+
+## What We Don't Know Yet
+(The specific gaps to close on the call: who they are, their role, seniority, employer context, why now, timeline.)
+
+## Discovery Call Objectives
+(3-4 specific things to learn to identify the person and confirm fit.)
+
+## Suggested Opening Questions
+(5 sharp, open-ended questions — topic-aware. Use "{topic}" as the natural entry point to surface role, experience level, the specific pain behind the inquiry, motivation, and timeline.)
+
+## Possible Program Fits
+(Map the plausible programs to the experience RANGE this topic implies — explicitly conditional on what the call reveals. Do not pick one as if the person were known.)
+
+## Watch-Outs
+(Signals that would indicate poor fit, scope mismatch, or a need to refer elsewhere.)
+
+## Talking Points if Asked About Pricing
+(Brief, confident framing for each program tier without being salesy.)
+
+Keep it tight — under 2 minutes to read before the call.
+Tone: like a smart colleague prepping you, not a formal report.
+
+IMPORTANT: Do NOT include a document title or heading at the top of your response. Start directly with "## What We Know". The title is added by the system automatically."""
 
 
 # ── Save brief ────────────────────────────────────────────────────────────────
 
 def save_brief(client_input: dict, brief: str) -> Path:
-    date_str = datetime.now().strftime("%Y-%m-%d")
-    name_slug = client_input["name"].lower().replace(" ", "_")
-    name_slug = re.sub(r"[^a-z0-9_]", "", name_slug)
-    filename  = f"{date_str}_{name_slug}.md"
+    date_str  = datetime.now().strftime("%Y-%m-%d")
+    label     = client_input.get("label") or client_input.get("name", "")
+    name_slug = re.sub(r"[^a-z0-9_]", "", label.lower().replace(" ", "_"))[:50] or "brief"
+    is_topic  = client_input.get("type") == "topic"
+    filename  = f"{date_str}_{'topic_' if is_topic else ''}{name_slug}.md"
     out_path  = BRIEFS_DIR / filename
 
+    title = brief_title(client_input)
+    # A topic brief has no client identity — record the topic, not a fake client.
+    subject_lines = (
+        f"topic: {client_input['topic']}\nclient: Not provided (topic-only lead)"
+        if is_topic else
+        f"client: {client_input['name']}\nlinkedin: {client_input.get('url') or 'Not provided'}"
+    )
     header = f"""---
-client: {client_input['name']}
-linkedin: {client_input.get('url', 'Not provided')}
+{subject_lines}
 date: {date_str}
-type: Discovery Call Brief
+type: {'Topic Prep Brief' if is_topic else 'Discovery Call Brief'}
 generated_by: Latitude MedTech Coaching Brief Agent
 status: Review before call
 ---
 
-# Discovery Call Brief — {client_input['name']}
+# {title}
 *Generated {datetime.now().strftime("%B %d, %Y at %I:%M %p")}*
 
 ---
@@ -242,9 +301,13 @@ def main():
         sys.exit(1)
 
     client_input = parse_input(raw_input)
-    log.info(f"Generating brief for: {client_input['name']}")
+    if client_input["type"] == "insufficient":
+        log.error("Input too short — enter a client name, LinkedIn URL, or topic.")
+        sys.exit(1)
 
-    print(f"Generating discovery call brief for {client_input['name']}...")
+    label = client_input.get("label", client_input["name"])
+    log.info(f"Generating {client_input['type']} brief for: {label}")
+    print(f"Generating {client_input['type']} brief for {label}...")
 
     try:
         brief    = generate_brief(client_input)
@@ -253,15 +316,15 @@ def main():
         try:
             from memory import Memory as _Mem
             _Mem().submit_for_review(
-                'coaching_brief', 'brief',
-                f"Discovery Call Brief — {client_input['name']}", str(out_path))
+                'coaching_brief', 'brief', brief_title(client_input), str(out_path))
         except Exception: pass
 
+        subject = "Topic " if client_input["type"] == "topic" else "Client"
         print(f"""
 +----------------------------------------------------------+
 |  Brief Ready                                             |
 +----------------------------------------------------------+
-|  Client : {client_input['name']:<48}|
+|  {subject:<7}: {label[:46]:<46}|
 |  File   : {str(out_path.name)[:48]:<48}|
 +----------------------------------------------------------+
 
