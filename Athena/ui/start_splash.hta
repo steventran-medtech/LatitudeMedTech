@@ -172,7 +172,7 @@ Sub Window_OnLoad
   Dim aw, ah, al, at, pw, ph
   ' availWidth/Height = desktop work area (full screen minus the taskbar)
   aw = Screen.availWidth : ah = Screen.availHeight
-  al = Screen.availLeft  : at = Screen.availTop
+  al = 0 : at = 0
   ' Centered panel at 70% of the work area
   pw = Int(aw * 0.7) : ph = Int(ah * 0.7)
   window.resizeTo pw, ph
