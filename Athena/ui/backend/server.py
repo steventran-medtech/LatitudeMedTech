@@ -205,34 +205,12 @@ async def _ws_goodbye():
 
 # ── Agent runner ──────────────────────────────────────────────────────────────
 
-# Agents whose deliverables go through the Human Review Queue. Maps the runner's
-# agent_name to the source label used in mem.submit_for_review(), so a finished
-# run can be reported as "awaiting_review" rather than a misleading "ready".
-_REVIEW_GATED = {
-    "ma_intelligence_agent": "ma_intelligence",
-    "consulting_agent":      "consulting",
-    "content_agent":         "content_agent",
-}
-
-def _latest_pending_review_id(source: str) -> int:
-    """Highest pending review id for a given agent source (0 if none / no mem)."""
-    if not mem:
-        return 0
-    try:
-        return max((r["id"] for r in mem.get_pending_reviews()
-                    if r.get("agent") == source), default=0)
-    except Exception:
-        return 0
-
 async def run_agent(agent_name: str, script: str, args: list = None, context: str = ""):
     """Run an agent script and stream output via WebSocket."""
     if agent_name in running_agents:
         await manager.broadcast({"type": "agent_log", "agent": agent_name, "line": f"[SKIPPED] {agent_name} already running"})
         return
     running_agents.add(agent_name)
-    # Snapshot the review queue so we can tell if THIS run submits a new deliverable.
-    review_src = _REVIEW_GATED.get(agent_name)
-    prior_review_id = _latest_pending_review_id(review_src) if review_src else 0
     msg = {"type": "agent_start", "agent": agent_name, "ts": datetime.now().isoformat()}
     if context:
         msg["context"] = context
@@ -255,16 +233,8 @@ async def run_agent(agent_name: str, script: str, args: list = None, context: st
     await proc.wait()
     running_agents.discard(agent_name)
     status = "success" if proc.returncode == 0 else "error"
-    done = {"type": "agent_done", "agent": agent_name, "status": status, "ts": datetime.now().isoformat()}
-    # If a review-gated agent just queued a new deliverable, it's pending human
-    # review — not "ready". Surface that so the UI routes to the Review queue.
-    if status == "success" and review_src:
-        new_id = _latest_pending_review_id(review_src)
-        if new_id > prior_review_id:
-            done["status"] = "awaiting_review"
-            done["review_id"] = new_id
-    await manager.broadcast(done)
-    return {"status": done["status"], "lines": lines}
+    await manager.broadcast({"type": "agent_done", "agent": agent_name, "status": status, "ts": datetime.now().isoformat()})
+    return {"status": status, "lines": lines}
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -1137,9 +1107,9 @@ def list_documents():
     # that agents (M&A, Consulting) write to their ops folders, so completed
     # agent runs surface here instead of being stranded on disk.
     sources = [
-        ("documents",       ATHENA / 'documents',               '*.docx'),
+        ("documents",      ATHENA / 'documents',              '*.docx'),
         ("ma_intelligence", ATHENA / 'ops' / 'ma_intelligence', '*.md'),
-        ("consulting",      ATHENA / 'ops' / 'consulting',      '*.md'),
+        ("consulting",     ATHENA / 'ops' / 'consulting',      '*.md'),
     ]
     items = []
     for folder, base, pattern in sources:
@@ -1743,24 +1713,34 @@ def _pick_greeting() -> str:
     return _random.choice(pool)
 
 def _speak_phrase(text: str):
-    """Speak a phrase via the Kokoro server if available, else pyttsx3."""
+    """Speak a greeting or goodbye phrase using Kokoro's voice.
+
+    Fetches WAV bytes from the Kokoro server (port 8002) then plays them
+    via System.Media.SoundPlayer so audio routes through the Windows
+    default playback device — not sounddevice's selected interface.
+    """
+    import urllib.request, json, tempfile, os as _os
     try:
-        import urllib.request, json, io, sounddevice as sd, soundfile as sf
         payload = json.dumps({"text": text, "voice": os.getenv("VOICE_KOKORO_VOICE", "bf_emma")}).encode()
         req = urllib.request.Request("http://127.0.0.1:8002/speak", data=payload,
                                      headers={"Content-Type": "application/json"}, method="POST")
         with urllib.request.urlopen(req, timeout=15) as resp:
             wav = resp.read()
-        data, sr = sf.read(io.BytesIO(wav))
-        sd.play(data.astype("float32"), sr); sd.wait()
-    except Exception:
+        tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
         try:
-            import pyttsx3
-            e = pyttsx3.init(); e.setProperty("rate", 175); e.say(text); e.runAndWait()
-        except Exception:
-            pass
-    # Allow speaker audio to fully drain before the mic reopens for wake word detection
-    import time; time.sleep(1.0)
+            tmp.write(wav); tmp.flush(); tmp.close()
+            subprocess.run(
+                ["powershell.exe", "-NoProfile", "-WindowStyle", "Hidden", "-Command",
+                 f"$p = New-Object System.Media.SoundPlayer '{tmp.name}'; $p.PlaySync()"],
+                timeout=30, check=False,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+        finally:
+            try: _os.unlink(tmp.name)
+            except Exception: pass
+    except Exception:
+        pass
+    import time; time.sleep(0.5)
 
 _session_greeted = False   # plays once per server restart, regardless of tab refreshes
 
