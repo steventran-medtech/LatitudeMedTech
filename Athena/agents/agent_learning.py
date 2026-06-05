@@ -68,9 +68,16 @@ MAX_ITEMS_PER_SOURCE = 5
 MAX_TEXT_CHARS = 2000
 
 
+FETCH_TIMEOUT = 15  # seconds — feedparser.parse(url) has no timeout and will
+                    # hang the whole run on a slow feed (e.g. fda.gov), so we
+                    # fetch with requests first and hand the bytes to feedparser.
+
+
 def _fetch_rss(url: str) -> List[Dict]:
     try:
-        feed  = feedparser.parse(url)
+        resp = requests.get(url, headers=HEADERS, timeout=FETCH_TIMEOUT)
+        resp.raise_for_status()
+        feed  = feedparser.parse(resp.content)
         items = []
         for entry in feed.entries[:MAX_ITEMS_PER_SOURCE]:
             text = ""
@@ -148,8 +155,8 @@ def learn(agent_name: str, max_new: int = 10) -> Dict:
         for item in items:
             if not item["url"] or not item["title"]:
                 continue
-            if mem.learning_ingested(item["url"]):
-                continue   # already seen
+            if mem.learning_ingested(item["url"], agent_name):
+                continue   # this agent already learned it
             if mem.url_ingested(item["url"]):
                 continue   # already in main KB
 
@@ -188,7 +195,7 @@ def learn(agent_name: str, max_new: int = 10) -> Dict:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 ALL_AGENTS = ["content", "briefing", "iso", "coaching", "fda", "rag",
-              "consulting", "ma_intelligence"]
+              "consulting", "ma_intelligence", "voice_bridge"]
 
 
 def main():

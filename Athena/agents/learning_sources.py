@@ -71,6 +71,14 @@ AGENT_SOURCES = {
         {"name": "Strategy+Business",         "url": "https://www.strategy-business.com/rss",                  "domain": "Methodology",           "type": "rss"},
         {"name": "Stanford Social Innovation","url": "https://ssir.org/site/rss",                               "domain": "Case Studies",          "type": "rss"},
     ],
+    "voice_bridge": [
+        {"name": "MIT Technology Review","url": "https://www.technologyreview.com/feed/",                       "domain": "AI Technology",        "type": "rss"},
+        {"name": "VentureBeat AI",       "url": "https://venturebeat.com/category/ai/feed/",                   "domain": "AI Industry",          "type": "rss"},
+        {"name": "Google AI Blog",       "url": "https://blog.google/technology/ai/rss/",                      "domain": "Conversational AI",    "type": "rss"},
+        {"name": "The Gradient",         "url": "https://thegradient.pub/rss/",                                "domain": "ML Research",          "type": "rss"},
+        {"name": "AI Business",          "url": "https://aibusiness.com/rss.xml",                              "domain": "AI Applications",      "type": "rss"},
+    ],
+
     "ma_intelligence": [
         {"name": "BioPharma Dive",            "url": "https://www.biopharmadive.com/feeds/news/",               "domain": "M&A Deals",             "type": "rss"},
         {"name": "Fierce Biotech",            "url": "https://www.fiercebiotech.com/rss/xml",                   "domain": "M&A Deals",             "type": "rss"},

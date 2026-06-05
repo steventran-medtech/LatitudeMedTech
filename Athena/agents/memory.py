@@ -120,7 +120,8 @@ class Memory:
             title       TEXT,
             domain      TEXT,
             chunks_added INTEGER DEFAULT 0,
-            url_hash    TEXT    UNIQUE
+            url_hash    TEXT,
+            UNIQUE(agent, url_hash)
         );
 
         CREATE TABLE IF NOT EXISTS agent_health (
@@ -162,6 +163,49 @@ class Memory:
         if "thread_id" not in cols:
             self.conn.execute("ALTER TABLE review_queue ADD COLUMN thread_id TEXT")
         self.conn.commit()
+
+        # Migration: agent_learning.url_hash was originally declared globally UNIQUE.
+        # Because agents run sequentially and share feeds, an article claimed by an
+        # earlier-running agent could never be ingested by a later one — starving
+        # agents at the end of the run order (fda, voice_bridge, consulting, ...).
+        # Rebuild with composite UNIQUE(agent, url_hash) so each agent dedups
+        # independently. Detect the old schema by the single-column UNIQUE index
+        # SQLite auto-created for the column-level constraint.
+        if self._has_single_column_unique("agent_learning", "url_hash"):
+            self.conn.executescript("""
+                CREATE TABLE agent_learning_new (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp   TEXT    NOT NULL,
+                    agent       TEXT    NOT NULL,
+                    source_name TEXT    NOT NULL,
+                    source_url  TEXT,
+                    title       TEXT,
+                    domain      TEXT,
+                    chunks_added INTEGER DEFAULT 0,
+                    url_hash    TEXT,
+                    UNIQUE(agent, url_hash)
+                );
+                INSERT INTO agent_learning_new
+                    (id,timestamp,agent,source_name,source_url,title,domain,chunks_added,url_hash)
+                    SELECT id,timestamp,agent,source_name,source_url,title,domain,chunks_added,url_hash
+                    FROM agent_learning;
+                DROP TABLE agent_learning;
+                ALTER TABLE agent_learning_new RENAME TO agent_learning;
+                CREATE INDEX IF NOT EXISTS idx_learning_agent ON agent_learning(agent, timestamp);
+            """)
+            self.conn.commit()
+
+    def _has_single_column_unique(self, table, column):
+        """True if `table` has a UNIQUE index over exactly [column] (and no more).
+        Used to detect pre-migration schemas with a column-level UNIQUE constraint."""
+        for idx in self.conn.execute(f"PRAGMA index_list({table})").fetchall():
+            if not idx["unique"]:
+                continue
+            cols = [r["name"] for r in
+                    self.conn.execute(f"PRAGMA index_info('{idx['name']}')").fetchall()]
+            if cols == [column]:
+                return True
+        return False
 
     # ── Events ────────────────────────────────────────────────────────────────
 
@@ -416,8 +460,15 @@ class Memory:
         except sqlite3.IntegrityError:
             return False  # already ingested
 
-    def learning_ingested(self, url_or_title):
+    def learning_ingested(self, url_or_title, agent=None):
+        """Has this item already been learned? Scoped per-agent when `agent` is
+        given (the normal path) so each agent can ingest the same article into its
+        own knowledge base; a global check otherwise for backward compatibility."""
         h = hashlib.md5(url_or_title.encode()).hexdigest()
+        if agent is not None:
+            return self.conn.execute(
+                "SELECT id FROM agent_learning WHERE url_hash=? AND agent=?", (h, agent)
+            ).fetchone() is not None
         return self.conn.execute(
             "SELECT id FROM agent_learning WHERE url_hash=?", (h,)
         ).fetchone() is not None
