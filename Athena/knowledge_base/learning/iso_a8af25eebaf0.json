@@ -1,0 +1,15 @@
+{
+  "agent": "iso",
+  "doc_name": "Prime Food Processing LLC Issues Safety Warning Regarding Uneviscerated “Dried Herring Fish”",
+  "category": "FDA QMS",
+  "source": "FDA Quality Systems",
+  "url": "http://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts/prime-food-processing-llc-issues-safety-warning-regarding-uneviscerated-dried-herring-fish",
+  "ingested": "2026-06-05T10:12:47.719977",
+  "chunks": [
+    {
+      "text": "Brooklyn, NY – Prime Food Processing LLC is voluntarily recalling 69 cases of “Dried Herring Fish” because the product was not adequately eviscerated. The sale of uneviscerated fish is prohibited under New York State Agriculture and Markets regulations because Clostridium botulinum spores are more",
+      "doc_name": "Prime Food Processing LLC Issues Safety Warning Regarding Uneviscerated “Dried Herring Fish”",
+      "category": "FDA QMS"
+    }
+  ]
+}

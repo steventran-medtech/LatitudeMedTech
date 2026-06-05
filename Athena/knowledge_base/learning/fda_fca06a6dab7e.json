@@ -1,0 +1,15 @@
+{
+  "agent": "fda",
+  "doc_name": "New | phs004492.v1.p1 | The ARDS, Pneumonia, and Sepsis (APS) Consortium",
+  "category": "Medical Literature 50yr",
+  "source": "PubMed Central",
+  "url": "https://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/study.cgi?study_id=phs004492.v1.p1",
+  "ingested": "2026-06-05T10:14:38.156238",
+  "chunks": [
+    {
+      "text": "The ARDS, Pneumonia, and Sepsis (APS) Consortium (study page | release notes)",
+      "doc_name": "New | phs004492.v1.p1 | The ARDS, Pneumonia, and Sepsis (APS) Consortium",
+      "category": "Medical Literature 50yr"
+    }
+  ]
+}

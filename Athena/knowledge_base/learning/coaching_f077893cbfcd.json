@@ -1,0 +1,15 @@
+{
+  "agent": "coaching",
+  "doc_name": "New | phs004645.v1.p1 | Therapeutic Hypothermia After Pediatric Cardiac Arrest (In-Hospital) (THAPCA-IH-BioLINCC)",
+  "category": "Medical Literature 50yr",
+  "source": "PubMed Central",
+  "url": "https://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/study.cgi?study_id=phs004645.v1.p1",
+  "ingested": "2026-06-05T10:13:50.975319",
+  "chunks": [
+    {
+      "text": "Therapeutic Hypothermia After Pediatric Cardiac Arrest (In-Hospital) (THAPCA-IH-BioLINCC) (study page | release notes)",
+      "doc_name": "New | phs004645.v1.p1 | Therapeutic Hypothermia After Pediatric Cardiac Arrest (In-Hospital) (THAPCA-IH-BioLINCC)",
+      "category": "Medical Literature 50yr"
+    }
+  ]
+}

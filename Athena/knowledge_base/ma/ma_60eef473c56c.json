@@ -1,0 +1,15 @@
+{
+  "agent": "ma_intelligence",
+  "doc_name": "Why Traditional CQI Breaks Down as EMS Agencies Grow",
+  "category": "ma_deal_news",
+  "source": "MedCity News",
+  "url": "https://medcitynews.com/2026/06/why-traditional-cqi-breaks-down-as-ems-agencies-grow/",
+  "ingested": "2026-06-05T10:11:01.866362",
+  "chunks": [
+    {
+      "text": "The problem isn’t that CQI no longer matters. It’s that traditional approaches were never built for the scale and complexity many agencies are now dealing with. The post Why Traditional CQI Breaks Down as EMS Agencies Grow appeared first on MedCity News.",
+      "doc_name": "Why Traditional CQI Breaks Down as EMS Agencies Grow",
+      "category": "ma_deal_news"
+    }
+  ]
+}

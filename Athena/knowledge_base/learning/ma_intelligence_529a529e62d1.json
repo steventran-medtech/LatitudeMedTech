@@ -1,0 +1,15 @@
+{
+  "agent": "ma_intelligence",
+  "doc_name": "Study data convince Lundbeck to push new migraine drug forward",
+  "category": "M&A Deals",
+  "source": "BioPharma Dive",
+  "url": "https://www.biopharmadive.com/news/lundbeck-bocunebart-migraine-drug-data-pacap/822133/",
+  "ingested": "2026-06-05T10:15:39.893350",
+  "chunks": [
+    {
+      "text": "A possible alternative to &ldquo;anti-CGRP&rdquo; medications, the drug didn&rsquo;t&nbsp;meet some analysts&rsquo; expectations in mid-stage testing but still convinced Lundbeck to pursue further development.",
+      "doc_name": "Study data convince Lundbeck to push new migraine drug forward",
+      "category": "M&A Deals"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "agent": "coaching",
+  "doc_name": "Labeling complaint investigation tool – Internal auditing",
+  "category": "MedTech QA/RA",
+  "source": "Medical Device Academy",
+  "url": "https://medicaldeviceacademy.com/labeling-complaint-investigation/",
+  "ingested": "2026-06-05T10:13:07.877771",
+  "chunks": [
+    {
+      "text": "Can internal auditing be used as a tool specifically designed for conducting a labeling complaint investigation? What is a labeling complaint investigation? A complaint investigation is required when a customer &#8220;alleges deficiencies related to the identity, quality, durability, reliability, safety, effectiveness, or performance of a device after it is released for distribution (21 CFR 820.3b).&#8221; [&#8230;] The post Labeling complaint investigation tool &#8211; Internal auditing appeared first on Medical Device Academy.",
+      "doc_name": "Labeling complaint investigation tool – Internal auditing",
+      "category": "MedTech QA/RA"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "agent": "coaching",
+  "doc_name": "Audit Findings – How to communicate good and bad findings.",
+  "category": "MedTech QA/RA",
+  "source": "Medical Device Academy",
+  "url": "https://medicaldeviceacademy.com/audit-findings/",
+  "ingested": "2026-06-05T10:13:07.889638",
+  "chunks": [
+    {
+      "text": "This blog describes best practices for communicating audit findings during an audit, in the closing meeting, and in the audit report. Would you like to be surprised by an auditor with a major nonconformity? Of course not! Nobody likes that kind of surprise. However, do you know how to effectively communicate your audit findings during [&#8230;] The post Audit Findings &#8211; How to communicate good and bad findings. appeared first on Medical Device Academy.",
+      "doc_name": "Audit Findings – How to communicate good and bad findings.",
+      "category": "MedTech QA/RA"
+    }
+  ]
+}

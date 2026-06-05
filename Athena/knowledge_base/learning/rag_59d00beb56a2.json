@@ -1,0 +1,15 @@
+{
+  "agent": "rag",
+  "doc_name": "Announcing the ARC White-Box Estimation Challenge",
+  "category": "AI Safety",
+  "source": "AI Alignment Forum",
+  "url": "https://www.alignmentforum.org/posts/Kben8CzS4awCwNw5c/announcing-the-arc-white-box-estimation-challenge",
+  "ingested": "2026-06-05T10:14:50.592202",
+  "chunks": [
+    {
+      "text": "ARC has teamed up with AIcrowd to launch the ARC White-Box Estimation Challenge, a contest to improve upon our estimation algorithms for random MLPs. The warm-up round begins this week, and later rounds will have a total prize pool of at least $100,000. We are very grateful to Sharada Mohanty, Sneha Nanavati, Dipam Chakraborty and everyone else at AIcrowd for working with us to host this contest, as well as to Paul Rosu for testing the contest and to Harshita Khera for operational support. Introduction to the Challenge Our challenge follows the same setup as our recent paper on wide random MLPs: we consider MLPs with weights , defined by where the activation function is , applied coordinatewise. To begin with, we are fixing the width and the number of hidden layers , but we expect to change this setup in future rounds.[1] Contestants must design an algorithm that takes in a set of weights and produces an estimate for the expected output Algorithms will be evaluated on MLPs with randomly-sampled Gaussian weights. The goal is to achieve as low mean squared error as possible, subject to certain computational constraints. We have devised a FLOP-counting scheme with AIcrowd to minimize any advantage from using heavily optimized numerical kernels, allowing participants to focus on higher-level algorithm design instead. This scheme may still have a few rough edges remaining, but we hope to round these out over the course of the warm-up round. For further details, please see the challenge website. Why run this contest? In the long run, we would like to answer questions about highly intelligent AI systems such as, \"Are there unusual situations in which the system would undermine human control?\". Running the system on a huge number of different inputs may not be a reliable way to answer such questions, since a highly intelligent system may not fall for our \"honey pots\". This why we are interested in white-box approaches that leverage our access to the model's internals",
+      "doc_name": "Announcing the ARC White-Box Estimation Challenge",
+      "category": "AI Safety"
+    }
+  ]
+}

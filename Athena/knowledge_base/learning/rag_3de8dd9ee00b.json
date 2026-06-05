@@ -1,0 +1,15 @@
+{
+  "agent": "rag",
+  "doc_name": "Advice for making robust-to-training model organisms",
+  "category": "AI Safety",
+  "source": "AI Alignment Forum",
+  "url": "https://www.alignmentforum.org/posts/CmkAxJi83jRv9eXgJ/advice-for-making-robust-to-training-model-organisms-1",
+  "ingested": "2026-06-05T10:14:50.621700",
+  "chunks": [
+    {
+      "text": "We’d like to develop training techniques that work when applied to future misaligned AI systems. One strategy for studying proposed techniques is to test them on model organisms. However, model organisms built with common techniques are often fragile: we (and other researchers like Roger et al. and Ryd et al.) have observed them to stop misbehaving after untargeted training—training that doesn't directly target the misbehavior. For example, we have observed that simple untargeted training methods like “train the model to talk like a pirate” is effective against many model organisms that we have created, including many replications of prior work like Hubinger et al., Greenblatt et al., and Ryd et al..Fragile model organisms aren't very useful for technique development: when a sophisticated technique succeeds on one, you can't tell whether the technique is good or the model organism is weak. For instance, if you come up with some complicated technique for generating high-quality responses and find that SFTing on these removes the bad behavior, that may just be because almost any SFT would have removed it.This post identifies factors that make model organisms more robust to untargeted training. Our main findings are:Prompted model organisms are extremely fragile; researchers should avoid them.Higher-rank LoRA model organisms are relatively robust; full-weight fine-tuning (FWFT) is best.Password-locked model organisms are less robust when a larger fraction of their training data contains the password.Holding the creation method fixed, behaviors vary in robustness. We don't fully understand the pattern, but \"simple\" and instruction-compatible behaviors seem more robust.By applying these findings, we get model organisms whose bad behavior mostly but not fully persists under untargeted training that doesn’t “substantially” degrade its capabilities[1]. For instance, in our experiments in this post, pirate training only decreases the bad behavior rate by about 25% on average",
+      "doc_name": "Advice for making robust-to-training model organisms",
+      "category": "AI Safety"
+    }
+  ]
+}

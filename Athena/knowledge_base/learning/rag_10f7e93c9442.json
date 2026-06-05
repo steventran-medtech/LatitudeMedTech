@@ -1,0 +1,15 @@
+{
+  "agent": "rag",
+  "doc_name": "How to Fine-Tune an SLM for Emotion Recognition",
+  "category": "AI / ML",
+  "source": "Towards Data Science",
+  "url": "https://towardsdatascience.com/how-to-fine-tune-an-slm-for-emotion-recognition/",
+  "ingested": "2026-06-05T10:14:43.713571",
+  "chunks": [
+    {
+      "text": "Python tutorial for fine-tuning a Mistral Small 3.1 on an imbalanced training set to classify 15 emotions in social media communication The post How to Fine-Tune an SLM for Emotion Recognition appeared first on Towards Data Science.",
+      "doc_name": "How to Fine-Tune an SLM for Emotion Recognition",
+      "category": "AI / ML"
+    }
+  ]
+}

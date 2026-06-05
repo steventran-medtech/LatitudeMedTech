@@ -1,0 +1,15 @@
+{
+  "agent": "ma_intelligence",
+  "doc_name": "Texas AG investigating energy drinks",
+  "category": "Deal News",
+  "source": "STAT News",
+  "url": "https://www.statnews.com/2026/06/05/health-news-texas-ag-investigating-energy-drinks/?utm_campaign=rss",
+  "ingested": "2026-06-05T10:16:02.105613",
+  "chunks": [
+    {
+      "text": "The limitations of private health insurance, the quiet collapse of America's research ethics watchdog and other Morning Rounds news",
+      "doc_name": "Texas AG investigating energy drinks",
+      "category": "Deal News"
+    }
+  ]
+}

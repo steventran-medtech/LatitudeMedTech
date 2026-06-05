@@ -1,0 +1,15 @@
+{
+  "agent": "rag",
+  "doc_name": "Testing Gemini models for scheming tendencies",
+  "category": "AI Safety",
+  "source": "AI Alignment Forum",
+  "url": "https://www.alignmentforum.org/posts/F3sDngvTL9uyfz53k/testing-gemini-models-for-scheming-tendencies",
+  "ingested": "2026-06-05T10:14:50.609199",
+  "chunks": [
+    {
+      "text": "As AI models become increasingly capable and autonomous, keeping them safely aligned with human intentions is critical. Extending our previous work on&nbsp;evaluating scheming capabilities, we introduce complementary approaches to test whether AI models would sabotage their own safeguards, if given the opportunity.Our new papers focus on propensity for scheming:&nbsp;when models are deployed as coding agents, will they take opportunities to undermine the safeguards designed to oversee them?&nbsp;We tackle this using two complementary testing methods: automated auditing using simulated agentic environments, and scheming honeypot evaluations based on real internal alignment research codebases.Automated auditing for sabotage propensitiesFigure 1.&nbsp;Overview of the Gram auditing pipeline and an example of Gemini’s overeagerness.Our&nbsp;first paper&nbsp;introduces Gram (Gauging Realistic Agentic Misbehavior), an automated auditing framework that uses simulated agentic environments to evaluate sabotage risk.Gram builds on&nbsp;Petri, an existing automated auditing framework that generates simulated multi-turn agentic environments from seed scenario descriptions. We identified three limitations of Petri for testing sabotage propensities specifically and addressed them in Gram:Increased focus on agentic misbehavior.&nbsp;Petri combines many different kinds of scenarios (spontaneous sabotage, whistleblowing, compliance with misuse), making results hard to interpret. Gram focuses specifically on sabotage risk in coding and research deployments, using 17 seed scenarios split into&nbsp;instrumental goals&nbsp;(where a misaligned AI would have an incentive to self-preserve or seek power) and&nbsp;implicit constraints&nbsp;(where sabotage could help achieve a legitimate goal but isn’t intended by the user).Neutral auditors.&nbsp;Standard Petri auditors red-team targets and elicit specific behaviors, which we found to produce unnatural transcripts where the agent nudged, often",
+      "doc_name": "Testing Gemini models for scheming tendencies",
+      "category": "AI Safety"
+    }
+  ]
+}

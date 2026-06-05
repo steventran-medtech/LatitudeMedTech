@@ -1,0 +1,15 @@
+{
+  "agent": "rag",
+  "doc_name": "My AI Couldn’t See My Files — I Built a Zero-Dependency MCP Server",
+  "category": "AI / ML",
+  "source": "Towards Data Science",
+  "url": "https://towardsdatascience.com/my-ai-couldnt-see-my-files-i-built-a-zero-dependency-mcp-server/",
+  "ingested": "2026-06-05T10:14:43.693127",
+  "chunks": [
+    {
+      "text": "I got tired of copying files into an AI chat just to get feedback. So I built a pure Python MCP server that gives AI tools direct access to my local project—no frameworks, no dependencies. It runs over stdio for local use and switches to HTTP/SSE for concurrent clients with a single flag. The result: 5 clients, under 50ms, and a design that stays simple without sacrificing capability. The post My AI Couldn’t See My Files — I Built a Zero-Dependency MCP Server appeared first on Towards Data Science.",
+      "doc_name": "My AI Couldn’t See My Files — I Built a Zero-Dependency MCP Server",
+      "category": "AI / ML"
+    }
+  ]
+}

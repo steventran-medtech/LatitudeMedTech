@@ -1,0 +1,15 @@
+{
+  "agent": "consulting",
+  "doc_name": "Root Cause Analysis in the Age of Automated Workflows",
+  "category": "consulting_methodology",
+  "source": "Six Sigma Daily",
+  "url": "https://www.isixsigma.com/lean-methodology/root-cause-analysis-in-the-age-of-automated-workflows/",
+  "ingested": "2026-06-05T10:10:53.525017",
+  "chunks": [
+    {
+      "text": "When conducting process improvement, Root Cause Analysis is a physical, human-centric exercise. It involves stakeholders standing around a whiteboard, drawing Ishikawa diagrams, and asking the Five Whys until a human or mechanical point of failure is found. However, the nature of work has shifted as more industries are embracing automated workflows. Processes aren’t a string […]",
+      "doc_name": "Root Cause Analysis in the Age of Automated Workflows",
+      "category": "consulting_methodology"
+    }
+  ]
+}

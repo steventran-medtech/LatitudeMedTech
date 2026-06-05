@@ -1,0 +1,15 @@
+{
+  "agent": "coaching",
+  "doc_name": "Audit Report Writing Quiz",
+  "category": "MedTech QA/RA",
+  "source": "Medical Device Academy",
+  "url": "https://medicaldeviceacademy.com/audit-report-writing-quiz/",
+  "ingested": "2026-06-05T10:13:07.872769",
+  "chunks": [
+    {
+      "text": "The post Audit Report Writing Quiz appeared first on Medical Device Academy.",
+      "doc_name": "Audit Report Writing Quiz",
+      "category": "MedTech QA/RA"
+    }
+  ]
+}

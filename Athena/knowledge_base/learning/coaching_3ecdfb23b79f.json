@@ -1,0 +1,15 @@
+{
+  "agent": "coaching",
+  "doc_name": "New | phs004607.v1.p1 | AsthmaNet Step-up Yellow Zone Inhaled Corticosteroids to Prevent Exacerbations (STICS-BioLINCC)",
+  "category": "Medical Literature 50yr",
+  "source": "PubMed Central",
+  "url": "https://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/study.cgi?study_id=phs004607.v1.p1",
+  "ingested": "2026-06-05T10:13:50.985820",
+  "chunks": [
+    {
+      "text": "AsthmaNet Step-up Yellow Zone Inhaled Corticosteroids to Prevent Exacerbations (STICS-BioLINCC) (study page | release notes)",
+      "doc_name": "New | phs004607.v1.p1 | AsthmaNet Step-up Yellow Zone Inhaled Corticosteroids to Prevent Exacerbations (STICS-BioLINCC)",
+      "category": "Medical Literature 50yr"
+    }
+  ]
+}

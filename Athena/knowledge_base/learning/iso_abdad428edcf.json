@@ -1,0 +1,15 @@
+{
+  "agent": "iso",
+  "doc_name": "Champion Foods Recalls Some Batches of Motor City Pizza Co. 5 Cheese Bread Because of Possible Health Risk",
+  "category": "FDA QMS",
+  "source": "FDA Quality Systems",
+  "url": "http://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts/champion-foods-recalls-some-batches-motor-city-pizza-co-5-cheese-bread-because-possible-health-risk",
+  "ingested": "2026-06-05T10:12:47.723979",
+  "chunks": [
+    {
+      "text": "MAY 29, 2026 – Champion Foods LLC of New Boston, Michigan, is voluntarily recalling certain batches of Motor City Pizza Co. 5 Cheese Bread (“5 Cheese Bread”) because they have the potential to be contaminated with Salmonella. This action follows a California Dairies, Inc. milk powder recall due to a",
+      "doc_name": "Champion Foods Recalls Some Batches of Motor City Pizza Co. 5 Cheese Bread Because of Possible Health Risk",
+      "category": "FDA QMS"
+    }
+  ]
+}

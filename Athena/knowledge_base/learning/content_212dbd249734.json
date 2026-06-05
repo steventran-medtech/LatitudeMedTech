@@ -1,0 +1,15 @@
+{
+  "agent": "content",
+  "doc_name": "More Americans own wearables, connected health devices: survey",
+  "category": "MedTech Industry",
+  "source": "MedTech Dive",
+  "url": "https://www.medtechdive.com/news/wearable-connected-device-health-ownership-increase-rock-health/822020/",
+  "ingested": "2026-06-05T10:12:37.822608",
+  "chunks": [
+    {
+      "text": "Many adults are sharing device data with their providers too. But users are typically healthier and wealthier, suggesting people who could benefit the most from monitoring are less likely to adopt the tools, according to Rock Health.",
+      "doc_name": "More Americans own wearables, connected health devices: survey",
+      "category": "MedTech Industry"
+    }
+  ]
+}

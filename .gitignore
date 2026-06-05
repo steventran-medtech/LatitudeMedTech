@@ -56,3 +56,7 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
+*.sqlite-shm
+*.sqlite-wal
+# Runtime flag files
+Athena/ui/.athena_ready

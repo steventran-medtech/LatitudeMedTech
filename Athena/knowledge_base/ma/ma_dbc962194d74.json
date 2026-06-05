@@ -1,0 +1,15 @@
+{
+  "agent": "ma_intelligence",
+  "doc_name": "Alnylam, Inceptive ink AI deal potentially worth $2B",
+  "category": "ma_deal_news",
+  "source": "BioPharma Dive",
+  "url": "https://www.biopharmadive.com/news/alnylam-inceptive-ai-drug-discovery-rna-deal-artificial-intelligence/822008/",
+  "ingested": "2026-06-05T10:10:39.480915",
+  "chunks": [
+    {
+      "text": "The RNA-focused drugmaker says Inceptive's tools will help prioritize the best development options as well as speed up the research process.",
+      "doc_name": "Alnylam, Inceptive ink AI deal potentially worth $2B",
+      "category": "ma_deal_news"
+    }
+  ]
+}

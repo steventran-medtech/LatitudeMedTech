@@ -11,6 +11,7 @@ const FLAG = {
 const LABELS = {
   content:"Content", briefing:"Briefing", iso:"ISO Coach",
   coaching:"Coaching", fda:"FDA Agent", rag:"RAG", voice_bridge:"Voice",
+  consulting:"Consulting", ma_intelligence:"M&A Intelligence", eu_mdr:"EU MDR", hr:"HR/L&D",
 };
 
 function daysAgo(ts) {
@@ -83,9 +84,23 @@ function KnowledgeGrowth({ data }) {
   );
 }
 
-function AgentRow({ agent, onLearn, running }) {
-  const meta = FLAG[agent.flag_status] || FLAG.green;
+function AccPill({ items, chunks }) {
+  if (!items && !chunks) return <span style={{ color: "#7B90A0", fontSize: 11 }}>—</span>;
+  return (
+    <div>
+      <span style={{ fontWeight: 700, fontSize: 12, color: "#1A6FA3" }}>{(items || 0).toLocaleString()}</span>
+      <span style={{ fontSize: 10, color: "#7B90A0", marginLeft: 3 }}>items</span>
+      {chunks > 0 && (
+        <div style={{ fontSize: 10, color: "#7B90A0" }}>{chunks.toLocaleString()} chunks</div>
+      )}
+    </div>
+  );
+}
+
+function AgentRow({ agent, skills, onLearn, running }) {
+  const meta  = FLAG[agent.flag_status] || FLAG.green;
   const label = LABELS[agent.agent] || agent.agent;
+  const acc   = skills?.[agent.agent];
   return (
     <tr style={{ borderBottom: "1px solid #EDF1F5" }}>
       {/* Status dot + name */}
@@ -127,15 +142,19 @@ function AgentRow({ agent, onLearn, running }) {
           fontWeight: 600, fontSize: 12,
         }}>{agent.error_count_7d || 0}</span>
       </td>
-      {/* Items */}
+      {/* Items (7d) */}
       <td style={{ padding: "10px 8px", textAlign: "center" }}>
         <span style={{
           color: (agent.learning_7d || 0) === 0 ? "#C0392B" : "#0A2540",
           fontWeight: 600, fontSize: 12,
         }}>{agent.learning_7d || 0}</span>
       </td>
+      {/* Accumulated (all-time) */}
+      <td style={{ padding: "10px 8px" }}>
+        <AccPill items={acc?.total_items} chunks={acc?.total_chunks} />
+      </td>
       {/* Flag reason — sanitise legacy "9999 days" entries */}
-      <td style={{ padding: "10px 8px", maxWidth: 200 }}>
+      <td style={{ padding: "10px 8px", maxWidth: 180 }}>
         {agent.flag_status !== "green" && agent.flag_reason
           ? <span style={{ fontSize: 10, color: meta.color, lineHeight: 1.4 }}>
               {agent.flag_reason
@@ -168,6 +187,7 @@ function AgentRow({ agent, onLearn, running }) {
 export default function HRView() {
   const [health,   setHealth]   = useState([]);
   const [learning, setLearning] = useState([]);
+  const [skills,   setSkills]   = useState({});
   const [running,  setRunning]  = useState({});
   const [last,     setLast]     = useState(null);
   const [growth,   setGrowth]   = useState([]);
@@ -175,6 +195,7 @@ export default function HRView() {
   const load = () => {
     fetch(`${API}/api/hr/health`).then(r => r.json()).then(d => setHealth(d.agents || [])).catch(() => {});
     fetch(`${API}/api/hr/learning?days=7`).then(r => r.json()).then(d => setLearning(d.stats || [])).catch(() => {});
+    fetch(`${API}/api/hr/skills`).then(r => r.json()).then(d => setSkills(d.skills || {})).catch(() => {});
     fetch(`${API}/api/dashboard/knowledge-growth?days=90`).then(r => r.json()).then(d => setGrowth(d.daily || [])).catch(() => {});
     setLast(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
   };
@@ -229,6 +250,15 @@ export default function HRView() {
             style={{ ...gBtn, background: "#0A2540", color: "#fff", border: "none" }}>
             {running.hr ? "Running…" : "HR Review"}
           </button>
+          <button
+            onClick={() => {
+              trigger("/api/agents/skills-profile", "skills_profile");
+              setTimeout(load, 5000);
+            }}
+            disabled={running.skills_profile}
+            style={{ ...gBtn, background: "#3C5470", color: "#fff", border: "none" }}>
+            {running.skills_profile ? "Building…" : "Refresh Skills"}
+          </button>
         </div>
       </div>
 
@@ -266,7 +296,7 @@ export default function HRView() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
               <tr style={{ background: "#F8FAFC", borderBottom: "1px solid #DDE4EB" }}>
-                {["Agent", "Status", "Last Learned", "Last Run", "Errors 7d", "Items 7d", "Flag Reason", ""].map(h => (
+                {["Agent", "Status", "Last Learned", "Last Run", "Errors 7d", "Items 7d", "Accumulated", "Flag Reason", ""].map(h => (
                   <th key={h} style={{
                     padding: "9px 8px", textAlign: "left",
                     fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
@@ -280,6 +310,7 @@ export default function HRView() {
                 <AgentRow
                   key={a.agent}
                   agent={{ ...a, learning_7d: byAgent[a.agent]?.items || 0 }}
+                  skills={skills}
                   onLearn={learnOne}
                   running={!!running[`learn_${a.agent}`]}
                 />

@@ -1,0 +1,15 @@
+{
+  "agent": "ma_intelligence",
+  "doc_name": "STAT+: Up and down the ladder: The latest comings and goings",
+  "category": "Deal News",
+  "source": "STAT News",
+  "url": "https://www.statnews.com/pharmalot/2026/06/05/jobs-up-and-down-the-ladder-latest-comings-and-goings/?utm_campaign=rss",
+  "ingested": "2026-06-05T10:16:02.095110",
+  "chunks": [
+    {
+      "text": "From new hires to departures, promotions and transfers, here are the latest comings and goings in the pharmaceutical industry.",
+      "doc_name": "STAT+: Up and down the ladder: The latest comings and goings",
+      "category": "Deal News"
+    }
+  ]
+}

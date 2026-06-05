@@ -1,0 +1,15 @@
+{
+  "agent": "rag",
+  "doc_name": "My research agenda and work",
+  "category": "AI Safety",
+  "source": "AI Alignment Forum",
+  "url": "https://www.alignmentforum.org/posts/MuLvZxMcy5WaKJu3H/my-research-agenda-and-work",
+  "ingested": "2026-06-05T10:14:50.579520",
+  "chunks": [
+    {
+      "text": "This is a summary of the work I've done and work I plan to do, and the theories of change and AI progress that motivate my work. I've been working full-time on alignment for three years and change, and thinking about brainlike AGI and its alignment increasingly often since 2004. Here's the research agenda in one breath: I'm trying to predict what the first transformative AI will be, in enough mechanistic detail that we can predict likely failure modes of its alignment. That's in service of finding interventions that address those failure modes efficiently, so that they can realistically be implemented even if timelines are short and work is rushed. I'm using my background in computational cognitive neuroscience to predict what might be called loosely brainlike AGI: LLMs with added human-like cognitive capacities. I'll give a summary in the rest of this section, then give a little more depth on each major thread of my work in the remaining sections. All of it is pretty brief.Approach and premisesMost alignment work falls roughly into one of two broad categories: empirical study of current systems (\"prosaic alignment\"), or theory about idealized agents (\"agent foundations\") (with much variation and many notable exceptions). There are two assumptions implicit in these approaches: the first is that the AI we're trying to align will be like current AI. The second is that we have no idea what the AI we need to align will look like, so we must work on the fully general problem. I think there's a neglected third option: carefully predicting properties of the first AIs in which it's really important to get alignment right. I'm trying to make alignment plans that both anticipate new difficulties[1] and take advantage of the strengths of LLMs.I'm trying to predict how LLMs might be augmented to reach takeover-capable AI (TCAI),[2] beyond scaling the current approach. I'm looking at how developers might add systems for continuous learning and executive function, and how those",
+      "doc_name": "My research agenda and work",
+      "category": "AI Safety"
+    }
+  ]
+}

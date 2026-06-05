@@ -1,0 +1,15 @@
+{
+  "agent": "ma_intelligence",
+  "doc_name": "Opinion: If Americans risk their lives fighting Ebola overseas, they deserve the right to come home",
+  "category": "Deal News",
+  "source": "STAT News",
+  "url": "https://www.statnews.com/2026/06/05/americans-ebola-kenya-protests/?utm_campaign=rss",
+  "ingested": "2026-06-05T10:16:02.066553",
+  "chunks": [
+    {
+      "text": "Outbreak response is difficult enough without asking responders to wonder whether they will have access to the best available care if they become ill.",
+      "doc_name": "Opinion: If Americans risk their lives fighting Ebola overseas, they deserve the right to come home",
+      "category": "Deal News"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "agent": "content",
+  "doc_name": "Diabetes tech companies are racing toward ‘fully closed loop’ devices. But automation comes with trade-offs.",
+  "category": "MedTech Industry",
+  "source": "MedTech Dive",
+  "url": "https://www.medtechdive.com/news/diabetes-tech-companies-are-racing-toward-fully-closed-loop-devices-but/821954/",
+  "ingested": "2026-06-05T10:12:37.828108",
+  "chunks": [
+    {
+      "text": "Insulet, MiniMed and Tandem Diabetes Care are all working on systems to take meal announcements out of diabetes management.",
+      "doc_name": "Diabetes tech companies are racing toward ‘fully closed loop’ devices. But automation comes with trade-offs.",
+      "category": "MedTech Industry"
+    }
+  ]
+}

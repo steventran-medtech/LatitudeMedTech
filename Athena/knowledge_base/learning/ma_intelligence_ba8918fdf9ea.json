@@ -1,0 +1,15 @@
+{
+  "agent": "ma_intelligence",
+  "doc_name": "Pharma is betting big on PD-1/VEGF bispecifics. But are companies chasing the wrong target?",
+  "category": "M&A Deals",
+  "source": "BioPharma Dive",
+  "url": "https://www.biopharmadive.com/news/pharma-merck-summit-vegf-pd1-drug-research-cancer/822035/",
+  "ingested": "2026-06-05T10:15:39.901856",
+  "chunks": [
+    {
+      "text": "While many drugmakers are focused on lung cancer, evidence shows the liver may be a better bet.",
+      "doc_name": "Pharma is betting big on PD-1/VEGF bispecifics. But are companies chasing the wrong target?",
+      "category": "M&A Deals"
+    }
+  ]
+}

@@ -905,7 +905,34 @@
       "ingested_at": "2026-06-03T20:47:45.106417",
       "source": "tavily:FDA warning letter medical device quality system",
       "hash": "880b9bd17a5850e9"
+    },
+    "tavily_bdf8ab30f04e589e": {
+      "name": "Design Controls For Medical Device Companies [Guide]",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/design-controls",
+      "chunks": 18,
+      "ingested_at": "2026-06-05T10:10:45.647772",
+      "source": "tavily:medical device design controls DHF regulatory guidance",
+      "hash": "4ce9bec81e98bf7b"
+    },
+    "tavily_45910e0c24124767": {
+      "name": "Homepage  | RAPS",
+      "category": "Regulatory",
+      "url": "https://www.raps.org",
+      "chunks": 3,
+      "ingested_at": "2026-06-05T10:10:51.554487",
+      "source": "tavily:San Diego medical device company FDA approval 2025 2026",
+      "hash": "fb76150573853290"
+    },
+    "tavily_a7ceea6a41a89630": {
+      "name": "CER under MEDDEV 2.7/1 Rev. 4 and EU MDR | Greenlight Guru",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/meddev-2-7-1-rev-4-mdcg-mdr",
+      "chunks": 3,
+      "ingested_at": "2026-06-05T10:11:08.111147",
+      "source": "tavily:EU MDR technical documentation guidance update",
+      "hash": "01634086f85d1874"
     }
   },
-  "last_run": "2026-06-03T20:47:54.276662"
+  "last_run": "2026-06-05T10:11:08.611769"
 }

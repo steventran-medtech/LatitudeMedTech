@@ -353,6 +353,31 @@ def hr_health():
     return {"agents": agents}
 
 
+@app.get("/api/hr/skills")
+def hr_skills():
+    """Live skill/KB accumulation per agent, queried directly from the memory DB."""
+    if not mem:
+        return {"error": "Memory not available"}
+    result = {}
+    for key, label, tier in WORKFORCE_ROSTER:
+        acc = mem.get_skill_accumulation(key)
+        result[key] = {
+            "label": label, "tier": tier,
+            "total_items":  acc["total_items"],
+            "total_chunks": acc["total_chunks"],
+            "domains":      acc["domains"],
+            "last":         acc["last"],
+        }
+    return {"skills": result}
+
+
+@app.post("/api/agents/skills-profile")
+async def trigger_skills_profile(background_tasks: BackgroundTasks):
+    """Regenerate all agent skill/KB profile .md files."""
+    background_tasks.add_task(run_agent, "skills_profile", "skills_profile.py")
+    return {"status": "started", "agent": "skills_profile"}
+
+
 @app.get("/api/hr/learning")
 def hr_learning(days: int = 7):
     if not mem:

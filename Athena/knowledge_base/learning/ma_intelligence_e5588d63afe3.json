@@ -1,0 +1,15 @@
+{
+  "agent": "ma_intelligence",
+  "doc_name": "STAT+: Will Makary’s FDA voucher program survive?",
+  "category": "Deal News",
+  "source": "STAT News",
+  "url": "https://www.statnews.com/2026/06/05/biotech-news-will-makarys-fda-voucher-program-survive/?utm_campaign=rss",
+  "ingested": "2026-06-05T10:16:02.081115",
+  "chunks": [
+    {
+      "text": "RevMed's cancer drug feels out of reach for some, SCOTUS preserves key generic drug pathway, and more biotech news",
+      "doc_name": "STAT+: Will Makary’s FDA voucher program survive?",
+      "category": "Deal News"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "agent": "coaching",
+  "doc_name": "Scaling AI With Adaptive Governance",
+  "category": "Management Research",
+  "source": "MIT Sloan Mgmt",
+  "url": "https://sloanreview.mit.edu/article/scaling-ai-with-adaptive-governance/",
+  "ingested": "2026-06-05T10:13:17.662368",
+  "chunks": [
+    {
+      "text": "Christian Gralingen The Research From 2022 to 2025, the authors conducted in-depth, semistructured interviews with senior leaders and practitioners responsible for AI governance, risk, compliance, data, and product decisions. Core interviews were conducted at Microsoft, Barclays, Kyriba, Nasdaq, Lloyds Bank, Danske Bank, and the Abu Dhabi Department of Finance. The interviews focused on how governance [&#8230;]",
+      "doc_name": "Scaling AI With Adaptive Governance",
+      "category": "Management Research"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "agent": "consulting",
+  "doc_name": "Our Guide to the Summer 2026 Issue",
+  "category": "consulting_methodology",
+  "source": "MIT Sloan Management",
+  "url": "https://sloanreview.mit.edu/article/our-guide-to-the-summer-2026-issue/",
+  "ingested": "2026-06-05T10:10:49.837731",
+  "chunks": [
+    {
+      "text": "Create Generative AI Value at Scale Kevin Schmitt, Gregory Vial, and Ivo Blohm Key Insight: Organizations are expanding their GenAI use by implementing coordinated cross-functional structures that draw on domain expertise and user innovation. Top Takeaways: Companies that establish a new kind of internal AI organization that researchers have dubbed the “AI spine” are better [&#8230;]",
+      "doc_name": "Our Guide to the Summer 2026 Issue",
+      "category": "consulting_methodology"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "agent": "rag",
+  "doc_name": "The Fundamental Choice in Reinforcement Learning: On‑Policy vs. Off‑Policy",
+  "category": "AI / ML",
+  "source": "Towards Data Science",
+  "url": "https://towardsdatascience.com/the-fundamental-choice-in-reinforcement-learning-on-policy-vs-off-policy/",
+  "ingested": "2026-06-05T10:14:43.698070",
+  "chunks": [
+    {
+      "text": "How a simple choice shapes exploration, safety, and efficiency The post The Fundamental Choice in Reinforcement Learning: On‑Policy vs. Off‑Policy appeared first on Towards Data Science.",
+      "doc_name": "The Fundamental Choice in Reinforcement Learning: On‑Policy vs. Off‑Policy",
+      "category": "AI / ML"
+    }
+  ]
+}

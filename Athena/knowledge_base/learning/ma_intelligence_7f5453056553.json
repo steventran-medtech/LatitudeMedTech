@@ -1,0 +1,15 @@
+{
+  "agent": "ma_intelligence",
+  "doc_name": "An ADC specialist sinks on safety concerns for blood cancer drug",
+  "category": "M&A Deals",
+  "source": "BioPharma Dive",
+  "url": "https://www.biopharmadive.com/news/adc-therapeutics-sinks-deaths-Phase-3-trial-blood-cancer/822006/",
+  "ingested": "2026-06-05T10:15:39.906854",
+  "chunks": [
+    {
+      "text": "Shares for ADC Therapeutics fell more than 50% after a Phase 3 trial observed a death rate that at least one analyst believes &ldquo;may be difficult to accept for physicians, patients and regulators.&rdquo;",
+      "doc_name": "An ADC specialist sinks on safety concerns for blood cancer drug",
+      "category": "M&A Deals"
+    }
+  ]
+}
