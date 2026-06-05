@@ -1,0 +1,19 @@
+{
+  "doc_id": "tavily_45e5b57b705a05ae",
+  "doc_name": "Guidance and Useful Information - Public Health - European Union",
+  "category": "EU_MDR",
+  "source": "tavily:MDCG guidance document EU MDR 2025 2026",
+  "ingested_at": "2026-06-05T12:34:16.258770",
+  "chunk_count": 1,
+  "chunks": [
+    {
+      "id": "tavily_45e5b57b705a05ae_chunk_0",
+      "doc_id": "tavily_45e5b57b705a05ae",
+      "doc_name": "Guidance and Useful Information - Public Health - European Union",
+      "category": "EU_MDR",
+      "chunk_num": 0,
+      "text": "![European Commission logo](/themes/contrib/oe_theme/dist/ec/images/logo/logo-ec--mute.svg) # Guidance and Useful Information A range of [guidance documents](/medical-devices-sector/new-regulations/guidance-mdcg-endorsed-documents-and-other-guidance_en) assist stakeholders in implementing the medical devices regulations. [Dedicated factsheets](/medical-devices-new-regulations/getting-ready-new-regulations_en) provide a summarised view of the main areas of activities in the medical devices sector. Relevant contacts for the medical devices sector, including Competent Authorities and stakeholders are publicly available. ## Latest updates ## Documents ![](https://health.ec.europa.eu/sites/default/files/styles/oe_theme_ratio_3_2_medium/public/2021-12/events-icon.jpg?h=f2329d93&itok=W42yCN2F) ![](https://health.ec.europa.eu/sites/default/files/styles/oe_theme_ratio_3_2_medium/public/2021-12/publications-icon.jpg?h=f2329d93&itok=_e0oEKA8) Share this page ![European Commission logo](/themes/contrib/oe_theme/dist/ec/images/logo/negative/logo-ec--en.svg) Follow the European Commission",
+      "word_count": 70
+    }
+  ]
+}

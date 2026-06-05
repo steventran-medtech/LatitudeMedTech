@@ -941,7 +941,106 @@
       "ingested_at": "2026-06-05T10:40:09.730655",
       "source": "tavily:MDCG guidance document EU MDR 2025 2026",
       "hash": "083afd9aa4a8becb"
+    },
+    "tavily_afb3e2d84243df80": {
+      "name": "CDRH Learn - FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/training-and-continuing-education/cdrh-learn",
+      "chunks": 23,
+      "ingested_at": "2026-06-05T11:25:46.755808",
+      "source": "tavily:FDA CDRH guidance document 2025 2026 medical device",
+      "hash": "e09bf90c27cdfdf0"
+    },
+    "tavily_d2b6d0272f96bdd8": {
+      "name": "Incorporate Risk Management in Medical Device Development [Tips]",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/medical-device-risk-management",
+      "chunks": 4,
+      "ingested_at": "2026-06-05T11:25:53.555811",
+      "source": "tavily:ISO 14971 risk management medical device update",
+      "hash": "129bf95887fc1299"
+    },
+    "tavily_d42596e1ad514d84": {
+      "name": "Streamlining The Device Marketing Authorization Process",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/streamlining-the-device-marketing-authorization-process",
+      "chunks": 15,
+      "ingested_at": "2026-06-05T11:44:25.368309",
+      "source": "tavily:ISO 13485 audit finding MDSAP medical device quality",
+      "hash": "a2441aae074a45ed"
+    },
+    "tavily_437848a06c208f73": {
+      "name": "European CE Technical Documentation for Medical Devices - Emergo",
+      "category": "General",
+      "url": "https://www.emergobyul.com/services/european-ce-technical-documentation-medical-devices",
+      "chunks": 4,
+      "ingested_at": "2026-06-05T11:53:27.908692",
+      "source": "tavily:EU MDR technical documentation guidance update",
+      "hash": "880b9bd17a5850e9"
+    },
+    "tavily_fb8e02e285d68bcb": {
+      "name": "Selecting a Notified Body: How to Work with Your New Device ...",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/selecting-notified-body",
+      "chunks": 5,
+      "ingested_at": "2026-06-05T11:53:34.143001",
+      "source": "tavily:EU MDR notified body medical device regulatory",
+      "hash": "cb8e727d73b42fe4"
+    },
+    "tavily_8a6c90e1bcaaf444": {
+      "name": "Notified Bodies and Certificates module - Public Health",
+      "category": "EU_MDR",
+      "url": "https://health.ec.europa.eu/medical-devices-eudamed/notified-bodies-and-certificates-module_en",
+      "chunks": 1,
+      "ingested_at": "2026-06-05T11:53:34.143502",
+      "source": "tavily:EU MDR notified body medical device regulatory",
+      "hash": "44f257f8696c0669"
+    },
+    "tavily_cdaa3b28da6bfd20": {
+      "name": "Understanding the New FDA Guidance on Changes to 510(k) - Global Medical Device Podcast powered by Greenlight Guru",
+      "category": "General",
+      "url": "https://podcast.greenlight.guru/episode/understanding-the-new-fda-guidance-on-changes-to-510k",
+      "chunks": 1,
+      "ingested_at": "2026-06-05T11:54:39.868355",
+      "source": "tavily:FDA 510k guidance update medical device quality",
+      "hash": "9f46702fbcdc49cb"
+    },
+    "tavily_5c0ecd198c7204ae": {
+      "name": "Medical Device Recalls",
+      "category": "FDA",
+      "url": "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfRes/res.cfm?start_search=1&event_id=&productdescriptiontxt=pcr&productcode=&IVDProducts=&rootCauseText=&recallstatus=&centerclassificationtypetext=&recallnumber=&postdatefrom=&postdateto=&productshortreasontxt=&firmlegalnam=&PMA_510K_Num=&pnumber=&knumber=&PAGENUM=100",
+      "chunks": 2,
+      "ingested_at": "2026-06-05T12:07:49.322201",
+      "source": "tavily:FDA recall Class I medical device",
+      "hash": "40ad3285e51c5a58"
+    },
+    "tavily_f375b905284186db": {
+      "name": "Risk Management Procedure (SYS-010)",
+      "category": "General",
+      "url": "https://medicaldeviceacademy.com/risk-management-procedure",
+      "chunks": 3,
+      "ingested_at": "2026-06-05T12:08:48.822935",
+      "source": "tavily:ISO 14971 risk management medical device update",
+      "hash": "382e897c3776c2a4"
+    },
+    "tavily_45e5b57b705a05ae": {
+      "name": "Guidance and Useful Information - Public Health - European Union",
+      "category": "EU_MDR",
+      "url": "https://health.ec.europa.eu/medical-devices-sector/guidance-and-useful-information_en",
+      "chunks": 1,
+      "ingested_at": "2026-06-05T12:34:16.260904",
+      "source": "tavily:MDCG guidance document EU MDR 2025 2026",
+      "hash": "eb76de1eea5fa7d5"
+    },
+    "tavily_0174f882e5180f40": {
+      "name": "Medical Device Audit: How to Become Audit Ready | Greenlight Guru",
+      "category": "General",
+      "url": "https://www.greenlight.guru/medical-device-audit",
+      "chunks": 14,
+      "ingested_at": "2026-06-05T12:57:14.804744",
+      "source": "tavily:ISO 13485 audit finding MDSAP medical device quality",
+      "hash": "dc2ad5e8bdda7200"
     }
   },
-  "last_run": "2026-06-05T10:40:12.573506"
+  "last_run": "2026-06-05T12:57:22.025927"
 }

@@ -199,9 +199,19 @@ function confirmQuit() {
 // ── App lifecycle ─────────────────────────────────────────────────────────────
 
 app.on("second-instance", () => {
-  // Focus existing window if user tries to open a second instance
-  mainWindow?.show();
-  mainWindow?.focus();
+  // Bring existing window to front and notify user
+  if (mainWindow) {
+    mainWindow.show();
+    mainWindow.focus();
+    dialog.showMessageBox(mainWindow, {
+      type: "info",
+      title: "Athena Already Running",
+      message: "Athena is already open.",
+      detail: "Only one instance of Athena can run at a time. The existing window has been brought to focus.",
+      buttons: ["OK"],
+      defaultId: 0,
+    });
+  }
 });
 
 app.whenReady().then(async () => {
@@ -228,11 +238,13 @@ app.whenReady().then(async () => {
 
     splash.close();
     mainWindow.show();
+    mainWindow.maximize();
     mainWindow.focus();
   } catch (err) {
     log(`Startup error: ${err.message}`);
     splash.close();
     mainWindow.show();
+    mainWindow.maximize();
   }
 });
 

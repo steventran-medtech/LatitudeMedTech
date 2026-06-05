@@ -188,7 +188,7 @@ def learn(agent_name: str, max_new: int = 10) -> Dict:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 ALL_AGENTS = ["content", "briefing", "iso", "coaching", "fda", "rag",
-              "consulting", "ma_intelligence"]
+              "consulting", "ma_intelligence", "voice_bridge"]
 
 
 def main():

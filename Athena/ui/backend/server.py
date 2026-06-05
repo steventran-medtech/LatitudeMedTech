@@ -32,6 +32,18 @@ ATHENA      = Path(__file__).resolve().parents[2]        # ui/backend/ -> ui/ ->
 AGENTS_DIR  = ATHENA / "agents"
 VENV_PYTHON = ATHENA / "voice" / "venv" / "Scripts" / "python.exe"
 
+# ── App version (single source of truth: Athena/VERSION.json) ──────────────────
+def _load_version_info() -> dict:
+    """Read the canonical version metadata. Never raises — falls back to a
+    dev placeholder so a missing/corrupt VERSION.json can't block startup."""
+    try:
+        return json.loads((ATHENA / "VERSION.json").read_text(encoding="utf-8"))
+    except Exception:
+        return {"version": "0.0.0", "released": "unknown", "channel": "dev"}
+
+VERSION_INFO = _load_version_info()
+APP_VERSION  = VERSION_INFO.get("version", "0.0.0")
+
 load_dotenv(ATHENA / "voice" / ".env")
 
 sys.path.insert(0, str(AGENTS_DIR))
@@ -110,7 +122,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         )
         return response
 
-app = FastAPI(title="Latitude MedTech", version="1.0",
+app = FastAPI(title="Latitude MedTech", version=APP_VERSION,
               docs_url=None, redoc_url=None)  # disable public docs
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -119,13 +131,10 @@ app.add_middleware(SecurityHeadersMiddleware)
 # ── Voice bridge ──────────────────────────────────────────────────────────────
 sys.path.insert(0, str(ATHENA / "voice"))
 try:
-    from voice_bridge import router as voice_router, voice_websocket_endpoint, _start_kokoro_server
+    from voice_bridge import router as voice_router, voice_websocket_endpoint
     app.include_router(voice_router)
     VOICE_AVAILABLE = True
-    # Pre-warm Kokoro TTS server at startup so first voice response is instant
-    import threading as _th
-    _th.Thread(target=_start_kokoro_server, daemon=True, name="kokoro-prewarm").start()
-    print("[voice] Kokoro pre-warm started in background")
+    print("[voice] Voice bridge loaded — OWW + Whisper + Kokoro preloading in background")
 except Exception as _ve:
     VOICE_AVAILABLE = False
     print(f"[voice] Bridge not loaded: {_ve}")
@@ -201,7 +210,22 @@ async def run_agent(agent_name: str, script: str, args: list = None):
 
 @app.get("/")
 def root():
-    return {"status": "ok", "service": "Latitude MedTech API", "version": "1.0"}
+    return {"status": "ok", "service": "Latitude MedTech API", "version": APP_VERSION}
+
+
+@app.get("/api/version")
+def get_version():
+    """Current Athena version plus the full changelog (raw Markdown).
+
+    Source of truth is Athena/VERSION.json (cached at startup as VERSION_INFO);
+    the changelog is read fresh so edits show up without a server restart.
+    """
+    changelog = ""
+    try:
+        changelog = (ATHENA / "CHANGELOG.md").read_text(encoding="utf-8")
+    except Exception:
+        pass
+    return {**VERSION_INFO, "changelog": changelog}
 
 
 @app.get("/api/auth/token")
@@ -234,6 +258,40 @@ def get_dashboard():
         return result
     except Exception as e:
         return {"error": str(e), "token_report": {}, "kb_stats": {}, "recent_topics": []}
+
+
+# ── Voice session log ─────────────────────────────────────────────────────────
+
+SESSIONS_FILE = ATHENA / "voice" / "sessions.jsonl"
+
+class SessionLogBody(BaseModel):
+    started_at: str
+    ended_at: str
+    duration_secs: int
+    queries: int
+    device: Optional[str] = ""
+
+@app.post("/api/sessions/log")
+async def log_session(body: SessionLogBody):
+    record = body.dict()
+    with open(SESSIONS_FILE, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record) + "\n")
+    return {"status": "logged"}
+
+@app.get("/api/sessions")
+def get_sessions(limit: int = 20):
+    if not SESSIONS_FILE.exists():
+        return {"sessions": []}
+    sessions = []
+    with open(SESSIONS_FILE, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                try:
+                    sessions.append(json.loads(line))
+                except Exception:
+                    pass
+    return {"sessions": list(reversed(sessions[-limit:]))}
 
 
 @app.get("/api/drafts")
@@ -1585,6 +1643,8 @@ def _speak_phrase(text: str):
             e = pyttsx3.init(); e.setProperty("rate", 175); e.say(text); e.runAndWait()
         except Exception:
             pass
+    # Allow speaker audio to fully drain before the mic reopens for wake word detection
+    import time; time.sleep(1.0)
 
 _session_greeted = False   # plays once per server restart, regardless of tab refreshes
 
@@ -1599,7 +1659,8 @@ async def greet():
         return {"phrase": "", "skipped": True}
     _session_greeted = True
     phrase = _pick_greeting()
-    asyncio.get_event_loop().run_in_executor(None, _speak_phrase, phrase)
+    # Await TTS completion so the caller knows it's safe to open the mic
+    await asyncio.get_event_loop().run_in_executor(None, _speak_phrase, phrase)
     return {"phrase": phrase}
 
 @app.post("/api/shutdown")

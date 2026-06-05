@@ -28,7 +28,17 @@ try {
         }
 } catch { Write-Host "[athena] process scan failed: $_" }
 
-# 3. Report.
+# 3. Close the isolated Chrome app window via the main PID recorded at launch.
+#    taskkill /T kills the whole process tree (window + renderers/gpu/utility),
+#    and works in the detached/no-window context where WMI command-line queries
+#    are unreliable. Scoped to that one instance — the user's main Chrome is safe.
+if (Test-Path $CHROME_PID_FILE) {
+    $chromePid = (Get-Content $CHROME_PID_FILE -ErrorAction SilentlyContinue | Select-Object -First 1)
+    if ($chromePid) { taskkill /PID $chromePid /T /F *> $null }
+    Remove-Item $CHROME_PID_FILE -Force -ErrorAction SilentlyContinue
+}
+
+# 4. Report.
 $b = if ($port8000 -and -not (Get-PortPids 8000)) { "stopped" } else { "STILL RUNNING" }
 $f = if ($port3000 -and -not (Get-PortPids 3000)) { "stopped" } else { "STILL RUNNING" }
 Write-Host "Backend (8000): $b"

@@ -49,11 +49,13 @@ AGENT_SOURCES = {
     ],
 
     "fda": [
-        {"name": "FDA Guidance Docs",   "url": "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/guidance/rss.xml",       "domain": "FDA Regulatory",   "type": "rss"},
-        {"name": "FDA Warning Letters", "url": "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/warning-letters/rss.xml", "domain": "FDA Enforcement",  "type": "rss"},
-        {"name": "FDA Recalls",         "url": "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/recalls/rss.xml",         "domain": "FDA Recalls",      "type": "rss"},
-        {"name": "CDRH Updates",        "url": "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/medical-devices/rss.xml", "domain": "CDRH",             "type": "rss"},
-        {"name": "Regulatory Focus",    "url": "https://www.raps.org/raps/media/news/rss.ashx",                                             "domain": "Regulatory Affairs","type":"rss"},
+        # Unique to FDA agent — not shared with briefing
+        {"name": "FDA Warning Letters",  "url": "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/warning-letters/rss.xml",    "domain": "FDA Enforcement",   "type": "rss"},
+        {"name": "FDA Recalls",          "url": "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/recalls/rss.xml",             "domain": "FDA Recalls",       "type": "rss"},
+        {"name": "FDA MedWatch Alerts",  "url": "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/medwatch-safety-alerts/rss.xml","domain": "FDA Safety",      "type": "rss"},
+        {"name": "FDA Press Releases",   "url": "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/press-announcements/rss.xml", "domain": "FDA Announcements", "type": "rss"},
+        {"name": "MDDI Online",          "url": "https://www.mddionline.com/rss.xml",                                                            "domain": "MedTech Regulatory","type": "rss"},
+        {"name": "Health Affairs",       "url": "https://www.healthaffairs.org/action/showFeed?type=etoc&feed=rss",                              "domain": "Health Policy",     "type": "rss"},
     ],
 
     "rag": [
@@ -71,6 +73,14 @@ AGENT_SOURCES = {
         {"name": "Strategy+Business",         "url": "https://www.strategy-business.com/rss",                  "domain": "Methodology",           "type": "rss"},
         {"name": "Stanford Social Innovation","url": "https://ssir.org/site/rss",                               "domain": "Case Studies",          "type": "rss"},
     ],
+    "voice_bridge": [
+        {"name": "MIT Technology Review","url": "https://www.technologyreview.com/feed/",                       "domain": "AI Technology",        "type": "rss"},
+        {"name": "VentureBeat AI",       "url": "https://venturebeat.com/category/ai/feed/",                   "domain": "AI Industry",          "type": "rss"},
+        {"name": "Google AI Blog",       "url": "https://blog.google/technology/ai/rss/",                      "domain": "Conversational AI",    "type": "rss"},
+        {"name": "The Gradient",         "url": "https://thegradient.pub/rss/",                                "domain": "ML Research",          "type": "rss"},
+        {"name": "AI Business",          "url": "https://aibusiness.com/rss.xml",                              "domain": "AI Applications",      "type": "rss"},
+    ],
+
     "ma_intelligence": [
         {"name": "BioPharma Dive",            "url": "https://www.biopharmadive.com/feeds/news/",               "domain": "M&A Deals",             "type": "rss"},
         {"name": "Fierce Biotech",            "url": "https://www.fiercebiotech.com/rss/xml",                   "domain": "M&A Deals",             "type": "rss"},

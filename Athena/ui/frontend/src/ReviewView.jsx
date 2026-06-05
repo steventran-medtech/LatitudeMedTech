@@ -137,6 +137,19 @@ function renderMarkdown(md) {
       flush();
       out.push(<div key={`em${i}`} style={{ fontStyle: "italic", color: "#7B90A0",
         fontSize: 13, fontFamily: SERIF, margin: "0 0 14px" }}>{t.slice(1, -1)}</div>);
+    } else if (/^!\[.*\]\(.+\)/.test(t)) {
+      flush();
+      const m = t.match(/^!\[([^\]]*)\]\(([^)]+)\)/);
+      if (m) {
+        out.push(
+          <div key={`img${i}`} style={{ margin: "16px 0", borderRadius: 8, overflow: "hidden",
+            boxShadow: "0 2px 10px rgba(10,37,64,0.08)" }}>
+            <img src={m[2]} alt={m[1]}
+              style={{ width: "100%", maxHeight: 420, objectFit: "cover", display: "block" }}
+              onError={e => { e.currentTarget.parentElement.style.display = "none"; }} />
+          </div>
+        );
+      }
     } else {
       para.push(t);
     }

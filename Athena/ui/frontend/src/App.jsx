@@ -6,6 +6,7 @@ import ISOView from "./ISOView.jsx";
 import FileViewer from "./FileViewer.jsx";
 import ReviewView from "./ReviewView.jsx";
 import MarketingView from "./MarketingView.jsx";
+import { useVoiceSession } from "./useVoiceSession.js";
 
 const API = "http://localhost:8000";
 const WS  = "ws://localhost:8000/ws";
@@ -89,7 +90,7 @@ const NAV_GROUPS = [
   {key:"system",  label:"System"},
 ];
 
-function Sidebar({active,setActive,runningAgents,pendingReview}){
+function Sidebar({active,setActive,runningAgents,pendingReview,version,onAbout}){
   const grouped = NAV_GROUPS.map(g=>({...g, items: NAV.filter(n=>n.group===g.key)}));
   const numRunning = runningAgents?.size || 0;
   return(
@@ -168,6 +169,24 @@ function Sidebar({active,setActive,runningAgents,pendingReview}){
           latitudemedtech.com<br/>
           steven.tran@latitudemedtech.com
         </div>
+        {/* Version — click for changelog / About */}
+        <button
+          onClick={onAbout}
+          title="View version & changelog"
+          style={{
+            marginTop:10,display:"flex",alignItems:"center",gap:6,
+            background:"transparent",border:"none",padding:0,cursor:"pointer",
+            fontFamily:F.mono,fontSize:9,letterSpacing:"0.04em",
+            color:"rgba(255,255,255,0.3)",transition:"color 0.12s",
+          }}
+          onMouseEnter={e=>e.currentTarget.style.color="rgba(196,146,42,0.9)"}
+          onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,0.3)"}>
+          <span style={{width:5,height:5,borderRadius:"50%",background:"#1F7A6D",
+            boxShadow:"0 0 5px rgba(31,122,109,0.6)",display:"inline-block"}}/>
+          {version?.version ? `v${version.version}` : "v—"}
+          {version?.channel && version.channel!=="stable" &&
+            <span style={{opacity:0.7}}>· {version.channel}</span>}
+        </button>
       </div>
       <style>{`@keyframes badgePulse{0%,100%{box-shadow:0 0 4px #1A6FA366}50%{box-shadow:0 0 10px #1A6FA3aa}}`}</style>
     </div>
@@ -632,6 +651,13 @@ function HourlyBars({data, valueKey="tokens", color=C.blue, height=120, highligh
 }
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
+function fmtDur(s){
+  const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
+  if(h>0) return `${h}h ${m}m`;
+  if(m>0) return `${m}m ${String(sec).padStart(2,"0")}s`;
+  return `${sec}s`;
+}
+
 function Dashboard({data}){
   const [history,setHistory]=useState([]);
   const [ts,setTs]=useState(null);
@@ -639,6 +665,7 @@ function Dashboard({data}){
   const [kbGrowth,setKbGrowth]=useState([]);
   const [kbTotal,setKbTotal]=useState(0);
   const [companyKb,setCompanyKb]=useState(null);
+  const [sessions,setSessions]=useState([]);
   useEffect(()=>{
     fetch(`${API}/api/dashboard/history?days=30`).then(r=>r.json()).then(d=>setHistory(d.daily||[])).catch(()=>{});
     fetch(`${API}/api/dashboard/knowledge-growth?days=90`).then(r=>r.json()).then(d=>{setKbGrowth(d.daily||[]);setKbTotal(d.total||0);}).catch(()=>{});
@@ -648,6 +675,7 @@ function Dashboard({data}){
       const domains=new Set(skills.flatMap(s=>s.domains||[]));
       setCompanyKb({totalChunks,domains:domains.size});
     }).catch(()=>{});
+    fetch(`${API}/api/sessions?limit=15`).then(r=>r.json()).then(d=>setSessions(d.sessions||[])).catch(()=>{});
   },[]);
   // Refetch when the hourly day toggle changes (today/yesterday totals come back unchanged).
   useEffect(()=>{
@@ -766,6 +794,33 @@ function Dashboard({data}){
         <div style={S.card}>
           <span style={S.label}>Recent content topics</span>
           {data.recent_topics.slice(0,8).map((t,i)=>(<div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:i<7?`1px solid ${C.ltgray}`:"none"}}><span style={{fontFamily:"Helvetica,sans-serif",fontSize:12,color:C.slate}}>{t.title}</span><span style={{fontFamily:"Helvetica,sans-serif",fontSize:11,color:C.muted}}>{t.timestamp?.slice(0,10)}</span></div>))}
+        </div>
+      )}
+      {sessions.length>0&&(
+        <div style={{...S.card,marginTop:16}}>
+          <span style={S.label}>Voice Sessions</span>
+          <table style={{width:"100%",borderCollapse:"collapse",fontFamily:"Helvetica,sans-serif",fontSize:12,marginTop:12}}>
+            <thead>
+              <tr style={{borderBottom:`1px solid ${C.border}`}}>
+                {["Date","Started","Duration","Queries"].map(h=>(
+                  <th key={h} style={{padding:"6px 8px",textAlign:"left",color:C.muted,fontWeight:600,fontSize:10,letterSpacing:"0.08em",textTransform:"uppercase"}}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sessions.map((s,i)=>{
+                const d=new Date(s.started_at);
+                return(
+                  <tr key={i} style={{borderBottom:`1px solid ${C.ltgray}`}}>
+                    <td style={{padding:"8px",color:C.slate}}>{d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</td>
+                    <td style={{padding:"8px",color:C.muted}}>{d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</td>
+                    <td style={{padding:"8px",color:C.blue,fontWeight:500}}>{fmtDur(s.duration_secs||0)}</td>
+                    <td style={{padding:"8px",color:C.muted}}>{s.queries||0}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
@@ -1025,7 +1080,7 @@ function AgentsView({logs,onRun,runningAgents}){
   const logEndRef = useRef(null);
 
   useEffect(()=>{
-    if(logEndRef.current) logEndRef.current.scrollIntoView({behavior:"smooth"});
+    if(logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   },[logs]);
 
   // Derive running state from the global runningAgents Set (stays in sync across tabs)
@@ -1205,6 +1260,105 @@ function Toaster({toasts}){
 }
 
 // ── Main app ───────────────────────────────────────────────────────────────
+// ── About / Version panel ─────────────────────────────────────────────────────
+function AboutModal({version,onClose}){
+  // Strip the changelog's top "# Changelog" H1 — the modal already has a title.
+  const changelog=(version?.changelog||"").replace(/^#\s+Changelog\s*\n/,"").trim();
+  return(
+    <div onClick={onClose} style={{
+      position:"fixed",inset:0,background:"rgba(10,37,64,0.5)",
+      zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:24,
+    }}>
+      <div onClick={e=>e.stopPropagation()} style={{
+        background:C.pearl,borderRadius:12,maxWidth:640,width:"100%",
+        maxHeight:"82vh",display:"flex",flexDirection:"column",
+        boxShadow:"0 20px 60px rgba(10,37,64,0.3)",overflow:"hidden",
+      }}>
+        {/* Header */}
+        <div style={{padding:"24px 30px 18px",borderBottom:`1px solid ${C.mist}`,background:C.navy}}>
+          <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between"}}>
+            <div>
+              <div style={{fontFamily:F.serif,fontSize:22,color:"#fff",fontWeight:400,lineHeight:1}}>Athena</div>
+              <div style={{fontFamily:F.sans,fontSize:10,color:"rgba(255,255,255,0.5)",marginTop:5,letterSpacing:"0.06em"}}>
+                Latitude MedTech · AI Operating System
+              </div>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontFamily:F.mono,fontSize:18,color:"#fff",fontWeight:600}}>
+                v{version?.version||"—"}
+              </div>
+              <div style={{fontFamily:F.sans,fontSize:10,color:"rgba(255,255,255,0.5)",marginTop:3}}>
+                {version?.channel||""}{version?.codename?` · "${version.codename}"`:""}
+              </div>
+              {version?.released&&<div style={{fontFamily:F.sans,fontSize:9,color:"rgba(255,255,255,0.4)",marginTop:2}}>
+                released {version.released}
+              </div>}
+            </div>
+          </div>
+        </div>
+        {/* Changelog body */}
+        <div style={{padding:"4px 30px 24px",overflowY:"auto",flex:1}}>
+          {changelog
+            ? <MarkdownView content={changelog}/>
+            : <div style={{fontFamily:F.sans,fontSize:13,color:C.fog,padding:"20px 0"}}>
+                Changelog unavailable.
+              </div>}
+        </div>
+        {/* Footer */}
+        <div style={{padding:"14px 30px",borderTop:`1px solid ${C.mist}`,display:"flex",justifyContent:"flex-end"}}>
+          <button onClick={onClose} style={{padding:"8px 22px",background:C.navy,border:"none",
+            borderRadius:7,cursor:"pointer",fontFamily:F.sans,fontSize:12,fontWeight:600,
+            color:"#fff",letterSpacing:"0.02em"}}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const VOICE_BADGE = {
+  idle:      { color: "#7B90A0", pulse: false },
+  loading:   { color: "#C4922A", pulse: true  },
+  listening: { color: "#1A6FA3", pulse: true  },
+  awake:     { color: "#C4922A", pulse: false },
+  thinking:  { color: "#7B3FA6", pulse: true  },
+  speaking:  { color: "#1F7A6D", pulse: false },
+  stopped:   { color: "#C0392B", pulse: false },
+};
+
+function VoiceStatusBadge({ voice, onNavigate }) {
+  const { running, state } = voice;
+  const cfg = VOICE_BADGE[state] ?? VOICE_BADGE.idle;
+  const label = running
+    ? (state ? state.charAt(0).toUpperCase() + state.slice(1) : "Live")
+    : "Offline";
+  return (
+    <div
+      onClick={onNavigate}
+      title="Athena Voice"
+      style={{
+        display:"flex", alignItems:"center", gap:5,
+        padding:"3px 10px", borderRadius:20, cursor:"pointer",
+        background: running ? `${cfg.color}14` : "transparent",
+        border:`1px solid ${running ? cfg.color+"44" : C.mist}`,
+        transition:"border-color 0.2s, background 0.2s",
+      }}
+    >
+      <div style={{
+        width:6, height:6, borderRadius:"50%",
+        background: running ? cfg.color : C.fog,
+        animation: (running && cfg.pulse) ? "agentPing 1.2s ease-in-out infinite" : "none",
+        boxShadow: running ? `0 0 0 2px ${cfg.color}33` : "none",
+      }}/>
+      <span style={{
+        fontFamily:F.sans, fontSize:10, fontWeight:600,
+        color: running ? cfg.color : C.fog, letterSpacing:"0.03em",
+      }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
 export default function App(){
   const [active,setActive]=useState("voice");
   const [data,setData]=useState(null);
@@ -1213,7 +1367,10 @@ export default function App(){
   const [wsReady,setWsReady]=useState(false);
   const [runningAgents,setRunningAgents]=useState(new Set());
   const [toasts,setToasts]=useState([]);
+  const [version,setVersion]=useState(null);
+  const [aboutOpen,setAboutOpen]=useState(false);
   const wsRef=useRef(null);
+  const voice=useVoiceSession();
 
   const addToast=useCallback((message,type="info")=>{
     const id=Date.now()+Math.random();
@@ -1264,6 +1421,11 @@ export default function App(){
 
   useEffect(()=>{loadData();},[loadData]);
 
+  // Load app version once (for the sidebar badge + About panel)
+  useEffect(()=>{
+    fetch(`${API}/api/version`).then(r=>r.json()).then(setVersion).catch(()=>{});
+  },[]);
+
   // Poll review queue count every 30s so badge stays current
   useEffect(()=>{
     const poll=()=>fetch(`${API}/api/review/pending`).then(r=>r.json())
@@ -1273,10 +1435,7 @@ export default function App(){
     return()=>clearInterval(t);
   },[]);
 
-  // Play startup greeting once on first load
-  useEffect(()=>{
-    fetch(`${API}/api/voice/greet`,{method:"POST"}).catch(()=>{});
-  },[]);
+  // Greeting moved to VoiceView — plays before mic opens to avoid self-recording
 
   const pendingRef = useRef(new Set());
   const activeRef  = useRef(active);
@@ -1316,7 +1475,7 @@ export default function App(){
   const pages={
     dashboard:<Dashboard data={data}/>,
     briefing: <BriefingView/>,
-    voice:    <VoiceView/>,
+    voice:    <VoiceView voice={voice}/>,
     content:  <ContentView onGenerate={runAgent}/>,
     coaching: <CoachingView onGenerate={runAgent}/>,
     marketing:<MarketingView/>,
@@ -1332,7 +1491,7 @@ export default function App(){
   return(
     <div style={S.app}>
       <Toaster toasts={toasts}/>
-      <Sidebar active={active} setActive={setActive} runningAgents={runningAgents} pendingReview={pendingReview}/>
+      <Sidebar active={active} setActive={setActive} runningAgents={runningAgents} pendingReview={pendingReview} version={version} onAbout={()=>setAboutOpen(true)}/>
       <div style={S.main}>
         {/* Top bar */}
         <div style={S.header}>
@@ -1356,6 +1515,7 @@ export default function App(){
                 </span>
               </div>
             )}
+            <VoiceStatusBadge voice={voice} onNavigate={()=>setActive("voice")}/>
             {/* WS status pill */}
             <div style={{display:"flex",alignItems:"center",gap:5,padding:"3px 10px",
               background:wsReady?"rgba(31,122,109,0.08)":"rgba(192,57,43,0.08)",
@@ -1388,6 +1548,9 @@ export default function App(){
         </div>
         <div style={S.content}>{pages[active]}</div>
       </div>
+
+      {/* About / version + changelog */}
+      {aboutOpen&&<AboutModal version={version} onClose={()=>setAboutOpen(false)}/>}
 
       {/* Exit confirmation dialog */}
       {exitDialog&&(

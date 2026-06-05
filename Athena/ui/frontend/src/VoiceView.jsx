@@ -11,8 +11,6 @@
  *   — No log clutter; just the orb + last exchange
  */
 
-import { useEffect, useRef, useState } from "react";
-
 const API    = "http://localhost:8000";
 const NAVY   = "#0A2540";
 const OCEAN  = "#1A6FA3";
@@ -138,69 +136,18 @@ function HUDPanel({ label, children, accent = OCEAN }) {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
-export default function VoiceView() {
-  const [running, setRunning] = useState(false);
-  const [state,   setState]   = useState("idle");
-  const [level,   setLevel]   = useState(0);
-  const [query,   setQuery]   = useState("");
-  const [lastYou, setLastYou] = useState("");
-  const [lastAthena, setLastAthena] = useState("");
-  const [log,     setLog]     = useState([]);
-  const [status,  setStatus]  = useState(null);
-  const [devices, setDevices] = useState([]);
-  const [selDev,  setSelDev]  = useState("");
-  const wsRef   = useRef(null);
-  const peakRef = useRef(0);
+function fmtElapsed(s) {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+  return `${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+}
+
+export default function VoiceView({ voice }) {
+  const { running, state, level, query, lastYou, lastAthena, speakingLines, log, status,
+          devices, selDev, setSelDev, elapsed, startVoice, stopVoice } = voice;
   const cfg = ORB[state] ?? ORB.idle;
-
-  useEffect(() => {
-    fetch(`${API}/api/voice/status`).then(r => r.json())
-      .then(d => { setRunning(d.active); setState(d.state ?? "idle"); setStatus(d); }).catch(() => {});
-    fetch(`${API}/api/voice/devices`).then(r => r.json())
-      .then(d => setDevices(d.devices ?? [])).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (!running) { wsRef.current?.close(); return; }
-    const ws = new WebSocket("ws://localhost:8000/ws/voice");
-    wsRef.current = ws;
-    ws.onmessage = (e) => {
-      const msg  = JSON.parse(e.data);
-      const type = msg.type?.replace("voice_", "") ?? "";
-      if (type === "level") {
-        const v = msg.level ?? 0;
-        setLevel(v);
-        if (v > peakRef.current) peakRef.current = v;
-        return;
-      }
-      if (type === "thinking") setQuery(msg.query ?? "");
-      if (type === "transcript") { setLastYou(msg.text ?? ""); setQuery(""); }
-      if (type === "speaking" && msg.response && msg.response !== "…") setLastAthena(msg.response ?? "");
-      if (type === "loading")   setState("loading");
-      if (type === "listening") setState("listening");
-      if (type === "awake")     setState("awake");
-      if (type === "thinking")  setState("thinking");
-      if (type === "speaking")  setState("speaking");
-      if (type === "stopped")   { setState("stopped"); setRunning(false); setLevel(0); }
-      setLog(prev => [...prev.slice(-(MAX_LOG - 1)), { ...msg, id: Date.now() + Math.random() }]);
-    };
-    return () => ws.close();
-  }, [running]);
-
-  const startVoice = () => {
-    const params = selDev !== "" ? `?device=${selDev}` : "";
-    fetch(`${API}/api/voice/start${params}`, { method: "POST" })
-      .then(r => r.json()).then(d => {
-        if (d.status === "started" || d.status === "already_running") {
-          setRunning(true); setState("loading"); setStatus(d);
-        }
-      }).catch(() => {});
-  };
-
-  const stopVoice = () => {
-    fetch(`${API}/api/voice/stop`, { method: "POST" })
-      .then(() => { setRunning(false); setState("stopped"); setLevel(0); }).catch(() => {});
-  };
 
   return (
     <div style={{
@@ -269,9 +216,23 @@ export default function VoiceView() {
             <span style={{ fontFamily: "Inter, sans-serif", fontSize: 9, fontWeight: 700,
               letterSpacing: "0.1em", textTransform: "uppercase",
               color: running ? TEAL : RED }}>
-              {running ? "Online" : "Offline"}
+              {running ? "Live" : "Offline"}
             </span>
           </div>
+          {/* Session elapsed timer — only shown while running */}
+          {running && elapsed > 0 && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 5,
+              padding: "3px 10px", borderRadius: 12,
+              border: `1px solid ${GOLD}44`,
+              background: `${GOLD}0D`,
+            }}>
+              <span style={{ fontFamily: "Inter, sans-serif", fontSize: 9, fontWeight: 700,
+                letterSpacing: "0.1em", textTransform: "uppercase", color: GOLD }}>
+                {fmtElapsed(elapsed)}
+              </span>
+            </div>
+          )}
           {/* Action button */}
           {!running ? (
             <button onClick={startVoice} style={orbBtn(OCEAN)}>Turn On</button>
@@ -323,11 +284,29 @@ export default function VoiceView() {
           </HUDPanel>
         )}
 
-        {lastAthena && (
+        {(speakingLines.length > 0 || lastAthena) && (
           <HUDPanel label="Athena" accent={TEAL}>
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: 13, color: "#e0eaf2",
-              lineHeight: 1.7, fontWeight: 300 }}>
-              {lastAthena}
+              lineHeight: 1.8, fontWeight: 300 }}>
+              {speakingLines.length > 0
+                ? speakingLines.map((line, i) => (
+                    <span key={line.id} style={{
+                      display: "inline",
+                      animation: "lineIn 0.35s ease forwards",
+                      opacity: 0,
+                    }}>
+                      {i > 0 ? " " : ""}{line.text}
+                    </span>
+                  ))
+                : lastAthena
+              }
+              {state === "speaking" && speakingLines.length > 0 && (
+                <span style={{
+                  display: "inline-block", width: 2, height: "0.85em",
+                  background: TEAL, marginLeft: 3, verticalAlign: "middle",
+                  animation: "cursorBlink 0.9s step-end infinite",
+                }}/>
+              )}
             </div>
           </HUDPanel>
         )}
@@ -432,6 +411,18 @@ export default function VoiceView() {
         @keyframes wave2 { 0%{height:6px} 100%{height:14px} }
         @keyframes wave3 { 0%{height:3px} 100%{height:18px} }
         @keyframes wave4 { 0%{height:8px} 100%{height:12px} }
+        @keyframes statusPulse {
+          0%,100% { opacity: 1; }
+          50%      { opacity: 0.4; }
+        }
+        @keyframes cursorBlink {
+          0%,100% { opacity: 1; }
+          50%      { opacity: 0; }
+        }
+        @keyframes lineIn {
+          from { opacity: 0; transform: translateY(5px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
     </div>
   );

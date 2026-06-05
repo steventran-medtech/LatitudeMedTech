@@ -1,0 +1,15 @@
+{
+  "agent": "iso",
+  "doc_name": "Nelson & Isa Lacteos LLC Recalls Requeson Cheese Due to Possible Health Risk",
+  "category": "FDA QMS",
+  "source": "FDA Quality Systems",
+  "url": "http://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts/nelson-isa-lacteos-llc-recalls-requeson-cheese-due-possible-health-risk",
+  "ingested": "2026-06-05T12:09:11.298247",
+  "chunks": [
+    {
+      "text": "Nelson &amp; Isa Lacteos LLC. of Bayshore, NY, is recalling 1lb packages of Requeson Cheese because they may be contaminated with Listeria monocytogenes, an organism which can cause serious and sometimes fatal infections in young children, frail or elderly people, and others with weakened immune systems",
+      "doc_name": "Nelson & Isa Lacteos LLC Recalls Requeson Cheese Due to Possible Health Risk",
+      "category": "FDA QMS"
+    }
+  ]
+}
