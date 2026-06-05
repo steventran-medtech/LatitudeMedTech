@@ -28,17 +28,18 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import feedparser
 
-load_dotenv(Path.home() / "Athena" / "voice" / ".env")
-sys.path.insert(0, str(Path.home() / "Athena" / "agents"))
+from pathconfig import ENV_FILE, AGENTS_DIR, KB_DIR as _KB_ROOT, LOGS_DIR, OPS_DIR
+load_dotenv(ENV_FILE)
+sys.path.insert(0, str(AGENTS_DIR))
 
 from memory import Memory
 from agent_base import AgentBase
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 BRAVE_API_KEY     = os.getenv("BRAVE_API_KEY", "")
-KB_DIR   = Path.home() / "Athena" / "knowledge_base" / "ma"
-LOG_DIR  = Path.home() / "Athena" / "logs"
-OUT_DIR  = Path.home() / "Athena" / "ops" / "ma_intelligence"
+KB_DIR  = _KB_ROOT / "ma"
+LOG_DIR = LOGS_DIR
+OUT_DIR = OPS_DIR / "ma_intelligence"
 KB_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 OUT_DIR.mkdir(parents=True, exist_ok=True)

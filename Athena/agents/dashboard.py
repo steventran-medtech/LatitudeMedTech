@@ -16,13 +16,14 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 
-sys.path.insert(0, str(Path.home() / 'Athena' / 'agents'))
+from pathlib import Path as _Path
+_AGENTS = _Path(__file__).resolve().parent
+sys.path.insert(0, str(_AGENTS))
 
 try:
     from memory import Memory
 except ImportError:
-    print("ERROR: memory.py not found in ~/Athena/agents/")
-    print("Make sure memory.py is in C:\\Users\\huann\\Athena\\agents\\")
+    print("ERROR: memory.py not found in agents/")
     sys.exit(1)
 
 

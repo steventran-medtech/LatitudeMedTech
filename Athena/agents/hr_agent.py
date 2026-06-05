@@ -27,13 +27,14 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
-load_dotenv(Path.home() / 'Athena' / 'voice' / '.env')
-sys.path.insert(0, str(Path.home() / 'Athena' / 'agents'))
+from pathconfig import ENV_FILE, AGENTS_DIR, OPS_DIR, LOGS_DIR
+load_dotenv(ENV_FILE)
+sys.path.insert(0, str(AGENTS_DIR))
 
 from memory import Memory
 
-HR_DIR  = Path.home() / 'Athena' / 'ops' / 'hr'
-LOG_DIR = Path.home() / 'Athena' / 'logs'
+HR_DIR  = OPS_DIR / 'hr'
+LOG_DIR = LOGS_DIR
 HR_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 

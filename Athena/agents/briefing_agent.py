@@ -25,10 +25,10 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import anthropic
 
-load_dotenv(Path.home() / 'Athena' / 'voice' / '.env')
+from pathconfig import ENV_FILE, AGENTS_DIR, BRIEFINGS_DIR, LOGS_DIR
+load_dotenv(ENV_FILE)
+sys.path.insert(0, str(AGENTS_DIR))
 
-import sys as _sys
-_sys.path.insert(0, str(Path.home() / 'Athena' / 'agents'))
 try:
     from kb_query import KBQuery
     _kb = KBQuery()
@@ -41,16 +41,14 @@ try:
 except Exception:
     _base = None
 
-sys.path.insert(0, str(Path.home() / 'Athena' / 'agents'))
 try:
     from memory import Memory
     mem = Memory()
 except ImportError:
     mem = None
 
-BRIEFINGS_DIR = Path.home() / 'Athena' / 'briefings'
-LOG_DIR       = Path.home() / 'Athena' / 'logs'
-SEEN_FILE     = Path.home() / 'Athena' / 'briefings' / '.seen_items.json'
+LOG_DIR   = LOGS_DIR
+SEEN_FILE = BRIEFINGS_DIR / '.seen_items.json'
 BRIEFINGS_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 

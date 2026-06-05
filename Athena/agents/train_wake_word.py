@@ -158,7 +158,7 @@ def manual_training_approach():
     Fallback: provides instructions for manual training via
     openwakeword's GitHub training notebooks.
     """
-    instructions = """
+    instructions = f"""
 +----------------------------------------------------------+
 |  Hi Athena Custom Wake Word - Manual Training Guide      |
 +----------------------------------------------------------+
@@ -175,7 +175,7 @@ STEP 1 - Use openwakeword's Colab notebook:
 
 STEP 2 - Deploy the model (no code edit needed):
   Rename it to hi_athena.onnx and drop it here:
-  C:\\Users\\huann\\LatitudeMedTech\\Athena\\voice\\wake\\hi_athena.onnx
+  {MODEL_OUT}
 
   voice_bridge.py auto-detects this file on startup. If absent, the system
   falls back to the built-in "alexa" wake word.
@@ -235,7 +235,7 @@ def test_model(model_path: Path):
 
 def update_assistant(model_path: Path):
     """Update assistant.py to use the new Hi Athena model."""
-    assistant_path = Path.home() / 'Athena' / 'voice' / 'assistant.py'
+    assistant_path = ATHENA_ROOT / 'voice' / 'assistant.py'
     if not assistant_path.exists():
         log.warning(f"assistant.py not found at {assistant_path}")
         return

@@ -9,7 +9,7 @@ Usage:
     python coaching_brief.py "https://linkedin.com/in/janesmith"
     python coaching_brief.py  (prompts you to enter)
 
-Output: ~/Athena/coaching\briefs\YYYY-MM-DD_name.md
+Output: Athena/coaching/briefs/YYYY-MM-DD_name.md
 """
 
 import os
@@ -21,11 +21,11 @@ from datetime import datetime
 from dotenv import load_dotenv
 import anthropic
 
-load_dotenv(Path.home() / "Athena" / "voice" / ".env")
+from pathconfig import ENV_FILE, BRIEFS_DIR, LOGS_DIR
+load_dotenv(ENV_FILE)
+LOG_DIR = LOGS_DIR
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-BRIEFS_DIR = Path.home() / "Athena" / "coaching" / "briefs"
-LOG_DIR    = Path.home() / "Athena" / "logs"
 BRIEFS_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -144,7 +144,7 @@ Tone: like a smart colleague prepping you, not a formal report.
 IMPORTANT: Do NOT include a document title or heading at the top of your response. Start directly with "## What We Know". The title is added by the system automatically."""
 
     resp = client.messages.create(
-        model="claude-sonnet-4-6-20250514",
+        model="claude-sonnet-4-6",
         max_tokens=1200,
         messages=[{"role": "user", "content": prompt}],
     )
@@ -191,7 +191,7 @@ def main():
 """)
 
     if not ANTHROPIC_API_KEY:
-        log.error("ANTHROPIC_API_KEY not set. Check C:\\Users\\huann\\Athena\\voice\\.env")
+        log.error(f"ANTHROPIC_API_KEY not set. Check {ENV_FILE}")
         sys.exit(1)
 
     # Get input from command line or prompt

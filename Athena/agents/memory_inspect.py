@@ -18,7 +18,8 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 
-sys.path.insert(0, str(Path.home() / 'Athena' / 'agents'))
+from pathlib import Path as _Path
+sys.path.insert(0, str(_Path(__file__).resolve().parent))
 from memory import Memory
 
 

@@ -18,10 +18,9 @@ Usage:
 import json
 import re
 import math
-from pathlib import Path
 from typing import List, Dict
 
-KB_DIR = Path.home() / 'Athena' / 'knowledge_base'
+from pathconfig import KB_DIR
 
 
 class KBQuery:

@@ -40,8 +40,8 @@ from dotenv import load_dotenv
 from scipy.signal import resample_poly
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-ATHENA = Path(r"C:\Users\huann\LatitudeMedTech\Athena")
-RULES  = Path(r"C:\Users\huann\LatitudeMedTech\.claude\agents")
+ATHENA = Path(__file__).resolve().parent.parent          # voice/ -> Athena/
+RULES  = ATHENA.parent / ".claude" / "agents"
 load_dotenv(ATHENA / "voice" / ".env")
 
 sys.path.insert(0, str(ATHENA / "agents"))
@@ -533,7 +533,7 @@ def _transcribe(whisper_model, audio):
 
 def _build_system_prompt():
     # Load CLAUDE.md core values + voice-specific additions
-    claude_md = Path(r"C:\Users\huann\LatitudeMedTech\CLAUDE.md")
+    claude_md = ATHENA.parent / "CLAUDE.md"
     firm_context = ""
     if claude_md.exists():
         raw = claude_md.read_text(encoding="utf-8")

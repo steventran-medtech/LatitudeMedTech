@@ -51,3 +51,8 @@ out/
 # ============================================================
 .DS_Store
 Thumbs.db
+
+# Runtime database (regenerable, not versioned)
+*.db
+*.sqlite
+*.sqlite3

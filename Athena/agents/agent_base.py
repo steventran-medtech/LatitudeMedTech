@@ -19,12 +19,10 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-ATHENA     = Path.home() / "Athena"
-RULES_DIR  = Path(r"C:\Users\huann\LatitudeMedTech\.claude\agents")
-CLAUDE_MD  = Path(r"C:\Users\huann\LatitudeMedTech\CLAUDE.md")
+from pathconfig import ATHENA_ROOT, ENV_FILE, AGENTS_DIR, RULES_DIR, CLAUDE_MD
 
-load_dotenv(ATHENA / "voice" / ".env")
-sys.path.insert(0, str(ATHENA / "agents"))
+load_dotenv(ENV_FILE)
+sys.path.insert(0, str(AGENTS_DIR))
 
 # Shared memory + KB
 try:

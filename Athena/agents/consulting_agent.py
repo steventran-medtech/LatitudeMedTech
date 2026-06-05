@@ -25,16 +25,17 @@ from dotenv import load_dotenv
 import feedparser
 import requests
 
-load_dotenv(Path.home() / "Athena" / "voice" / ".env")
-sys.path.insert(0, str(Path.home() / "Athena" / "agents"))
+from pathconfig import ENV_FILE, AGENTS_DIR, KB_DIR as _KB_ROOT, LOGS_DIR, OPS_DIR
+load_dotenv(ENV_FILE)
+sys.path.insert(0, str(AGENTS_DIR))
 
 from memory import Memory
 from agent_base import AgentBase
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-KB_DIR   = Path.home() / "Athena" / "knowledge_base" / "consulting"
-LOG_DIR  = Path.home() / "Athena" / "logs"
-OUT_DIR  = Path.home() / "Athena" / "ops" / "consulting"
+KB_DIR  = _KB_ROOT / "consulting"
+LOG_DIR = LOGS_DIR
+OUT_DIR = OPS_DIR / "consulting"
 KB_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 OUT_DIR.mkdir(parents=True, exist_ok=True)

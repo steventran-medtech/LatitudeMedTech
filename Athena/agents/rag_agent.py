@@ -28,10 +28,9 @@ from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
-load_dotenv(Path.home() / 'Athena' / 'voice' / '.env')
-
-KB_DIR     = Path.home() / 'Athena' / 'knowledge_base'
-LOG_DIR    = Path.home() / 'Athena' / 'logs'
+from pathconfig import ENV_FILE, KB_DIR, LOGS_DIR
+load_dotenv(ENV_FILE)
+LOG_DIR = LOGS_DIR
 KB_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 INDEX_FILE = KB_DIR / 'index.json'

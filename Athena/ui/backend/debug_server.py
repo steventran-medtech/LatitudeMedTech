@@ -1,7 +1,8 @@
 import sys
 import traceback
 
-sys.path.insert(0, r'C:\\Users\\huann\\LatitudeMedTech\\Athena\agents')
+from pathlib import Path as _P
+sys.path.insert(0, str(_P(__file__).resolve().parents[2] / 'agents'))
 
 try:
     # Try importing everything server.py imports

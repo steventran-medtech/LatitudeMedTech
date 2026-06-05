@@ -30,7 +30,7 @@ import importlib.util
 from pathlib import Path
 from datetime import datetime
 
-ATHENA    = Path(r"C:\\Users\\huann\\LatitudeMedTech\\Athena")
+ATHENA    = Path(__file__).resolve().parent.parent  # agents/ -> Athena/
 AGENTS    = ATHENA / "agents"
 UI_BACK   = ATHENA / "ui" / "backend"
 UI_FRONT  = ATHENA / "ui" / "frontend" / "src"

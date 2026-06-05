@@ -29,9 +29,10 @@ from datetime import datetime
 from dotenv import load_dotenv
 import anthropic
 
-load_dotenv(Path.home() / 'Athena' / 'voice' / '.env')
+from pathconfig import ENV_FILE, AGENTS_DIR, ISO_DIR, LOGS_DIR
+load_dotenv(ENV_FILE)
+sys.path.insert(0, str(AGENTS_DIR))
 
-sys.path.insert(0, str(Path.home() / 'Athena' / 'agents'))
 try:
     from agent_base import AgentBase
     _base = AgentBase("iso")
@@ -44,8 +45,8 @@ try:
 except Exception:
     _kb = None
 
-CONTENT_DIR = Path.home() / 'Athena' / 'coaching' / 'iso13485'
-LOG_DIR     = Path.home() / 'Athena' / 'logs'
+CONTENT_DIR = ISO_DIR
+LOG_DIR     = LOGS_DIR
 CONTENT_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 

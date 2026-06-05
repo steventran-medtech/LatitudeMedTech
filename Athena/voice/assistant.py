@@ -15,10 +15,11 @@ import soundfile as sf
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv(Path.home() / 'Athena' / 'voice' / '.env')
+_ATHENA = Path(__file__).resolve().parent.parent   # voice/ -> Athena/
+load_dotenv(_ATHENA / 'voice' / '.env')
 
 # ── Shared memory ─────────────────────────────────────────────────────────────
-sys.path.insert(0, str(Path.home() / 'Athena' / 'agents'))
+sys.path.insert(0, str(_ATHENA / 'agents'))
 try:
     from memory import Memory
     _mem        = Memory()

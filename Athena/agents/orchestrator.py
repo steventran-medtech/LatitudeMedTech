@@ -54,7 +54,8 @@ DISCLAIMER = (
 )
 LABEL = "Alpha — Steve Review Required"
 
-CHECKPOINT_DB = Path.home() / "Athena" / "memory" / "orchestrator_checkpoints.sqlite"
+from pathconfig import MEMORY_DIR
+CHECKPOINT_DB = MEMORY_DIR / "orchestrator_checkpoints.sqlite"
 
 
 # ── Workflow state ────────────────────────────────────────────────────────────

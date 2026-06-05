@@ -35,7 +35,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional
 
-MEMORY_DIR = Path.home() / 'Athena' / 'memory'
+from pathconfig import MEMORY_DIR
 MEMORY_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = MEMORY_DIR / 'latitude_memory.db'
 

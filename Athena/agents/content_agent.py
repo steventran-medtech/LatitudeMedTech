@@ -22,18 +22,16 @@ from datetime import datetime
 from dotenv import load_dotenv
 import anthropic
 
-load_dotenv(Path.home() / 'Athena' / 'voice' / '.env')
+from pathconfig import ENV_FILE, AGENTS_DIR, DRAFTS_DIR, LOGS_DIR
+load_dotenv(ENV_FILE)
+sys.path.insert(0, str(AGENTS_DIR))
 
-import sys
-sys.path.insert(0, str(Path.home() / 'Athena' / 'agents'))
 try:
     from kb_query import KBQuery
     kb = KBQuery()
 except ImportError:
     kb = None
 
-import sys
-sys.path.insert(0, str(Path.home() / 'Athena' / 'agents'))
 try:
     from memory import Memory
     mem = Memory()
@@ -41,8 +39,7 @@ except ImportError:
     mem = None
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-DRAFTS_DIR = Path.home() / 'Athena' / 'content' / 'drafts'
-LOG_DIR    = Path.home() / 'Athena' / 'logs'
+LOG_DIR = LOGS_DIR
 DRAFTS_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 

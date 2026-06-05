@@ -39,11 +39,9 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
 
-load_dotenv(Path.home() / 'Athena' / 'voice' / '.env')
-
-DRAFTS_DIR    = Path.home() / 'Athena' / 'content' / 'drafts'
-PUBLISHED_DIR = Path.home() / 'Athena' / 'content' / 'published'
-LOG_DIR       = Path.home() / 'Athena' / 'logs'
+from pathconfig import ENV_FILE, DRAFTS_DIR, PUBLISHED_DIR, LOGS_DIR
+load_dotenv(ENV_FILE)
+LOG_DIR = LOGS_DIR
 PUBLISHED_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -233,7 +231,7 @@ def check_setup():
         print("\nSubstack Publisher — Setup Required")
         print("=" * 50)
         print("\nAdd these to your .env file:")
-        print(f"  C:\\Users\\huann\\Athena\\voice\\.env\n")
+        print(f"  {ENV_FILE}\n")
         for var in missing:
             if var == "SUBSTACK_DRAFT_EMAIL":
                 print(f"  {var}=your-secret@substack.com")

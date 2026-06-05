@@ -28,7 +28,7 @@ from slowapi.errors import RateLimitExceeded
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-ATHENA      = Path(r"C:\\Users\\huann\\LatitudeMedTech\\Athena")
+ATHENA      = Path(__file__).resolve().parents[2]        # ui/backend/ -> ui/ -> Athena/
 AGENTS_DIR  = ATHENA / "agents"
 VENV_PYTHON = ATHENA / "voice" / "venv" / "Scripts" / "python.exe"
 
@@ -238,7 +238,7 @@ def get_dashboard():
 
 @app.get("/api/drafts")
 def list_drafts():
-    drafts_dir = Path.home() / 'Athena' / 'content' / 'drafts'
+    drafts_dir = ATHENA / 'content' / 'drafts'
     if not drafts_dir.exists():
         return {"drafts": []}
     files = sorted(drafts_dir.glob('*.md'), key=lambda f: f.stat().st_mtime, reverse=True)
@@ -263,7 +263,7 @@ def list_drafts():
 
 @app.get("/api/drafts/{filename}")
 def get_draft(filename: str):
-    drafts_dir = Path.home() / 'Athena' / 'content' / 'drafts'
+    drafts_dir = ATHENA / 'content' / 'drafts'
     f = drafts_dir / filename
     if not f.exists():
         return JSONResponse(status_code=404, content={"error": "Not found"})
@@ -272,7 +272,7 @@ def get_draft(filename: str):
 
 @app.get("/api/briefings")
 def list_briefings():
-    briefings_dir = Path.home() / 'Athena' / 'briefings'
+    briefings_dir = ATHENA / 'briefings'
     if not briefings_dir.exists():
         return {"briefings": []}
     files = sorted(
@@ -292,7 +292,7 @@ def list_briefings():
 
 @app.get("/api/briefings/{filename}")
 def get_briefing(filename: str):
-    briefings_dir = Path.home() / 'Athena' / 'briefings'
+    briefings_dir = ATHENA / 'briefings'
     f = briefings_dir / filename
     if not f.exists():
         return JSONResponse(status_code=404, content={"error": "Not found"})
@@ -629,7 +629,7 @@ def generate_docx(title: str, content: str, doc_type: str) -> Path:
     disc_run.font.color.rgb = LM_MUTED
 
     # ── Save ──────────────────────────────────────────────────────────────────
-    out_dir  = Path.home() / 'Athena' / 'documents'
+    out_dir  = ATHENA / 'documents'
     out_dir.mkdir(exist_ok=True)
     slug     = re.sub(r'[^a-z0-9]+', '_', title.lower())[:50]
     out_path = out_dir / f"{datetime.now().strftime('%Y-%m-%d')}_{slug}.docx"
@@ -639,7 +639,7 @@ def generate_docx(title: str, content: str, doc_type: str) -> Path:
 
 @app.get("/api/documents")
 def list_documents():
-    docs_dir = Path.home() / 'Athena' / 'documents'
+    docs_dir = ATHENA / 'documents'
     if not docs_dir.exists():
         return {"documents": []}
     files = sorted(docs_dir.glob('*.docx'), key=lambda f: f.stat().st_mtime, reverse=True)
@@ -651,7 +651,7 @@ def list_documents():
 
 @app.get("/api/documents/open/{filename}")
 def open_document(filename: str):
-    docs_dir = Path.home() / 'Athena' / 'documents'
+    docs_dir = ATHENA / 'documents'
     f = docs_dir / filename
     if not f.exists():
         return JSONResponse(status_code=404, content={"error": "Not found"})
@@ -685,7 +685,7 @@ async def voice_ws_endpoint(ws: WebSocket):
 
 # ── Settings routes ───────────────────────────────────────────────────────────
 
-sys.path.insert(0, str(Path.home() / 'Athena' / 'agents'))
+sys.path.insert(0, str(AGENTS_DIR))
 try:
     from settings_manager import settings as agent_settings
     SETTINGS_AVAILABLE = True
@@ -736,7 +736,7 @@ def reset_settings():
 
 # ── File management routes ────────────────────────────────────────────────────
 
-_HOME_ATHENA = Path.home() / "Athena"   # agents write here (Path.home()/Athena)
+_HOME_ATHENA = ATHENA   # canonical code-tree root; agents write here
 FOLDER_MAP = {
     "briefings":       _HOME_ATHENA / "briefings",
     "content/drafts":  _HOME_ATHENA / "content" / "drafts",

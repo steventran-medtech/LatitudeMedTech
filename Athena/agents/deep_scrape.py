@@ -28,17 +28,17 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
-load_dotenv(Path.home() / 'Athena' / 'voice' / '.env')
+from pathconfig import ENV_FILE, AGENTS_DIR, KB_DIR, LOGS_DIR
+load_dotenv(ENV_FILE)
+sys.path.insert(0, str(AGENTS_DIR))
 
-sys.path.insert(0, str(Path.home() / 'Athena' / 'agents'))
 try:
     from memory import Memory
     mem = Memory()
 except ImportError:
     mem = None
 
-KB_DIR  = Path.home() / 'Athena' / 'knowledge_base'
-LOG_DIR = Path.home() / 'Athena' / 'logs'
+LOG_DIR = LOGS_DIR
 KB_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -283,7 +283,7 @@ def main():
 
     if not TAVILY_API_KEY:
         log.error("TAVILY_API_KEY not set. Cannot run deep scrape.")
-        log.error("Check C:\\Users\\huann\\Athena\\voice\\.env")
+        log.error(f"Check {ENV_FILE}")
         sys.exit(1)
 
     total_new = 0
@@ -346,7 +346,7 @@ def main():
 |  Total KB files         : {str(total_files):<32}|
 |  Elapsed time           : {str(elapsed) + 's':<32}|
 +----------------------------------------------------------+
-|  Knowledge base: C:\\Users\\huann\\Athena\\knowledge_base\\  |
+|  Knowledge base: {str(KB_DIR):<39}|
 +----------------------------------------------------------+
 """)
 

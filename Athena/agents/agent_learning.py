@@ -31,14 +31,15 @@ from datetime import datetime
 from typing import List, Dict, Optional
 from dotenv import load_dotenv
 
-load_dotenv(Path.home() / 'Athena' / 'voice' / '.env')
-sys.path.insert(0, str(Path.home() / 'Athena' / 'agents'))
+from pathconfig import ENV_FILE, AGENTS_DIR, KB_DIR as _KB_ROOT, LOGS_DIR
+load_dotenv(ENV_FILE)
+sys.path.insert(0, str(AGENTS_DIR))
 
 from memory import Memory
 from kb_query import KBQuery
 
-KB_DIR  = Path.home() / 'Athena' / 'knowledge_base' / 'learning'
-LOG_DIR = Path.home() / 'Athena' / 'logs'
+KB_DIR  = _KB_ROOT / 'learning'
+LOG_DIR = LOGS_DIR
 KB_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 

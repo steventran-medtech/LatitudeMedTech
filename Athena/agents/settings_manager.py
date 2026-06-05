@@ -18,10 +18,9 @@ Usage:
 
 import json
 import os
-from pathlib import Path
 from datetime import datetime
 
-SETTINGS_PATH = Path.home() / 'Athena' / 'settings.json'
+from pathconfig import SETTINGS_PATH
 
 # ── Default settings ──────────────────────────────────────────────────────────
 DEFAULTS = {
