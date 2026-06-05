@@ -85,3 +85,6 @@ Athena/voice/miso/
 # Voice training artifacts (captured audio samples, candidate model files)
 Athena/voice/samples/
 Athena/voice/wake_synth/*.pkl
+
+# Stray patch artifacts (leftover output from local diff/patch tooling)
+*.mypatch
