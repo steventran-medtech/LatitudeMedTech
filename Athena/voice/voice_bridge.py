@@ -203,73 +203,109 @@ def _load_agent_context(name: str) -> str:
             return text
     return ""
 
-# ── Intent detection ──────────────────────────────────────────────────────────
+# ── Intent classification via Claude tool-use ─────────────────────────────────
+# Athena uses Claude Haiku to decide whether a query should trigger a background
+# agent. No regex pattern-matching — Claude reasons about the request in context,
+# handles paraphrases and ambiguity, and generates the spoken confirmation itself.
 
-_INTENT_PATTERNS = {
-    "content": [
-        r'\b(write|draft|article|post|content|substack|meridian|publish|blog)\b'
-    ],
-    "briefing": [
-        r'\b(brief(ing)?|what.s happening|what happened|news|update me|catch me up|intel|intelligence)\b',
-        r'\b(m.?a|merger|acquisition|deal|market data|market intel|funding|raise|ipo|valuation)\b',
-        r'\b(2026|current|latest|today|this week|this month).{0,20}(data|news|market|deal|funding)\b',
-        r'\b(what.s (going on|new|happening)|recent (news|developments|updates))\b',
-    ],
-    "rag": [
-        r'\b(ingest|index|update (the )?(knowledge|kb)|rag|crawl|fetch (new )?docs)\b'
-    ],
-    "iso": [
-        r'\b(iso\s*13485|clause|qms lesson|quality system|13485)\b'
-    ],
-    "coaching_brief": [
-        r'\b(coaching brief|brief for|prep for|client brief|discovery call)\b'
-    ],
-    # Marketing intents — brief, plan, outreach, events, pipeline
-    "marketing": [
-        r'\b(marketing brief|marketing plan|guerilla|go.to.market|gtm)\b',
-        r'\b(outreach (for|to)|pitch (to|for)|write to|email to|contact)\s+[A-Z]',
-        r'\b(sales pipeline|pipeline status|marketing pipeline|how many (leads|prospects|targets))\b',
-        r'\b(events? calendar|upcoming (conference|event|podcast)|what events)\b',
-        r'\b(thirty.sixty.ninety|30.60.90|ninety.day (plan|target|goal))\b',
-    ],
+_AGENT_TOOL_SCHEMA = {
+    "name": "trigger_agent",
+    "description": (
+        "Trigger one of Athena's background agents when Steven explicitly asks for a "
+        "task to be run. Only call this tool when the user is making a clear request "
+        "to execute a task — NOT for questions you can answer conversationally. "
+        "When in doubt, do NOT call this tool and answer directly instead."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "agent": {
+                "type": "string",
+                "enum": [
+                    "content",             # Write/draft a Substack article or content piece
+                    "briefing",            # Daily market and industry briefing
+                    "rag",                 # Ingest / update the knowledge base
+                    "iso",                 # Generate an ISO 13485 coaching clause
+                    "coaching_brief",      # Generate a coaching brief for a named client
+                    "consulting",          # Run the consulting frameworks/methodology agent
+                    "ma",                  # Run the M&A intelligence agent
+                    "marketing",           # Weekly marketing brief (default)
+                    "marketing_plan",      # 30-60-90 day guerilla marketing plan
+                    "marketing_events",    # Upcoming MedTech events calendar
+                    "marketing_scorecard", # Marketing pipeline KPI scorecard
+                    "marketing_outreach",  # Personalised outreach copy for a specific target
+                ],
+                "description": "The agent to trigger.",
+            },
+            "override": {
+                "type": "string",
+                "description": (
+                    "Optional extra context passed to the agent: a topic focus, "
+                    "client name (for coaching_brief), outreach target name or company "
+                    "(for marketing_outreach), or a search/analysis query. "
+                    "Leave empty string if not applicable."
+                ),
+            },
+            "confirmation": {
+                "type": "string",
+                "description": (
+                    "Spoken confirmation for Steven. One sentence, max 15 words. "
+                    "British English. No markdown or lists. "
+                    "Example: 'Starting your marketing brief now.' "
+                    "or 'On it — generating outreach for Jon Speer.'"
+                ),
+            },
+        },
+        "required": ["agent", "override", "confirmation"],
+    },
 }
 
-def _detect_intent(text: str):
-    """Return (agent_id, client_name_or_override) or (None, None)."""
-    t = text.lower()
-    for agent, patterns in _INTENT_PATTERNS.items():
-        for pat in patterns:
-            if re.search(pat, t):
-                # For coaching brief, try to extract a name
-                if agent == "coaching_brief":
-                    m = re.search(r'(?:brief for|prep for|about)\s+([A-Z][a-z]+ ?[A-Z]?[a-z]*)', text)
-                    override = m.group(1) if m else ""
-                    return agent, override
-                # For content, pass the full query as override
-                if agent == "content":
-                    return agent, text
-                if agent == "briefing":
-                    return agent, text   # pass full query so agent focuses on it
-                # Marketing: detect sub-mode and optional target
-                if agent == "marketing":
-                    tl = text.lower()
-                    if re.search(r'\b(outreach|pitch|write to|email to|contact)\b', tl):
-                        m = re.search(
-                            r'(?:outreach (?:for|to)|pitch (?:to|for)|write to|email to|contact)\s+'
-                            r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)',
-                            text
-                        )
-                        target = m.group(1) if m else ""
-                        return "marketing_outreach", target
-                    if re.search(r'\b(plan|30.60.90|ninety.day)\b', tl):
-                        return "marketing_plan", ""
-                    if re.search(r'\b(event|conference|calendar)\b', tl):
-                        return "marketing_events", ""
-                    if re.search(r'\b(pipeline|leads|prospects)\b', tl):
-                        return "marketing_scorecard", ""
-                    return "marketing", ""   # default → brief
-                return agent, ""
-    return None, None
+_CLASSIFY_SYSTEM = (
+    "You are the intent classifier for Athena, a voice assistant for Latitude MedTech LLC. "
+    "Steven Tran (CEO) is speaking to you. Your only job is to decide whether his request "
+    "should trigger a background agent, or whether you should answer conversationally.\n\n"
+    "TRIGGER an agent only when Steven explicitly asks to RUN a task: "
+    "'generate', 'draft', 'write', 'run', 'start', 'give me my [X]', 'what's the pipeline', "
+    "'outreach for [person]', 'brief for [client]', etc.\n\n"
+    "DO NOT trigger an agent for:\n"
+    "- Questions you can answer directly ('What is ISO 13485?', 'How long does a 510k take?')\n"
+    "- Ambiguous requests where you're unsure\n"
+    "- Conversational follow-ups to previous answers\n\n"
+    "If you call trigger_agent, the 'confirmation' field is what Athena will speak aloud. "
+    "Keep it to one short sentence, British English, no markdown."
+)
+
+
+def _classify_intent(text: str, history: list):
+    """
+    Ask Claude Haiku (with tool_use) whether this query should trigger an agent.
+    Returns (agent_id, override, confirmation_text) or (None, None, None).
+    Falls through to the conversational path if classification fails or no tool is called.
+    """
+    try:
+        import anthropic as _ant
+        client = _ant.Anthropic(api_key=ANTHROPIC_API_KEY)
+        recent = history[-6:] if len(history) > 6 else history
+        resp = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=256,
+            system=_CLASSIFY_SYSTEM,
+            tools=[_AGENT_TOOL_SCHEMA],
+            tool_choice={"type": "auto"},
+            messages=recent + [{"role": "user", "content": text}],
+        )
+        for block in resp.content:
+            if getattr(block, "type", None) == "tool_use" and block.name == "trigger_agent":
+                inp = block.input
+                return (
+                    inp.get("agent"),
+                    inp.get("override", ""),
+                    inp.get("confirmation", ""),
+                )
+        return None, None, None
+    except Exception as e:
+        log.warning(f"Intent classification failed, falling through to conversation: {e}")
+        return None, None, None
 
 def _trigger_agent(agent_id: str, override: str = "") -> bool:
     """Fire an agent via the local FastAPI backend. Returns True if accepted."""
@@ -278,16 +314,18 @@ def _trigger_agent(agent_id: str, override: str = "") -> bool:
         return json.dumps({"mode": mode, "target": target}).encode()
 
     ROUTE_MAP = {
-        "content":           ("/api/agents/content",   lambda o: json.dumps({"override": o}).encode()),
-        "briefing":          ("/api/agents/briefing",  lambda o: json.dumps({"override": o}).encode()),
-        "rag":               ("/api/agents/rag",       lambda o: json.dumps({"override": o}).encode()),
-        "iso":               ("/api/agents/iso",       lambda _: json.dumps({}).encode()),
-        "coaching_brief":    ("/api/agents/brief",     lambda o: json.dumps({"client": o}).encode()),
-        "marketing":         ("/api/agents/marketing", lambda _: _marketing_payload("brief")),
-        "marketing_plan":    ("/api/agents/marketing", lambda _: _marketing_payload("plan")),
-        "marketing_events":  ("/api/agents/marketing", lambda _: _marketing_payload("events")),
-        "marketing_scorecard":("/api/agents/marketing",lambda _: _marketing_payload("scorecard")),
-        "marketing_outreach":("/api/agents/marketing", lambda t: _marketing_payload("outreach", t)),
+        "content":            ("/api/agents/content",    lambda o: json.dumps({"override": o}).encode()),
+        "briefing":           ("/api/agents/briefing",   lambda o: json.dumps({"override": o}).encode()),
+        "rag":                ("/api/agents/rag",        lambda o: json.dumps({"override": o}).encode()),
+        "iso":                ("/api/agents/iso",        lambda _: json.dumps({}).encode()),
+        "coaching_brief":     ("/api/agents/brief",      lambda o: json.dumps({"client": o}).encode()),
+        "consulting":         ("/api/agents/consulting", lambda _: json.dumps({"mode": "learn"}).encode()),
+        "ma":                 ("/api/agents/ma",         lambda o: json.dumps({"mode": "learn", "topic": o}).encode()),
+        "marketing":          ("/api/agents/marketing",  lambda _: _marketing_payload("brief")),
+        "marketing_plan":     ("/api/agents/marketing",  lambda _: _marketing_payload("plan")),
+        "marketing_events":   ("/api/agents/marketing",  lambda _: _marketing_payload("events")),
+        "marketing_scorecard":("/api/agents/marketing",  lambda _: _marketing_payload("scorecard")),
+        "marketing_outreach": ("/api/agents/marketing",  lambda t: _marketing_payload("outreach", t)),
     }
     route = ROUTE_MAP.get(agent_id)
     if not route:
@@ -313,6 +351,8 @@ _AGENT_LABELS = {
     "rag":                "RAG Ingestion",
     "iso":                "ISO 13485 Coach",
     "coaching_brief":     "Coaching Brief",
+    "consulting":         "Consulting Agent",
+    "ma":                 "M&A Intelligence",
     "marketing":          "Marketing Brief",
     "marketing_plan":     "Marketing Plan",
     "marketing_events":   "Events Calendar",
@@ -857,20 +897,25 @@ def _voice_loop():
         else:
             _emit("transcript", text=text)
 
-        # ── Intent: does this query map to an agent? ───────────────────────
-        agent_id, override = _detect_intent(text)
+        # ── Intent classification: LLM-driven, not regex ──────────────────
+        # Haiku+tool_use decides whether to dispatch an agent or fall through
+        # to the full conversational path. Classification adds ~200ms but only
+        # fires when Haiku returns a tool_use block — conversational turns
+        # proceed to streaming Sonnet as before.
+        _state = VS.THINKING
+        _emit("thinking", query=text)
+        agent_id, override, confirm = _classify_intent(text, history)
         if agent_id:
-            label = _AGENT_LABELS.get(agent_id, agent_id)
-            _state = VS.THINKING
+            ok = _trigger_agent(agent_id, override or "")
+            if not ok:
+                confirm = "I couldn't reach that agent — check the backend is running."
+            elif not confirm:
+                label = _AGENT_LABELS.get(agent_id, agent_id)
+                confirm = f"On it — starting the {label} now."
             _emit("thinking", query=text, agent=agent_id)
-            ok = _trigger_agent(agent_id, override)
-            if ok:
-                confirm = f"On it — I've started the {label} agent."
-            else:
-                confirm = "I couldn't reach that agent. Check the backend is running."
             _state = VS.SPEAKING
             _emit("speaking", response=confirm, agent=agent_id)
-            _speak_sentence(confirm)   # immediate — single sentence
+            _speak_sentence(confirm)
             history.append({"role": "user", "content": text})
             history.append({"role": "assistant", "content": confirm})
             if len(history) > 20: history = history[-20:]
