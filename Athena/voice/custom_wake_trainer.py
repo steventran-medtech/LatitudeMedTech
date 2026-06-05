@@ -1,19 +1,19 @@
-"""
+﻿"""
 Athena Custom Wake Word Trainer
 ================================
 Trains a binary OpenWakeWord classifier for "Hi Athena" and exports it as
-an ONNX model to voice/wake/hi_athena.onnx — the slot already wired in
+an ONNX model to voice/wake/hi_athena.onnx â€” the slot already wired in
 voice_bridge.py's _load_wake_model().
 
 Pipeline:
-  1. GENERATE   — synthesise positive examples via Kokoro TTS (varied speed/pitch)
-  2. AUGMENT    — add room reverb, mic noise, and time-stretch variations
-  3. NEGATIVE   — pull background clips from voice/query_telemetry.jsonl silence windows
-  4. FEATURES   — extract mel-spectrogram embeddings (Google speech_embedding model)
-  5. TRAIN      — fit a lightweight binary MLP classifier
-  6. EXPORT     — save ONNX model + quantised int8 copy
-  7. VALIDATE   — smoke-test against a held-out 20% split; require >90% accuracy
-  8. DEPLOY     — copy to voice/wake/hi_athena.onnx; bridge picks it up on next start
+  1. GENERATE   â€” synthesise positive examples via Kokoro TTS (varied speed/pitch)
+  2. AUGMENT    â€” add room reverb, mic noise, and time-stretch variations
+  3. NEGATIVE   â€” pull background clips from voice/query_telemetry.jsonl silence windows
+  4. FEATURES   â€” extract mel-spectrogram embeddings (Google speech_embedding model)
+  5. TRAIN      â€” fit a lightweight binary MLP classifier
+  6. EXPORT     â€” save ONNX model + quantised int8 copy
+  7. VALIDATE   â€” smoke-test against a held-out 20% split; require >90% accuracy
+  8. DEPLOY     â€” copy to voice/wake/hi_athena.onnx; bridge picks it up on next start
 
 Usage:
   python custom_wake_trainer.py                 # full pipeline
@@ -26,7 +26,7 @@ Dependencies (voice venv):
 
 Note on data volume:
   OpenWakeWord recommends 500-2000 positive examples after augmentation.
-  This script generates 60 base TTS clips × 6 augmentation variants = 360 samples.
+  This script generates 60 base TTS clips Ã— 6 augmentation variants = 360 samples.
   Collecting 20+ real "Hi Athena" recordings and adding them improves accuracy further.
   Place real WAV recordings (16 kHz mono) in voice/samples/wake/ to auto-include them.
 """
@@ -47,7 +47,7 @@ from pathlib import Path
 
 import numpy as np
 
-# ── Path bootstrap ─────────────────────────────────────────────────────────────
+# â”€â”€ Path bootstrap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 VOICE_DIR  = Path(__file__).resolve().parent
 ATHENA     = VOICE_DIR.parent
@@ -55,7 +55,8 @@ WAKE_DIR   = VOICE_DIR / "wake"
 SAMPLES    = VOICE_DIR / "samples"
 REAL_WAKE  = SAMPLES / "wake"   # user places real "Hi Athena" WAVs here
 SYNTH_DIR  = VOICE_DIR / "wake_synth"
-MODEL_OUT  = WAKE_DIR / "hi_athena.onnx"
+MODEL_PKL  = WAKE_DIR / "hi_athena.pkl"
+MODEL_OUT  = MODEL_PKL
 LOG_FILE   = ATHENA / "logs" / "wake_word_trainer.log"
 
 KOKORO_PORT   = 8002
@@ -75,7 +76,7 @@ def _log(msg: str):
         pass
 
 
-# ── Dependency gate ────────────────────────────────────────────────────────────
+# â”€â”€ Dependency gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _check_deps() -> bool:
     """Return True if all required packages are importable."""
@@ -91,9 +92,9 @@ def _check_deps() -> bool:
     return True
 
 
-# ── Phase 1: TTS synthesis ────────────────────────────────────────────────────
+# â”€â”€ Phase 1: TTS synthesis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-# Phrase variations — phonetically equivalent but different prosody
+# Phrase variations â€” phonetically equivalent but different prosody
 _PHRASES = [
     "Hi Athena",
     "Hey Athena",
@@ -164,9 +165,9 @@ def generate_positives() -> list:
     try:
         urllib.request.urlopen(f"http://127.0.0.1:{KOKORO_PORT}/health", timeout=2)
         kokoro_up = True
-        _log("  Kokoro server reachable — using high-quality TTS")
+        _log("  Kokoro server reachable â€” using high-quality TTS")
     except Exception:
-        _log("  Kokoro not running — using pyttsx3 fallback")
+        _log("  Kokoro not running â€” using pyttsx3 fallback")
 
     idx = 0
     for phrase in _PHRASES:
@@ -191,7 +192,7 @@ def generate_positives() -> list:
     return paths
 
 
-# ── Phase 2: Augmentation ─────────────────────────────────────────────────────
+# â”€â”€ Phase 2: Augmentation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _add_noise(audio: np.ndarray, snr_db: float) -> np.ndarray:
     """Add Gaussian white noise at given SNR."""
@@ -262,7 +263,7 @@ def augment_positives(base_paths: list) -> list:
     return all_paths
 
 
-# ── Phase 3: Negative examples ────────────────────────────────────────────────
+# â”€â”€ Phase 3: Negative examples â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def collect_negatives() -> list:
     """
@@ -307,7 +308,7 @@ def collect_negatives() -> list:
     return paths
 
 
-# ── Phase 4 & 5: Feature extraction + training ───────────────────────────────
+# â”€â”€ Phase 4 & 5: Feature extraction + training â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def extract_embeddings(wav_paths: list, label: int) -> tuple:
     """
@@ -445,9 +446,9 @@ def train_classifier(pos_paths: list, neg_paths: list) -> object:
     return clf, acc
 
 
-# ── Phase 6 & 7: ONNX export + validation ────────────────────────────────────
+# â”€â”€ Phase 6 & 7: ONNX export + validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-def export_onnx(clf, feature_dim: int) -> Path:
+def export_model(clf) -> Path:
     """
     Export the sklearn pipeline to ONNX via skl2onnx.
     Falls back to joblib pickle if skl2onnx is not installed.
@@ -466,12 +467,12 @@ def export_onnx(clf, feature_dim: int) -> Path:
         pkl_out = SYNTH_DIR / "hi_athena_candidate.pkl"
         with open(pkl_out, "wb") as f:
             pickle.dump(clf, f)
-        _log(f"  skl2onnx not available — model saved as pickle: {pkl_out}")
+        _log(f"  skl2onnx not available â€” model saved as pickle: {pkl_out}")
         _log("  Install skl2onnx to produce a proper ONNX model for OWW")
         return pkl_out
 
 
-# ── Phase 8: Deploy ───────────────────────────────────────────────────────────
+# â”€â”€ Phase 8: Deploy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def deploy(model_path: Path, accuracy: float, threshold: float = 0.90):
     """
@@ -479,7 +480,7 @@ def deploy(model_path: Path, accuracy: float, threshold: float = 0.90):
     The bridge picks it up on next restart (no code change needed).
     """
     if accuracy < threshold:
-        _log(f"  Accuracy {accuracy:.1%} below {threshold:.0%} threshold — NOT deploying")
+        _log(f"  Accuracy {accuracy:.1%} below {threshold:.0%} threshold â€” NOT deploying")
         _log("  Collect more training data and re-run")
         return False
     WAKE_DIR.mkdir(parents=True, exist_ok=True)
@@ -490,15 +491,15 @@ def deploy(model_path: Path, accuracy: float, threshold: float = 0.90):
     return True
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def run(generate_only: bool = False, validate_only: bool = False):
     _log("=" * 60)
-    _log("Athena Custom Wake Word Trainer — 'Hi Athena'")
+    _log("Athena Custom Wake Word Trainer â€” 'Hi Athena'")
     _log("=" * 60)
 
     if not _check_deps():
-        _log("Aborting — install missing packages first")
+        _log("Aborting â€” install missing packages first")
         sys.exit(1)
 
     if validate_only:
@@ -512,7 +513,7 @@ def run(generate_only: bool = False, validate_only: bool = False):
     # Full pipeline
     pos_paths = generate_positives()
     if not pos_paths:
-        _log("No positive samples generated — is Kokoro running?")
+        _log("No positive samples generated â€” is Kokoro running?")
         sys.exit(1)
 
     pos_paths = augment_positives(pos_paths)
@@ -537,3 +538,4 @@ if __name__ == "__main__":
     parser.add_argument("--validate-only", action="store_true")
     args = parser.parse_args()
     run(generate_only=args.generate_only, validate_only=args.validate_only)
+

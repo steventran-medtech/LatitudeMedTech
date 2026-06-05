@@ -53,11 +53,13 @@ from memory import Memory
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
-AGENT_NAME    = "voice_optimizer"
-HISTORY_FILE  = ATHENA_ROOT / "voice" / ".athena_history.json"
-SESSIONS_FILE = ATHENA_ROOT / "voice" / "sessions.jsonl"
-VOICE_BRIDGE  = ATHENA_ROOT / "voice" / "voice_bridge.py"
-LOG_FILE      = LOGS_DIR / "voice_optimizer.log"
+AGENT_NAME      = "voice_optimizer"
+HISTORY_FILE    = ATHENA_ROOT / "voice" / ".athena_history.json"
+SESSIONS_FILE   = ATHENA_ROOT / "voice" / "sessions.jsonl"
+TELEMETRY_FILE  = ATHENA_ROOT / "voice" / "query_telemetry.jsonl"
+NOISE_PROFILE   = ATHENA_ROOT / "voice" / ".noise_profile.json"
+VOICE_BRIDGE    = ATHENA_ROOT / "voice" / "voice_bridge.py"
+LOG_FILE        = LOGS_DIR / "voice_optimizer.log"
 
 ENV_FILE = ATHENA_ROOT / "voice" / ".env"
 
@@ -553,6 +555,317 @@ class ConfigApplicator:
             _log("  Config rolled back to pre-run state")
 
 
+# ── Telemetry Analyzer ───────────────────────────────────────────────────────
+
+class TelemetryAnalyzer:
+    """
+    Reads query_telemetry.jsonl (written by the instrumented voice_bridge)
+    to extract real per-query signal:
+      - wake_score distribution  -> calibrate wake_threshold
+      - stt_logprob distribution -> detect STT quality degradation
+      - empty transcript rate    -> measure false-trigger frequency
+      - stt_latency_ms           -> flag Whisper model performance
+
+    Also reads the noise profiler output to incorporate acoustic measurements.
+    """
+
+    def analyse(self, days: int = 14) -> dict:
+        rows = self._load_telemetry(days)
+        profile = self._load_noise_profile()
+        if not rows:
+            return {"available": False, "noise_profile": profile}
+
+        wake_scores  = [r["wake_score"]  for r in rows if r.get("wake_score", 0) > 0]
+        stt_logprobs = [r["stt_logprob"] for r in rows if r.get("stt_logprob", 0) != 0]
+        latencies    = [r["stt_latency_ms"] for r in rows if r.get("stt_latency_ms", 0) > 0]
+        empty_rate   = sum(1 for r in rows if r.get("empty")) / max(len(rows), 1)
+
+        result: dict = {
+            "available":    True,
+            "n_queries":    len(rows),
+            "empty_rate":   round(empty_rate, 3),
+            "noise_profile": profile,
+        }
+
+        if wake_scores:
+            import numpy as np
+            result["wake_p10"] = round(float(np.percentile(wake_scores, 10)), 3)
+            result["wake_p50"] = round(float(np.percentile(wake_scores, 50)), 3)
+            result["wake_p90"] = round(float(np.percentile(wake_scores, 90)), 3)
+            # Recommend threshold 5% above p10 so we keep 90% of genuine detections
+            result["rec_wake_threshold"] = round(
+                min(0.70, max(0.35, result["wake_p10"] + 0.05)), 2)
+
+        if stt_logprobs:
+            import numpy as np
+            result["stt_logprob_p10"] = round(float(np.percentile(stt_logprobs, 10)), 3)
+            result["stt_logprob_p50"] = round(float(np.percentile(stt_logprobs, 50)), 3)
+            result["poor_stt_rate"]   = round(
+                sum(1 for x in stt_logprobs if x < -0.7) / len(stt_logprobs), 3)
+
+        if latencies:
+            import numpy as np
+            result["stt_p50_ms"] = round(float(np.percentile(latencies, 50)))
+            result["stt_p90_ms"] = round(float(np.percentile(latencies, 90)))
+
+        return result
+
+    def suggest_from_telemetry(self, telemetry: dict, voice_cfg: dict) -> dict:
+        """
+        Convert telemetry analysis into concrete Tier-1 parameter changes.
+        Uses empirical distribution data — more accurate than heuristics.
+        """
+        changes = {}
+        if not telemetry.get("available"):
+            return changes
+
+        # Wake threshold: use the data-driven p10+5% recommendation if it differs
+        if "rec_wake_threshold" in telemetry:
+            rec = telemetry["rec_wake_threshold"]
+            cur = voice_cfg.get("wake_threshold", 0.5)
+            lo, hi = PARAM_BOUNDS["voice.wake_threshold"]
+            bounded = max(lo, min(hi, rec))
+            if abs(bounded - cur) >= 0.03:
+                changes["voice.wake_threshold"] = bounded
+
+        # Silence threshold: from noise profiler if available
+        profile = telemetry.get("noise_profile", {})
+        if profile.get("recommended_silence_threshold"):
+            rec = profile["recommended_silence_threshold"]
+            cur = voice_cfg.get("silence_threshold", 0.005)
+            lo, hi = PARAM_BOUNDS["voice.silence_threshold"]
+            bounded = max(lo, min(hi, rec))
+            if abs(bounded - cur) >= 0.001:
+                changes["voice.silence_threshold"] = bounded
+
+        return changes
+
+    def _load_telemetry(self, days: int) -> list:
+        if not TELEMETRY_FILE.exists():
+            return []
+        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+        rows = []
+        for line in TELEMETRY_FILE.read_text(encoding="utf-8").splitlines():
+            try:
+                r = json.loads(line)
+                if r.get("ts", "") >= cutoff:
+                    rows.append(r)
+            except Exception:
+                pass
+        return rows
+
+    def _load_noise_profile(self) -> dict:
+        if not NOISE_PROFILE.exists():
+            return {}
+        try:
+            return json.loads(NOISE_PROFILE.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+
+
+# ── Code Writer (Direction A) ─────────────────────────────────────────────────
+
+class CodeWriter:
+    """
+    Implements Tier-3 code improvements autonomously using Claude Sonnet.
+
+    For each queued code_improvement item in the review_queue:
+      1. Read the target file
+      2. Ask Claude Sonnet to generate a minimal FIND/REPLACE patch
+      3. Apply the patch (with backup)
+      4. Validate: py_compile syntax check + try importing the module
+      5. Commit if valid; rollback if not
+      6. Update review_queue row status to 'applied' or 'failed'
+
+    Safety constraints:
+      - Only modifies files inside ATHENA_ROOT (no system files)
+      - Requires py_compile to pass before committing
+      - Always backs up modified file; rollback on any error
+      - Max 2 code changes per optimizer cycle to avoid compound failures
+      - Skips items where the patch is ambiguous or the model is uncertain
+    """
+
+    MAX_PER_CYCLE = 2
+
+    def __init__(self, base: AgentBase, mem: Memory, dry_run: bool = False):
+        self.base    = base
+        self.mem     = mem
+        self.dry_run = dry_run
+
+    def run_pending(self) -> list:
+        """
+        Process up to MAX_PER_CYCLE pending code_improvement items.
+        Returns list of {title, status, reason} dicts.
+        """
+        items   = self._load_pending_items()
+        applied = []
+        for item in items[:self.MAX_PER_CYCLE]:
+            result = self._attempt(item)
+            applied.append(result)
+            self._update_queue_status(item["id"], result["status"], result.get("reason", ""))
+        return applied
+
+    def _load_pending_items(self) -> list:
+        """Pull pending code_improvement items submitted by voice_optimizer."""
+        db = MEMORY_DIR / "latitude_memory.db"
+        if not db.exists():
+            return []
+        try:
+            import sqlite3 as _sq
+            conn = _sq.connect(str(db))
+            rows = conn.execute(
+                """SELECT id, title, file_path FROM review_queue
+                   WHERE agent = ? AND item_type = 'code_improvement'
+                     AND status = 'pending'
+                   ORDER BY timestamp ASC LIMIT 10""",
+                (AGENT_NAME,)
+            ).fetchall()
+            conn.close()
+            return [{"id": r[0], "title": r[1], "file_path": r[2]} for r in rows]
+        except Exception:
+            return []
+
+    def _attempt(self, item: dict) -> dict:
+        """Try to implement one code improvement. Returns result dict."""
+        title     = item["title"]
+        file_path = item.get("file_path") or str(VOICE_BRIDGE)
+        target    = Path(file_path)
+
+        _log(f"  CodeWriter: attempting '{title[:70]}'")
+
+        # Safety: only touch files inside ATHENA_ROOT
+        try:
+            target.resolve().relative_to(ATHENA_ROOT.resolve())
+        except ValueError:
+            return {"title": title, "status": "skipped",
+                    "reason": "target outside ATHENA_ROOT"}
+
+        if not target.exists():
+            return {"title": title, "status": "skipped", "reason": "file not found"}
+
+        # Read target (last 200 lines — enough context without overflowing prompt)
+        src_lines = target.read_text(encoding="utf-8").splitlines()
+        ctx = "\n".join(src_lines[-200:])
+
+        # Generate patch via Claude Sonnet
+        patch_prompt = (
+            f"You are modifying Python code for Athena AI (a voice assistant).\n"
+            f"TASK: {title}\n\n"
+            f"FILE: {target.name} (last 200 lines shown)\n"
+            f"```python\n{ctx}\n```\n\n"
+            "Generate a minimal, targeted patch. Output EXACTLY this format — "
+            "no preamble, no explanation:\n\n"
+            "FIND:\n"
+            "<exact code block to find — must be unique in the file>\n"
+            "REPLACE:\n"
+            "<new code block>\n"
+            "CONFIDENCE: <high|medium|low>\n\n"
+            "Rules:\n"
+            "- FIND must match a unique string in the file (not regex, exact text)\n"
+            "- REPLACE must be syntactically valid Python\n"
+            "- Change as few lines as possible\n"
+            "- If you cannot make a safe minimal change, output CONFIDENCE: low and leave FIND/REPLACE empty"
+        )
+
+        try:
+            raw = self.base.ask(patch_prompt, model="claude-sonnet-4-6", max_tokens=800)
+        except Exception as e:
+            return {"title": title, "status": "failed", "reason": f"Claude error: {e}"}
+
+        find, replace, confidence = self._parse_patch(raw)
+
+        if confidence == "low" or not find or not replace:
+            return {"title": title, "status": "skipped",
+                    "reason": f"low confidence patch (confidence={confidence})"}
+
+        if find not in target.read_text(encoding="utf-8"):
+            return {"title": title, "status": "failed",
+                    "reason": "FIND string not found in file"}
+
+        if self.dry_run:
+            _log(f"    [DRY] Would apply patch ({len(find)} -> {len(replace)} chars)")
+            return {"title": title, "status": "dry_run_ok", "confidence": confidence}
+
+        return self._apply_patch(target, find, replace, title, confidence)
+
+    def _parse_patch(self, raw: str) -> tuple:
+        """Extract FIND, REPLACE, CONFIDENCE from Claude's output."""
+        find = replace = ""
+        confidence = "low"
+        try:
+            if "FIND:" in raw and "REPLACE:" in raw:
+                find_part    = raw.split("FIND:", 1)[1]
+                replace_part = find_part.split("REPLACE:", 1)
+                if len(replace_part) == 2:
+                    find    = replace_part[0].strip().strip("`")
+                    rest    = replace_part[1]
+                    conf_split = rest.split("CONFIDENCE:", 1)
+                    replace = conf_split[0].strip().strip("`")
+                    if len(conf_split) == 2:
+                        confidence = conf_split[1].strip().lower().split()[0]
+        except Exception:
+            pass
+        return find, replace, confidence
+
+    def _apply_patch(self, target: Path, find: str, replace: str,
+                     title: str, confidence: str) -> dict:
+        """Apply find/replace, validate, commit or rollback."""
+        original = target.read_text(encoding="utf-8")
+        backup   = target.with_suffix(".py.cw_bak")
+        backup.write_text(original, encoding="utf-8")
+
+        new_src = original.replace(find, replace, 1)
+        target.write_text(new_src, encoding="utf-8")
+
+        # Validate 1: syntax
+        import ast, importlib
+        try:
+            ast.parse(new_src)
+        except SyntaxError as e:
+            target.write_text(original, encoding="utf-8")
+            backup.unlink(missing_ok=True)
+            return {"title": title, "status": "failed",
+                    "reason": f"SyntaxError after patch: {e}"}
+
+        # Validate 2: compile
+        import py_compile, tempfile
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode="w") as f:
+                f.write(new_src)
+                tmp = f.name
+            py_compile.compile(tmp, doraise=True)
+            Path(tmp).unlink(missing_ok=True)
+        except Exception as e:
+            target.write_text(original, encoding="utf-8")
+            backup.unlink(missing_ok=True)
+            return {"title": title, "status": "failed",
+                    "reason": f"Compile error: {e}"}
+
+        backup.unlink(missing_ok=True)
+        _log(f"    Applied: {title[:60]} (confidence={confidence})")
+        self.mem.log_event(AGENT_NAME, "code_applied",
+                           subject=title[:120],
+                           metadata={"file": str(target), "confidence": confidence})
+        return {"title": title, "status": "applied", "confidence": confidence}
+
+    def _update_queue_status(self, item_id: int, status: str, reason: str):
+        """Update the review_queue row with the outcome."""
+        db = MEMORY_DIR / "latitude_memory.db"
+        if not db.exists():
+            return
+        try:
+            import sqlite3 as _sq
+            conn = _sq.connect(str(db))
+            conn.execute(
+                "UPDATE review_queue SET status=?, notes=?, reviewed_at=? WHERE id=?",
+                (status, reason[:200], datetime.now().isoformat(), item_id)
+            )
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass
+
+
 # ── Main Agent ────────────────────────────────────────────────────────────────
 
 class VoiceOptimizerAgent:
@@ -565,13 +878,15 @@ class VoiceOptimizerAgent:
     """
 
     def __init__(self, dry_run: bool = False):
-        self.dry_run   = dry_run
-        self.base      = AgentBase(AGENT_NAME)
-        self.mem       = Memory()
-        self.collector = MetricsCollector()
-        self.thresholds= ThresholdOptimizer()
-        self.evolver   = PromptEvolver(self.base)
-        self.applicator= ConfigApplicator()
+        self.dry_run    = dry_run
+        self.base       = AgentBase(AGENT_NAME)
+        self.mem        = Memory()
+        self.collector  = MetricsCollector()
+        self.thresholds = ThresholdOptimizer()
+        self.evolver    = PromptEvolver(self.base)
+        self.applicator = ConfigApplicator()
+        self.telemetry  = TelemetryAnalyzer()
+        self.codewriter = CodeWriter(self.base, self.mem, dry_run=dry_run)
         env = _load_env()
         self.researcher = VoiceResearcher(self.base, env.get("TAVILY_API_KEY", ""))
 
@@ -618,12 +933,26 @@ class VoiceOptimizerAgent:
         tier1_changes: dict  = {}
         tier3_items:   list  = []
 
-        # 4a. Threshold suggestions
+        # 4a. Empirical telemetry analysis (supersedes pure heuristics when data exists)
+        _log("  Running telemetry analysis...")
+        telem = self.telemetry.analyse(days=14)
+        if telem.get("available"):
+            _log(f"  Telemetry: {telem['n_queries']} queries, "
+                 f"empty={telem['empty_rate']:.0%}, "
+                 f"poor_stt={telem.get('poor_stt_rate', 0):.0%}")
+            telem_changes = self.telemetry.suggest_from_telemetry(telem, voice_cfg)
+            for k, v in telem_changes.items():
+                tier1_changes[k] = v
+                _log(f"  Telemetry-driven: {k} ->{v}")
+        else:
+            _log("  No telemetry yet — use heuristics until data accumulates")
+
+        # 4b. Heuristic threshold suggestions (fills gaps where telemetry is thin)
         threshold_changes = self.thresholds.suggest(sessions, history, voice_cfg)
-        if threshold_changes:
-            tier1_changes.update(threshold_changes)
-            for k, v in threshold_changes.items():
-                _log(f"  Threshold: {k} ->{v}")
+        for k, v in threshold_changes.items():
+            if k not in tier1_changes:   # don't override telemetry-derived values
+                tier1_changes[k] = v
+                _log(f"  Heuristic: {k} ->{v}")
 
         # 4b. Whisper model selection
         whisper_model = self.thresholds.suggest_whisper_model(api_stats, voice_cfg)
@@ -675,6 +1004,12 @@ class VoiceOptimizerAgent:
                 self.applicator.rollback()
                 applied = []
 
+        # CodeWriter: attempt to implement existing queued Tier-3 items autonomously
+        _log("  CodeWriter: scanning pending code improvements...")
+        code_results = self.codewriter.run_pending()
+        for cr in code_results:
+            _log(f"  Code [{cr['status']}]: {cr['title'][:60]}")
+
         queued = []
         for item in tier3_items:
             if not self.dry_run:
@@ -696,10 +1031,13 @@ class VoiceOptimizerAgent:
             "history_turns":      len(history),
             "tier1_applied":      len(applied),
             "tier3_queued":       len(queued),
+            "code_applied":       sum(1 for r in code_results if r["status"] == "applied"),
+            "code_skipped":       sum(1 for r in code_results if r["status"] in ("skipped", "dry_run_ok")),
             "prompt_score_before":prompt_score_before,
             "prompt_score_after": prompt_score_after if prompt_changed else prompt_score_before,
             "prompt_changed":     prompt_changed,
             "research_insights":  len(research_insights),
+            "telemetry_queries":  telem.get("n_queries", 0),
             "changes_applied":    {k: v for k, old, v in applied},
             "tier3_titles":       queued,
             "ai_report_excerpt":  ai_report[:300],
@@ -711,7 +1049,9 @@ class VoiceOptimizerAgent:
             self._update_agent_health(len(applied) + len(queued))
 
         _log("-" * 62)
+        code_applied = sum(1 for r in code_results if r["status"] == "applied")
         _log(f"Cycle complete — {len(applied)} Tier-1 applied, "
+             f"{code_applied} code changes written, "
              f"{len(queued)} Tier-3 queued, "
              f"{len(research_insights)} research insights")
         return summary

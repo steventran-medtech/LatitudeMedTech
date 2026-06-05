@@ -31,6 +31,7 @@ import urllib.request
 import urllib.error
 from collections import deque
 
+import hashlib
 import numpy as np
 import sounddevice as sd
 import soundfile as sf
@@ -538,13 +539,32 @@ _session_stats = {
     "latencies_ms":     [],
 }
 
-def _track_query(latency_ms: float, empty: bool = False):
-    """Log per-query stats; adjust silence threshold if too many false starts."""
+def _track_query(latency_ms: float, empty: bool = False,
+                 stt_logprob: float = 0.0, wake_score: float = 0.0,
+                 transcript: str = "", stt_ms: float = 0.0):
+    """
+    Log per-query stats; adjust silence threshold if too many false starts.
+    Now also writes rich telemetry to query_telemetry.jsonl for ML training.
+    """
     global SILENCE_THRESHOLD
     _session_stats["queries"] += 1
     _session_stats["latencies_ms"].append(latency_ms)
     if empty:
         _session_stats["empty_transcripts"] += 1
+
+    # Write ML telemetry for every query — used by voice_optimizer & whisper_finetuner
+    _log_query_telemetry({
+        "ts":                datetime.now().isoformat(),
+        "transcript_words":  len(transcript.split()) if transcript else 0,
+        "stt_logprob":       round(stt_logprob, 4),
+        "wake_score":        round(wake_score, 4),
+        "stt_latency_ms":    round(stt_ms),
+        "total_latency_ms":  round(latency_ms),
+        "empty":             empty,
+        "silence_threshold": SILENCE_THRESHOLD,
+        "wake_threshold":    WAKE_THRESHOLD,
+        "whisper_model":     WHISPER_MODEL,
+    })
 
     # Self-optimise: if >40% of activations produce empty transcripts,
     # the silence threshold is too low — tighten it to reduce false triggers.
@@ -563,16 +583,60 @@ def _track_query(latency_ms: float, empty: bool = False):
         _mem.log_event("voice_bridge", "self_optimise",
                        metadata={"avg_latency_ms": round(avg_ms),
                                  "empty_rate": round(empty_rate if q >= 10 else 0, 3),
-                                 "silence_threshold": SILENCE_THRESHOLD})
+                                 "silence_threshold": SILENCE_THRESHOLD,
+                                 "avg_stt_logprob": round(stt_logprob, 3),
+                                 "avg_wake_score": round(wake_score, 3)})
 
 # ── Wake word ─────────────────────────────────────────────────────────────────
 
+
+class _SklearnWakeDetector:
+    """
+    OWW-compatible wrapper for the sklearn pipeline trained by custom_wake_trainer.py.
+    Mirrors Model.predict() / reset() so the voice loop needs no changes.
+    Loaded when voice/wake/hi_athena.pkl exists (preferred over ONNX fallback).
+    predict(chunk) -> {"hi_athena": float}
+    """
+
+    def __init__(self, clf, n_history: int = 5):
+        from openwakeword.utils import AudioFeatures
+        self._clf = clf
+        self._af  = AudioFeatures()
+        self._buf = []
+        self._n   = n_history
+
+    def predict(self, audio_chunk: np.ndarray) -> dict:
+        CLIP = 16000
+        try:
+            i16 = audio_chunk.astype(np.int16)
+            i16 = np.pad(i16, (0, max(0, CLIP - len(i16))))[:CLIP]
+            emb = np.array(self._af.embed_clips(i16.reshape(1, -1)))  # (1,3,96)
+            self._buf.append(emb.reshape(1, -1))
+            if len(self._buf) > self._n:
+                self._buf.pop(0)
+            avg  = np.mean(np.concatenate(self._buf), axis=0, keepdims=True)
+            prob = self._clf.predict_proba(avg)[0][1]
+            return {"hi_athena": float(prob)}
+        except Exception:
+            return {"hi_athena": 0.0}
+
+    def reset(self):
+        self._buf.clear()
+
+
 def _load_wake_model():
     try:
+        custom_pkl  = ATHENA / "voice" / "wake" / "hi_athena.pkl"
+        custom_onnx = ATHENA / "voice" / "wake" / "hi_athena.onnx"
+        if custom_pkl.exists():
+            import pickle
+            with open(custom_pkl, "rb") as f:
+                clf = pickle.load(f)
+            _emit("loading", message="Custom 'Hi Athena' wake word model loaded")
+            return _SklearnWakeDetector(clf)
         from openwakeword.model import Model
-        custom = ATHENA / "voice" / "wake" / "hi_athena.onnx"
-        if custom.exists():
-            return Model(wakeword_models=[str(custom)], inference_framework="onnx")
+        if custom_onnx.exists():
+            return Model(wakeword_models=[str(custom_onnx)], inference_framework="onnx")
         return Model(wakeword_models=["alexa"], inference_framework="onnx")
     except Exception as e:
         _emit("error", message=f"Wake word model failed: {e}")
@@ -610,7 +674,8 @@ def _preload_models():
 
 def _listen_for_wake(oww_model):
     """
-    Stream mic → resample → openwakeword. Returns True on detection.
+    Stream mic → resample → openwakeword. Returns (detected: bool, max_score: float).
+    max_score is the highest OWW confidence seen at detection — logged for threshold tuning.
     Robust: catches device errors, re-opens stream, keeps listening.
     """
     level_every = max(1, int(0.1 * DEVICE_RATE / CHUNK_NATIVE))
@@ -631,15 +696,16 @@ def _listen_for_wake(oww_model):
                     if _chunk_is_speech(rs):
                         i16 = (rs * 32768).clip(-32768, 32767).astype(np.int16)
                         pred = oww_model.predict(i16)
+                        max_score = max(pred.values()) if pred else 0.0
                         for _, score in pred.items():
                             if score >= WAKE_THRESHOLD:
-                                return True
+                                return True, round(float(max_score), 4)
         except Exception as e:
             # Audio device hiccup — wait briefly and retry instead of crashing
             _emit("level", level=0.0)
             time.sleep(retry_delay)
             retry_delay = min(retry_delay * 1.5, 3.0)  # back off up to 3s
-    return False
+    return False, 0.0
 
 # ── STT ───────────────────────────────────────────────────────────────────────
 
@@ -677,6 +743,56 @@ def _record_query():
 
 _LOW_CONFIDENCE_THRESHOLD = -0.7   # avg_logprob below this = uncertain transcript
 
+# ── ML telemetry & sample capture ────────────────────────────────────────────
+TELEMETRY_FILE = ATHENA / "voice" / "query_telemetry.jsonl"
+SAMPLES_DIR    = ATHENA / "voice" / "samples"
+
+# Reads capture_samples flag from settings.json at module load.
+# Set to true in settings.json to save WAV clips for Whisper fine-tuning.
+_CAPTURE_SAMPLES = False
+try:
+    _cfg_path = ATHENA / "settings.json"
+    if _cfg_path.exists():
+        _CAPTURE_SAMPLES = json.loads(_cfg_path.read_text(encoding="utf-8")).get(
+            "voice", {}).get("capture_samples", False)
+except Exception:
+    pass
+
+
+def _log_query_telemetry(data: dict):
+    """Append one per-query telemetry record to query_telemetry.jsonl."""
+    try:
+        with open(TELEMETRY_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(data) + "\n")
+    except Exception:
+        pass
+
+
+def _save_audio_sample(audio: np.ndarray, transcript: str, avg_logprob: float):
+    """
+    Save a WAV clip + JSON sidecar to voice/samples/ for Whisper fine-tuning.
+    Only saves when capture_samples=true and the transcript is non-empty.
+    Confident transcripts (avg_logprob > -0.5) are labelled as training-ready.
+    """
+    if not _CAPTURE_SAMPLES or not transcript.strip():
+        return
+    try:
+        SAMPLES_DIR.mkdir(parents=True, exist_ok=True)
+        ts  = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:19]
+        key = hashlib.md5(transcript.encode()).hexdigest()[:6]
+        wav_path  = SAMPLES_DIR / f"{ts}_{key}.wav"
+        meta_path = SAMPLES_DIR / f"{ts}_{key}.json"
+        sf.write(str(wav_path), audio, TARGET_RATE)
+        with open(meta_path, "w", encoding="utf-8") as f:
+            json.dump({
+                "transcript": transcript,
+                "avg_logprob": round(avg_logprob, 4),
+                "training_ready": avg_logprob > -0.5,
+                "ts": datetime.now().isoformat(),
+            }, f)
+    except Exception:
+        pass
+
 # Domain vocabulary injected as Whisper's initial_prompt.
 # Biases the decoder toward MedTech/regulatory terms before any LLM correction,
 # catching substitutions like "part of FDA 483s" → "report of FDA 483s"
@@ -693,11 +809,12 @@ _WHISPER_DOMAIN_PROMPT = (
 
 def _transcribe(whisper_model, audio):
     """
-    Transcribe audio. Returns (text, confident: bool).
+    Transcribe audio. Returns (text, confident: bool, avg_logprob: float).
     avg_logprob per segment: 0 = perfect, -1 = poor. Threshold -0.7.
+    avg_logprob is now returned so callers can log it for ML training.
     """
     if audio.size == 0:
-        return "", True
+        return "", True, 0.0
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
         tmp = f.name
     try:
@@ -712,8 +829,9 @@ def _transcribe(whisper_model, audio):
             avg_lp = sum(s.avg_logprob for s in segs) / len(segs)
             confident = avg_lp >= _LOW_CONFIDENCE_THRESHOLD
         else:
+            avg_lp  = 0.0
             confident = True
-        return text, confident
+        return text, confident, avg_lp
     finally:
         try: os.unlink(tmp)
         except: pass
@@ -1066,7 +1184,8 @@ def _voice_loop():
             _state = VS.LISTENING
             _emit("listening", message="Say 'Alexa' to activate")
 
-        if not _listen_for_wake(oww) or not _active:
+        wake_detected, wake_score = _listen_for_wake(oww)
+        if not wake_detected or not _active:
             break
 
         _state = VS.AWAKE
@@ -1083,16 +1202,23 @@ def _voice_loop():
             time.sleep(0.5)
             continue
 
+        stt_t0 = time.time()
         try:
-            text, confident = _transcribe(whisper, audio)
+            text, confident, avg_logprob = _transcribe(whisper, audio)
         except Exception as e:
             _emit("info", message=f"Transcription error (retrying): {e}")
             _state = VS.LISTENING
             _emit("listening", message="Say 'Alexa' to activate")
             continue
+        stt_ms = (time.time() - stt_t0) * 1000
 
         empty = not bool(text)
-        _track_query(0, empty=empty)
+        _track_query(0, empty=empty, stt_logprob=avg_logprob,
+                     wake_score=wake_score, transcript=text, stt_ms=stt_ms)
+
+        # Save audio clip for ML training when enabled
+        if text:
+            _save_audio_sample(audio, text, avg_logprob)
 
         if not text:
             _state = VS.LISTENING
@@ -1164,7 +1290,8 @@ def _voice_loop():
         _emit("speaking", response="…")   # UI shows speaking immediately
         response = _ask_claude_streaming(text, history, kb_ctx=kb_ctx)
         latency_ms = (time.time() - t0) * 1000
-        _track_query(latency_ms)
+        _track_query(latency_ms, stt_logprob=avg_logprob,
+                     wake_score=wake_score, transcript=text, stt_ms=stt_ms)
 
         history.append({"role": "user",      "content": text})
         history.append({"role": "assistant", "content": response})

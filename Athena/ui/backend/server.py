@@ -1426,11 +1426,17 @@ async def _resume_workflow(item_id: int, decision: str, notes: str):
         result = await asyncio.to_thread(_orchestrator().resume_coaching, thread_id, decision, notes)
         for step in result.get("steps", []):
             await manager.broadcast({"type": "agent_log", "agent": "orchestrator", "line": step})
+        # Orchestrator returns "finalized" (approved+delivered) or "rejected" — both are
+        # successful terminal states. Map to "success" so the UI doesn't show "failed".
+        orch_status = result.get("status", "")
+        ws_status = "success" if orch_status in ("finalized", "approved", "rejected") else "error"
         await manager.broadcast({"type": "agent_done", "agent": "orchestrator",
-                                 "status": result.get("status"), "ts": datetime.now().isoformat()})
+                                 "status": ws_status, "ts": datetime.now().isoformat()})
     except Exception as e:
         await manager.broadcast({"type": "agent_log", "agent": "orchestrator",
                                  "line": f"[ERROR] resume failed: {e}"})
+        await manager.broadcast({"type": "agent_done", "agent": "orchestrator",
+                                 "status": "error", "ts": datetime.now().isoformat()})
 
 @app.post("/api/review/{item_id}/approve")
 async def review_approve(item_id: int, request: Request):
