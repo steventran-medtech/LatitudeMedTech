@@ -15,7 +15,7 @@ import secrets
 import subprocess
 import asyncio
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, BackgroundTasks, Request, HTTPException
@@ -308,11 +308,49 @@ def kb_stats():
 
 # ── HR + Learning routes ──────────────────────────────────────────────────────
 
+# Canonical agent roster (label + tier) so the Workforce view always renders a
+# full row set even before the first HR Review has run.
+WORKFORCE_ROSTER = [
+    ("content",         "Content Agent",         "Manager"),
+    ("briefing",        "Briefing Agent",        "Senior Associate"),
+    ("iso",             "ISO Coach Agent",       "Manager"),
+    ("coaching",        "Coaching Brief Agent",  "Manager"),
+    ("fda",             "FDA Agent",             "Manager"),
+    ("rag",             "RAG Ingestion Agent",   "Senior Associate"),
+    ("consulting",      "Consulting Agent",      "Senior Manager"),
+    ("ma_intelligence", "M&A Intelligence Agent","Senior Manager"),
+    ("voice_bridge",    "Voice Assistant",       "Associate"),
+]
+
+
 @app.get("/api/hr/health")
 def hr_health():
     if not mem:
         return {"error": "Memory not available"}
-    return {"agents": mem.get_all_agent_health()}
+    # Stored flag/error data keyed by agent (populated by the last HR Review).
+    stored = {a["agent"]: a for a in mem.get_all_agent_health()}
+    agents = []
+    for key, label, tier in WORKFORCE_ROSTER:
+        row = dict(stored.get(key, {"agent": key, "flag_status": "green",
+                                    "error_count_7d": 0, "learning_7d": 0,
+                                    "flag_reason": None}))
+        row.setdefault("agent", key)
+        row["label"] = label
+        row["tier"]  = tier
+        # Always overlay live timestamps so they never read "Never" while
+        # activity exists in the DB under any name variant.
+        live_run   = mem.get_agent_last_run(key)
+        live_learn = mem.get_last_learning(key)
+        if live_run:
+            row["last_run"] = live_run
+        if live_learn:
+            row["last_learning"] = live_learn["timestamp"]
+        agents.append(row)
+    # Include any stored agents not in the roster (forward-compat).
+    for key, a in stored.items():
+        if key not in {k for k, _, _ in WORKFORCE_ROSTER}:
+            agents.append(a)
+    return {"agents": agents}
 
 
 @app.get("/api/hr/learning")
@@ -462,13 +500,48 @@ async def generate_document(req: DocRequest):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+# ── Figure embedding (Markdown ![alt](path) inside document content) ──────────
+FIGURES_DIR      = ATHENA / "documents" / "figures"
+MAX_FIG_WIDTH_IN = 6.1   # Letter (8.5in) minus 1.2in margins on each side
+
+
+def _resolve_figure(src: str) -> Optional[Path]:
+    """Resolve a figure referenced by ![alt](src). Tries absolute, the figures
+    dir, Athena-relative, then cwd. Returns None if nothing exists."""
+    cand = Path(src)
+    candidates = [cand] if cand.is_absolute() else [
+        FIGURES_DIR / src, ATHENA / "documents" / src, ATHENA / src, Path.cwd() / src,
+    ]
+    for c in candidates:
+        try:
+            if c.is_file():
+                return c
+        except OSError:
+            continue
+    return None
+
+
 def generate_docx(title: str, content: str, doc_type: str) -> Path:
-    """Generate branded .docx using python-docx."""
+    """Generate branded .docx using python-docx.
+
+    Content is Markdown. Supported block constructs:
+      ``# / ## / ###``     headings
+      ``- `` / ``* ``      bullets
+      ``**text**``         bold (line or inline)
+      ``---``              horizontal rule
+      ``![caption](path)`` figure (chart/diagram), centered, width-constrained,
+                           caption beneath. Render charts with
+                           ``figures.bar_chart(...)`` and reference the path.
+      ``> text``           callout / pull-stat box (shaded, left accent bar);
+                           consecutive ``>`` lines merge into one box.
+      ``| a | b |``        pipe table; a ``|---|`` separator row marks a header.
+    """
     try:
         from docx import Document
         from docx.shared import Pt, RGBColor, Inches, Cm
         from docx.enum.text import WD_ALIGN_PARAGRAPH
         from docx.enum.style import WD_STYLE_TYPE
+        from docx.enum.table import WD_TABLE_ALIGNMENT
         from docx.oxml.ns import qn
         from docx.oxml import OxmlElement
         import re
@@ -480,6 +553,7 @@ def generate_docx(title: str, content: str, doc_type: str) -> Path:
     LM_SLATE = RGBColor(0x2C, 0x3E, 0x50)
     LM_BLUE  = RGBColor(0x5B, 0x7F, 0xA6)
     LM_MUTED = RGBColor(0x8A, 0x86, 0x80)
+    LM_WHITE = RGBColor(0xFF, 0xFF, 0xFF)
 
     doc = Document()
 
@@ -541,11 +615,119 @@ def generate_docx(title: str, content: str, doc_type: str) -> Path:
     meta_para.paragraph_format.space_after = Pt(18)
 
     # ── Content ───────────────────────────────────────────────────────────────
+    def emit_runs(p, text):
+        """Add runs to paragraph p, honoring inline **bold**."""
+        for j, part in enumerate(re.split(r'\*\*(.+?)\*\*', text)):
+            if not part:
+                continue
+            r = p.add_run(part)
+            r.font.name = 'Calibri'; r.font.size = Pt(10.5)
+            if j % 2 == 1:
+                r.font.bold = True
+
+    def emit_callout(text_lines):
+        """Shaded pull-stat / callout box with a left accent bar (from > lines)."""
+        p = doc.add_paragraph()
+        pPr = p._p.get_or_add_pPr()
+        pBdr = OxmlElement('w:pBdr')
+        for edge, sz, col in (('left', '20', '5B7FA6'), ('top', '4', 'D9E1EA'),
+                              ('bottom', '4', 'D9E1EA'), ('right', '4', 'D9E1EA')):
+            e = OxmlElement('w:' + edge)
+            e.set(qn('w:val'), 'single'); e.set(qn('w:sz'), sz)
+            e.set(qn('w:space'), '8');    e.set(qn('w:color'), col)
+            pBdr.append(e)
+        pPr.append(pBdr)
+        shd = OxmlElement('w:shd')
+        shd.set(qn('w:val'), 'clear'); shd.set(qn('w:fill'), 'EFF3F7')
+        pPr.append(shd)
+        pf = p.paragraph_format
+        pf.left_indent = Inches(0.14); pf.right_indent = Inches(0.10)
+        pf.space_before = Pt(8);       pf.space_after = Pt(10)
+        for k, t in enumerate(text_lines):
+            if k:
+                p.add_run().add_break()
+            emit_runs(p, t)
+
+    def shade_cell(cell, fill):
+        tcPr = cell._tc.get_or_add_tcPr()
+        shd = OxmlElement('w:shd')
+        shd.set(qn('w:val'), 'clear'); shd.set(qn('w:fill'), fill)
+        tcPr.append(shd)
+
+    def set_table_borders(table):
+        tblPr = table._tbl.tblPr
+        borders = OxmlElement('w:tblBorders')
+        for edge in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
+            e = OxmlElement('w:' + edge)
+            e.set(qn('w:val'), 'single'); e.set(qn('w:sz'), '4')
+            e.set(qn('w:space'), '0');    e.set(qn('w:color'), 'CCCCCC')
+            borders.append(e)
+        ref = tblPr.find(qn('w:tblLook'))
+        if ref is None:
+            ref = tblPr.find(qn('w:tblCellMar'))
+        if ref is not None:
+            ref.addprevious(borders)
+        else:
+            tblPr.append(borders)
+
+    def emit_table(block):
+        """Render a Markdown pipe table; a |---| separator row marks a header."""
+        grid = [[c.strip() for c in row.strip().strip('|').split('|')] for row in block]
+        is_sep = lambda cells: all(set(c) <= set('-: ') and '-' in c
+                                   for c in cells if c != '')
+        has_header = len(grid) >= 2 and is_sep(grid[1])
+        body = ([grid[0]] + grid[2:]) if has_header else grid
+        ncols = max(len(r) for r in body)
+        table = doc.add_table(rows=0, cols=ncols)
+        table.alignment = WD_TABLE_ALIGNMENT.CENTER
+        table.allow_autofit = False
+        set_table_borders(table)
+        col_w = Inches(MAX_FIG_WIDTH_IN / ncols)
+        for ri, row in enumerate(body):
+            cells = table.add_row().cells
+            for ci in range(ncols):
+                cell = cells[ci]; cell.width = col_w
+                para = cell.paragraphs[0]
+                para.paragraph_format.space_after = Pt(2)
+                text = row[ci] if ci < len(row) else ''
+                if has_header and ri == 0:
+                    shade_cell(cell, '5B7FA6')
+                    r = para.add_run(re.sub(r'\*\*(.+?)\*\*', r'\1', text))
+                    r.font.name = 'Calibri'; r.font.size = Pt(10)
+                    r.font.bold = True;      r.font.color.rgb = LM_WHITE
+                else:
+                    if has_header and ri % 2 == 0:
+                        shade_cell(cell, 'F2F5F8')
+                    emit_runs(para, text)
+        doc.add_paragraph().paragraph_format.space_after = Pt(4)
+
     lines = content.splitlines()
-    for line in lines:
-        line = line.strip()
+    n    = len(lines)
+    idx  = 0
+    while idx < n:
+        line = lines[idx].strip()
+
         if not line:
             doc.add_paragraph()
+            idx += 1
+            continue
+
+        # Pipe table — consume the contiguous block of | … | lines
+        if line.startswith('|'):
+            block = []
+            while idx < n and lines[idx].strip().startswith('|'):
+                block.append(lines[idx].strip())
+                idx += 1
+            emit_table(block)
+            continue
+
+        # Callout / pull-stat — consume contiguous > lines
+        if line.startswith('>'):
+            quote = []
+            while idx < n and lines[idx].strip().startswith('>'):
+                quote.append(lines[idx].strip()[1:].strip())
+                idx += 1
+            emit_callout(quote)
             continue
 
         # H1
@@ -553,38 +735,36 @@ def generate_docx(title: str, content: str, doc_type: str) -> Path:
             p    = doc.add_heading(line[2:], level=1)
             p.runs[0].font.color.rgb = LM_BLACK
             p.runs[0].font.name = 'Calibri'
-            continue
+            idx += 1; continue
 
         # H2
         if line.startswith('## '):
             p    = doc.add_heading(line[3:], level=2)
             p.runs[0].font.color.rgb = LM_BLUE
             p.runs[0].font.name = 'Calibri'
-            continue
+            idx += 1; continue
 
         # H3
         if line.startswith('### '):
             p    = doc.add_heading(line[4:], level=3)
             p.runs[0].font.color.rgb = LM_SLATE
             p.runs[0].font.name = 'Calibri'
-            continue
+            idx += 1; continue
 
-        # Bullet
+        # Bullet (inline bold supported)
         if line.startswith('- ') or line.startswith('* '):
-            p   = doc.add_paragraph(style='List Bullet')
-            run = p.add_run(line[2:])
-            run.font.name = 'Calibri'
-            run.font.size = Pt(10.5)
-            continue
+            p = doc.add_paragraph(style='List Bullet')
+            emit_runs(p, line[2:])
+            idx += 1; continue
 
-        # Bold paragraph
-        if line.startswith('**') and line.endswith('**'):
+        # Whole-line bold paragraph (single bold span only)
+        if line.startswith('**') and line.endswith('**') and line.count('**') == 2:
             p   = doc.add_paragraph()
             run = p.add_run(line[2:-2])
             run.font.bold = True
             run.font.name = 'Calibri'
             run.font.size = Pt(10.5)
-            continue
+            idx += 1; continue
 
         # Horizontal rule
         if line.startswith('---'):
@@ -598,20 +778,46 @@ def generate_docx(title: str, content: str, doc_type: str) -> Path:
             bottom.set(qn('w:color'), '5B7FA6')
             pBdr.append(bottom)
             pPr.append(pBdr)
-            continue
+            idx += 1; continue
 
-        # Normal paragraph — handle inline bold
+        # Figure — ![caption](path) on its own line
+        img = re.match(r'^!\[(.*?)\]\((.+?)\)\s*$', line)
+        if img:
+            alt, src = img.group(1).strip(), img.group(2).strip()
+            fig_path = _resolve_figure(src)
+            if fig_path is None:
+                miss = doc.add_paragraph()
+                mrun = miss.add_run(f"[missing figure: {src}]")
+                mrun.font.name = 'Calibri'; mrun.font.size = Pt(9)
+                mrun.font.italic = True;    mrun.font.color.rgb = LM_MUTED
+                idx += 1; continue
+            # Constrain to content width; never upscale a smaller image
+            width_in = MAX_FIG_WIDTH_IN
+            try:
+                from PIL import Image as _PILImage
+                with _PILImage.open(fig_path) as im:
+                    width_in = min(MAX_FIG_WIDTH_IN, im.width / 96.0)
+            except Exception:
+                pass
+            doc.add_picture(str(fig_path), width=Inches(width_in))
+            pic = doc.paragraphs[-1]
+            pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            pic.paragraph_format.space_before = Pt(6)
+            pic.paragraph_format.space_after  = Pt(2)
+            if alt:
+                cap = doc.add_paragraph()
+                cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                cap.paragraph_format.space_after = Pt(10)
+                crun = cap.add_run(alt)
+                crun.font.name = 'Calibri'; crun.font.size = Pt(8.5)
+                crun.font.italic = True;    crun.font.color.rgb = LM_MUTED
+            idx += 1; continue
+
+        # Normal paragraph — inline bold
         p = doc.add_paragraph()
         p.paragraph_format.space_after = Pt(4)
-        parts = re.split(r'\*\*(.+?)\*\*', line)
-        for i, part in enumerate(parts):
-            if not part:
-                continue
-            run = p.add_run(part)
-            run.font.name = 'Calibri'
-            run.font.size = Pt(10.5)
-            if i % 2 == 1:
-                run.font.bold = True
+        emit_runs(p, line)
+        idx += 1
 
     # ── Disclaimer ────────────────────────────────────────────────────────────
     doc.add_paragraph()
@@ -745,6 +951,8 @@ FOLDER_MAP = {
     "iso13485":        _HOME_ATHENA / "coaching" / "iso13485",
     "learning":        _HOME_ATHENA / "knowledge_base" / "learning",
     "hr":              _HOME_ATHENA / "ops" / "hr",
+    "consulting":      _HOME_ATHENA / "ops" / "consulting",
+    "ma_intelligence": _HOME_ATHENA / "ops" / "ma_intelligence",
 }
 
 
@@ -961,6 +1169,81 @@ async def review_reject(item_id: int, request: Request):
     return {"status": "rejected", "id": item_id}
 
 
+def _resolve_review_file(item_id: int):
+    """Locate the file backing a review item by its stored path, falling back
+    to a filename search across the known folders if the absolute path moved."""
+    if not mem:
+        return None
+    row = mem.get_review(item_id)
+    if not row or not row.get("file_path"):
+        return None
+    f = Path(row["file_path"])
+    if f.exists():
+        return f
+    for base in FOLDER_MAP.values():
+        cand = base / f.name
+        if cand.exists():
+            return cand
+    return None
+
+
+@app.get("/api/review/{item_id}/content")
+def review_content(item_id: int):
+    """Return the text of a review item so it can be opened/read in-queue.
+    Markdown/text is returned inline; binary docs point the client at /serve."""
+    f = _resolve_review_file(item_id)
+    if not f:
+        return JSONResponse(status_code=404, content={"error": "File not found for this review item"})
+    ext = f.suffix.lower().lstrip(".")
+    if ext in ("md", "txt"):
+        return {"filename": f.name, "ext": ext,
+                "content": f.read_text(encoding="utf-8", errors="replace")}
+    return {"filename": f.name, "ext": ext, "content": None}   # docx/pdf → use /serve
+
+
+@app.get("/api/review/{item_id}/serve")
+def review_serve(item_id: int):
+    """Serve raw bytes of a review item's file (for docx/pdf in-browser viewing)."""
+    f = _resolve_review_file(item_id)
+    if not f:
+        return JSONResponse(status_code=404, content={"error": "File not found"})
+    suffix = f.suffix.lower()
+    mime = {
+        ".pdf":  "application/pdf",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".md":   "text/plain; charset=utf-8",
+        ".txt":  "text/plain; charset=utf-8",
+    }.get(suffix, "application/octet-stream")
+    return FResponse(content=f.read_bytes(), media_type=mime,
+                     headers={"Content-Disposition": f'inline; filename="{f.name}"'})
+
+
+@app.get("/api/dashboard/knowledge-growth")
+def knowledge_growth(days: int = 90):
+    """Cumulative knowledge accumulation over time — every ingested KB document
+    and every learning item, counted per day and accumulated. Powers the
+    Workforce 'Knowledge Growth' chart."""
+    if not mem:
+        return {"daily": [], "total": 0}
+    rows = mem.conn.execute(
+        """SELECT substr(ts,1,10) AS date, COUNT(*) AS n FROM (
+               SELECT timestamp AS ts FROM knowledge_items
+               UNION ALL
+               SELECT timestamp AS ts FROM agent_learning
+           ) WHERE ts IS NOT NULL
+           GROUP BY date ORDER BY date ASC"""
+    ).fetchall()
+    cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+    cum, out = 0, []
+    for r in rows:
+        cum += r["n"]
+        if r["date"] >= cutoff:
+            out.append({"date": r["date"], "items": r["n"], "cumulative": cum})
+    # If the window opens mid-history, seed the first point with the running
+    # total so the curve starts at the true accumulated height, not zero.
+    return {"daily": out, "total": cum}
+
+
 # ── Token history for dashboard charts ───────────────────────────────────────
 
 @app.get("/api/dashboard/history")
@@ -973,6 +1256,51 @@ def dashboard_history(days: int = 30):
         "WHERE date >= ? ORDER BY date ASC", (cutoff,)
     ).fetchall()
     return {"daily": [dict(r) for r in rows]}
+
+
+@app.get("/api/dashboard/timeseries")
+def dashboard_timeseries():
+    """Time-resolved token usage: today vs yesterday totals + per-hour breakdown for today.
+
+    Timestamps in api_calls are stored as local-time ISO strings (datetime.now().isoformat()),
+    so all date math uses SQLite's 'localtime' modifier to stay in the user's timezone.
+    """
+    if not mem:
+        return {"today": {}, "yesterday": {}, "hourly": []}
+
+    def _day_totals(day_expr):
+        row = mem.conn.execute(
+            "SELECT COUNT(*) AS calls, "
+            "       COALESCE(SUM(total_tokens),0) AS tokens, "
+            "       COALESCE(SUM(cost_usd),0)     AS cost, "
+            "       COALESCE(SUM(cache_hit),0)    AS cache_hits "
+            "FROM api_calls WHERE date(timestamp)=" + day_expr
+        ).fetchone()
+        return dict(row) if row else {}
+
+    today     = _day_totals("date('now','localtime')")
+    yesterday = _day_totals("date('now','localtime','-1 day')")
+    today["date"]     = datetime.now().strftime("%Y-%m-%d")
+    yesterday["date"] = (datetime.now() - __import__("datetime").timedelta(days=1)).strftime("%Y-%m-%d")
+
+    # Per-hour breakdown for today, zero-filled across all 24 hours.
+    rows = mem.conn.execute(
+        "SELECT strftime('%H', timestamp) AS hour, "
+        "       COUNT(*) AS calls, "
+        "       COALESCE(SUM(total_tokens),0) AS tokens, "
+        "       COALESCE(SUM(cost_usd),0)     AS cost "
+        "FROM api_calls WHERE date(timestamp)=date('now','localtime') "
+        "GROUP BY hour"
+    ).fetchall()
+    by_hour = {r["hour"]: dict(r) for r in rows}
+    hourly = [
+        by_hour.get(f"{h:02d}", {"hour": f"{h:02d}", "calls": 0, "tokens": 0, "cost": 0})
+        for h in range(24)
+    ]
+    for slot in hourly:
+        slot["hour"] = f"{int(slot['hour']):02d}"
+
+    return {"today": today, "yesterday": yesterday, "hourly": hourly}
 
 
 # ── Voice greeting + shutdown ─────────────────────────────────────────────────

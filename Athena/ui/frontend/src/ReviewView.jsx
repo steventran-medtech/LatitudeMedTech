@@ -3,8 +3,130 @@
  * Every client-facing output (briefs, articles) lands here before Steven approves it.
  */
 import { useEffect, useState } from "react";
+import mammoth from "mammoth";
 
 const API = "http://localhost:8000";
+
+// Minimal, safe Markdown renderer for the review modal (headings, bold,
+// bullets, rules, paragraphs). Avoids dangerouslySetInnerHTML on raw text.
+function renderMarkdown(md) {
+  const lines = md.replace(/\r\n/g, "\n").split("\n");
+  const out = [];
+  let para = [];
+  const flush = (i) => {
+    if (para.length) {
+      out.push(<p key={`p${i}`} style={{ margin: "0 0 12px", lineHeight: 1.7,
+        color: "#1A2A3A", fontSize: 14 }}>{inline(para.join(" "))}</p>);
+      para = [];
+    }
+  };
+  const inline = (s) => {
+    // bold **x** → <strong>
+    const parts = s.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((p, k) => p.startsWith("**") && p.endsWith("**")
+      ? <strong key={k}>{p.slice(2, -2)}</strong> : <span key={k}>{p}</span>);
+  };
+  lines.forEach((raw, i) => {
+    const t = raw.trim();
+    if (!t) { flush(i); return; }
+    if (/^#{1,6}\s/.test(t)) {
+      flush(i);
+      const level = t.match(/^#+/)[0].length;
+      const text = t.replace(/^#+\s/, "");
+      const size = level === 1 ? 20 : level === 2 ? 16 : 14;
+      out.push(<div key={`h${i}`} style={{ fontWeight: 700, fontSize: size,
+        color: "#0A2540", margin: "18px 0 8px" }}>{text}</div>);
+    } else if (/^[-*]\s/.test(t)) {
+      flush(i);
+      out.push(<div key={`li${i}`} style={{ display: "flex", gap: 8,
+        margin: "2px 0", fontSize: 14, color: "#1A2A3A", lineHeight: 1.6 }}>
+        <span style={{ color: "#1A6FA3" }}>•</span>
+        <span>{inline(t.replace(/^[-*]\s/, ""))}</span></div>);
+    } else if (/^(-{3,}|\*{3,})$/.test(t)) {
+      flush(i);
+      out.push(<hr key={`hr${i}`} style={{ border: "none",
+        borderTop: "1px solid #DDE4EB", margin: "16px 0" }} />);
+    } else if (/^\*[^*].*\*$/.test(t)) {
+      flush(i);
+      out.push(<div key={`em${i}`} style={{ fontStyle: "italic", color: "#7B90A0",
+        fontSize: 13, margin: "0 0 12px" }}>{t.slice(1, -1)}</div>);
+    } else {
+      para.push(t);
+    }
+  });
+  flush("end");
+  return out;
+}
+
+function ReviewViewer({ itemId, title, onClose }) {
+  const [state, setState] = useState({ loading: true, ext: "", content: "", html: "", error: "" });
+
+  useEffect(() => {
+    let active = true;
+    setState({ loading: true, ext: "", content: "", html: "", error: "" });
+    fetch(`${API}/api/review/${itemId}/content`)
+      .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.error || "Not found")))
+      .then(async d => {
+        if (!active) return;
+        if (d.ext === "md" || d.ext === "txt") {
+          setState({ loading: false, ext: d.ext, content: d.content || "", html: "", error: "" });
+        } else if (d.ext === "docx") {
+          const buf = await fetch(`${API}/api/review/${itemId}/serve`).then(r => r.arrayBuffer());
+          const res = await mammoth.convertToHtml({ arrayBuffer: buf });
+          if (active) setState({ loading: false, ext: "docx", content: "", html: res.value, error: "" });
+        } else {
+          setState({ loading: false, ext: d.ext, content: "", html: "", error: "" });
+        }
+      })
+      .catch(err => active && setState({ loading: false, ext: "", content: "", html: "",
+        error: typeof err === "string" ? err : "Could not open file" }));
+    return () => { active = false; };
+  }, [itemId]);
+
+  const serveUrl = `${API}/api/review/${itemId}/serve`;
+  return (
+    <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ position: "fixed", inset: 0, background: "rgba(10,37,64,0.45)",
+        zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ background: "#fff", borderRadius: 10, width: "82vw", maxWidth: 900,
+        height: "88vh", display: "flex", flexDirection: "column", overflow: "hidden",
+        boxShadow: "0 8px 40px rgba(10,37,64,0.3)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "12px 20px", borderBottom: "1px solid #DDE4EB", flexShrink: 0 }}>
+          <span style={{ fontFamily: "Inter,sans-serif", fontWeight: 700, fontSize: 14,
+            color: "#0A2540", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</span>
+          <div style={{ display: "flex", gap: 8 }}>
+            <a href={serveUrl} target="_blank" rel="noreferrer"
+              style={{ padding: "5px 12px", background: "#0A2540", color: "#fff", borderRadius: 5,
+                fontFamily: "Inter,sans-serif", fontSize: 12, fontWeight: 600, textDecoration: "none" }}>
+              Download
+            </a>
+            <button onClick={onClose} style={{ padding: "5px 10px", background: "transparent",
+              border: "1px solid #DDE4EB", borderRadius: 5, cursor: "pointer", fontSize: 14, color: "#5A5650" }}>
+              ✕
+            </button>
+          </div>
+        </div>
+        <div style={{ flex: 1, overflow: "auto", padding: "28px 40px",
+          fontFamily: "Inter,sans-serif", background: "#FCFDFE" }}>
+          {state.loading && <div style={{ color: "#7B90A0", fontSize: 13 }}>Loading…</div>}
+          {state.error && <div style={{ color: "#C0392B", fontSize: 13 }}>{state.error}</div>}
+          {!state.loading && !state.error && (state.ext === "md" || state.ext === "txt") && (
+            <div style={{ maxWidth: 720, margin: "0 auto" }}>{renderMarkdown(state.content)}</div>
+          )}
+          {!state.loading && state.ext === "docx" && (
+            <div style={{ maxWidth: 760, margin: "0 auto" }}
+              dangerouslySetInnerHTML={{ __html: state.html }} />
+          )}
+          {!state.loading && state.ext === "pdf" && (
+            <iframe src={serveUrl} title={title}
+              style={{ width: "100%", height: "100%", border: "none" }} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const TYPE_COLOR = {
   article: "#1A6FA3",
@@ -25,6 +147,7 @@ export default function ReviewView() {
   const [stats,  setStats]  = useState({});
   const [notes,  setNotes]  = useState({});
   const [acting, setActing] = useState({});
+  const [viewing, setViewing] = useState(null);   // {id, title} of item open in viewer
 
   const load = () => {
     fetch(`${API}/api/review/pending`).then(r => r.json())
@@ -105,8 +228,13 @@ export default function ReviewView() {
                   <span style={{ fontFamily:"Inter,sans-serif", fontSize:9,
                     color:C.fog }}>{date} {time}</span>
                 </div>
-                <div style={{ fontFamily:"Inter,sans-serif", fontWeight:600,
-                  fontSize:14, color:C.navy, lineHeight:1.4 }}>
+                <div
+                  onClick={() => setViewing({ id: item.id, title: item.title })}
+                  title="Open to read"
+                  style={{ fontFamily:"Inter,sans-serif", fontWeight:600,
+                  fontSize:14, color:C.ocean, lineHeight:1.4, cursor:"pointer",
+                  textDecoration:"underline", textDecorationColor:C.mist,
+                  textUnderlineOffset:3 }}>
                   {item.title}
                 </div>
                 {item.file_path && (
@@ -163,6 +291,10 @@ export default function ReviewView() {
           fontFamily:"Inter,sans-serif", fontSize:11, color:C.fog, cursor:"pointer",
         }}>Refresh</button>
       </div>
+
+      {viewing && (
+        <ReviewViewer itemId={viewing.id} title={viewing.title} onClose={() => setViewing(null)} />
+      )}
     </div>
   );
 }

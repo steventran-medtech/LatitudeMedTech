@@ -307,6 +307,12 @@ Include specific examples relevant to MedTech regulatory consulting."""
     out_path = OUT_DIR / f"{datetime.now().strftime('%Y-%m-%d')}_consulting_frameworks.md"
     out_path.write_text(f"# Consulting Methodology Reference\n*Generated {datetime.now().strftime('%B %d, %Y')}*\n\n{content}", encoding="utf-8")
     log.info(f"Frameworks report: {out_path}")
+    # Surface the deliverable in the Human Review Queue (Phase 1A human gate).
+    try:
+        mem.submit_for_review("consulting", "report",
+                              "Consulting Methodology Reference", str(out_path))
+    except Exception as e:
+        log.warning(f"Could not submit report for review: {e}")
     return out_path
 
 def main():

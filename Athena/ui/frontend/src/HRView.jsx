@@ -25,6 +25,64 @@ function DaysPill({ ts, warnAt = 7, redAt = 14 }) {
   return <span style={{ color: c, fontWeight: 600, fontSize: 11 }}>{d === 0 ? "Today" : `${d}d ago`}</span>;
 }
 
+// Cumulative knowledge-accumulation chart (pure SVG — no chart library).
+function KnowledgeGrowth({ data }) {
+  if (!data || data.length < 2) {
+    return (
+      <div style={{
+        background: "#fff", border: "1px solid #DDE4EB", borderRadius: 10,
+        padding: "18px 20px", marginBottom: 16,
+      }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+          textTransform: "uppercase", color: "#7B90A0", marginBottom: 6 }}>
+          Knowledge Growth
+        </div>
+        <div style={{ fontSize: 12, color: "#7B90A0" }}>
+          Not enough history yet — knowledge accumulation appears here as agents learn.
+        </div>
+      </div>
+    );
+  }
+  const w = 860, h = 150, pad = 6;
+  const vals = data.map(d => d.cumulative || 0);
+  const max  = Math.max(...vals, 1);
+  const min  = Math.min(...vals);
+  const x = i => pad + (i / (data.length - 1)) * (w - pad * 2);
+  const y = v => h - pad - ((v - min) / (max - min || 1)) * (h - pad * 2 - 4);
+  const line = vals.map((v, i) => `${x(i)},${y(v)}`).join(" ");
+  const total   = vals[vals.length - 1];
+  const added   = total - min;
+  const peakDay = data.reduce((a, b) => (b.items > a.items ? b : a), data[0]);
+  return (
+    <div style={{
+      background: "#fff", border: "1px solid #DDE4EB", borderRadius: 10,
+      padding: "18px 20px", marginBottom: 16,
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+          textTransform: "uppercase", color: "#7B90A0" }}>
+          Knowledge Growth · cumulative items
+        </div>
+        <div style={{ fontSize: 11, color: "#7B90A0" }}>
+          <strong style={{ color: "#1A6FA3", fontSize: 15 }}>{total.toLocaleString()}</strong> total
+          {added > 0 && <span> · +{added.toLocaleString()} this window</span>}
+        </div>
+      </div>
+      <svg viewBox={`0 0 ${w} ${h}`} style={{ width: "100%", height: 150 }} preserveAspectRatio="none">
+        <polyline points={`${pad},${h} ${line} ${w - pad},${h}`}
+          fill="#1A6FA3" fillOpacity="0.10" stroke="none" />
+        <polyline points={line} fill="none" stroke="#1A6FA3" strokeWidth="2" strokeLinejoin="round" />
+      </svg>
+      <div style={{ display: "flex", justifyContent: "space-between",
+        fontSize: 10, color: "#7B90A0", marginTop: 4 }}>
+        <span>{data[0]?.date}</span>
+        <span>peak day: {peakDay?.date} (+{peakDay?.items})</span>
+        <span>{data[data.length - 1]?.date}</span>
+      </div>
+    </div>
+  );
+}
+
 function AgentRow({ agent, onLearn, running }) {
   const meta = FLAG[agent.flag_status] || FLAG.green;
   const label = LABELS[agent.agent] || agent.agent;
@@ -112,10 +170,12 @@ export default function HRView() {
   const [learning, setLearning] = useState([]);
   const [running,  setRunning]  = useState({});
   const [last,     setLast]     = useState(null);
+  const [growth,   setGrowth]   = useState([]);
 
   const load = () => {
     fetch(`${API}/api/hr/health`).then(r => r.json()).then(d => setHealth(d.agents || [])).catch(() => {});
     fetch(`${API}/api/hr/learning?days=7`).then(r => r.json()).then(d => setLearning(d.stats || [])).catch(() => {});
+    fetch(`${API}/api/dashboard/knowledge-growth?days=90`).then(r => r.json()).then(d => setGrowth(d.daily || [])).catch(() => {});
     setLast(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
   };
 
@@ -152,9 +212,9 @@ export default function HRView() {
       {/* Header row */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <div>
-          <h2 style={{ fontSize: "1.15rem", fontWeight: 700, color: "#0A2540", margin: 0 }}>HR Agent</h2>
+          <h2 style={{ fontSize: "1.15rem", fontWeight: 700, color: "#0A2540", margin: 0 }}>Workforce</h2>
           <div style={{ fontSize: 11, color: "#7B90A0", marginTop: 2 }}>
-            Agent health · {last ? `Updated ${last}` : ""}
+            Agent health &amp; knowledge growth · {last ? `Updated ${last}` : ""}
           </div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
@@ -191,6 +251,9 @@ export default function HRView() {
           </div>
         ))}
       </div>
+
+      {/* Knowledge accumulation over time */}
+      <KnowledgeGrowth data={growth} />
 
       {/* Agent table */}
       {health.length === 0 ? (

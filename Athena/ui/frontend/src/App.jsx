@@ -76,7 +76,7 @@ const NAV = [
   {id:"dashboard", label:"Dashboard",      group:"system"},
   {id:"review",    label:"Review Queue",    group:"work"},
   {id:"agents",    label:"Run Agents",     group:"system"},
-  {id:"hr",        label:"HR",             group:"system"},
+  {id:"hr",        label:"Workforce",      group:"system"},
   {id:"tokens",    label:"Token Usage",    group:"system"},
   {id:"settings",  label:"Settings",       group:"system"},
 ];
@@ -600,20 +600,61 @@ function Sparkline({data, valueKey, color="#5B7FA6", height=48, label=""}){
   );
 }
 
+// ── Hourly bar chart (per-hour token usage for today) ────────────────────────
+function HourlyBars({data, valueKey="tokens", color=C.blue, height=120}){
+  if(!data||!data.length) return null;
+  const vals = data.map(d=>d[valueKey]||0);
+  const max  = Math.max(...vals, 1);
+  const nowHour = new Date().getHours();
+  return(
+    <div>
+      <div style={{display:"flex",alignItems:"flex-end",gap:2,height}}>
+        {data.map((d,i)=>{
+          const v=d[valueKey]||0;
+          const isNow=i===nowHour;
+          return(
+            <div key={i} title={`${d.hour}:00 — ${v.toLocaleString()} ${valueKey} · ${d.calls} calls · $${(d.cost||0).toFixed(4)}`}
+              style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"flex-end",height:"100%",cursor:"default"}}>
+              <div style={{height:`${Math.max((v/max)*100, v>0?3:0)}%`,
+                background:isNow?C.warm:color,opacity:v>0?(isNow?1:0.75):0.12,
+                borderRadius:"2px 2px 0 0",minHeight:v>0?2:1,transition:"height 0.2s"}}/>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",fontFamily:"Helvetica,sans-serif",fontSize:9,color:C.muted,marginTop:4}}>
+        {["00","06","12","18","23"].map(h=>(<span key={h}>{h}:00</span>))}
+      </div>
+    </div>
+  );
+}
+
 // ── Dashboard ──────────────────────────────────────────────────────────────
 function Dashboard({data}){
   const [history,setHistory]=useState([]);
+  const [ts,setTs]=useState(null);
   useEffect(()=>{
     fetch(`${API}/api/dashboard/history?days=30`).then(r=>r.json()).then(d=>setHistory(d.daily||[])).catch(()=>{});
+    fetch(`${API}/api/dashboard/timeseries`).then(r=>r.json()).then(setTs).catch(()=>{});
   },[]);
 
   if(!data) return <div style={{color:C.muted,fontFamily:"Helvetica,sans-serif",fontSize:13}}>Loading dashboard...</div>;
   const t=data.token_report?.totals||{};
   const kb=data.kb_stats||{};
+  const today=ts?.today||{}, yest=ts?.yesterday||{};
+  // % change today vs yesterday; null when yesterday is 0 (avoid divide-by-zero noise)
+  const delta=(a,b)=>(b>0?((a-b)/b*100):null);
+  const fmtDelta=d=>d==null?"":`${d>=0?"▲":"▼"} ${Math.abs(d).toFixed(0)}% vs yest`;
+  const deltaColor=d=>d==null?C.muted:d>=0?C.warm:C.green;
+  const timeCards=[
+    {label:"Tokens — Today", value:(today.tokens||0).toLocaleString(), sub:`${(yest.tokens||0).toLocaleString()} yesterday`, d:delta(today.tokens||0,yest.tokens||0), color:C.blue},
+    {label:"Spend — Today",  value:`$${(today.cost||0).toFixed(4)}`,   sub:`$${(yest.cost||0).toFixed(4)} yesterday`, d:delta(today.cost||0,yest.cost||0), color:C.warm},
+    {label:"API Calls — Today", value:today.calls||0,                  sub:`${yest.calls||0} yesterday`, d:delta(today.calls||0,yest.calls||0), color:C.slate},
+  ];
   const stats=[
     {label:"API Calls (30d)",  value:t.total_calls||0,          color:C.slate},
-    {label:"Total Tokens",     value:(t.total_tokens||0).toLocaleString(), color:C.blue},
-    {label:"Spend (USD)",      value:`$${(t.total_cost||0).toFixed(4)}`, color:C.warm},
+    {label:"Total Tokens (30d)", value:(t.total_tokens||0).toLocaleString(), color:C.blue},
+    {label:"Spend (30d, USD)",   value:`$${(t.total_cost||0).toFixed(4)}`, color:C.warm},
     {label:"KB Documents",     value:kb.total_docs||0,           color:C.teal},
     {label:"KB Chunks",        value:(kb.total_chunks||0).toLocaleString(), color:C.teal},
     {label:"Cache Hit Rate",   value:t.total_calls>0?`${((t.cache_hits||0)/t.total_calls*100).toFixed(1)}%`:"—", color:C.green},
@@ -624,6 +665,26 @@ function Dashboard({data}){
         <h2 style={S.h2}>Dashboard</h2>
         <span style={{fontFamily:"Helvetica,sans-serif",fontSize:11,color:C.muted}}>{new Date().toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</span>
       </div>
+      {/* Today vs yesterday */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16,marginBottom:16}}>
+        {timeCards.map(s=>(
+          <div key={s.label} style={{...S.card,padding:"18px 20px",marginBottom:0}}>
+            <div style={{...S.stat,color:s.color}}>{s.value}</div>
+            <div style={S.statLabel}>{s.label}</div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginTop:8}}>
+              <span style={{fontFamily:"Helvetica,sans-serif",fontSize:10,color:C.muted}}>{s.sub}</span>
+              <span style={{fontFamily:"Helvetica,sans-serif",fontSize:10,fontWeight:600,color:deltaColor(s.d)}}>{fmtDelta(s.d)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Per-hour breakdown for today */}
+      {ts?.hourly?.length>0&&(
+        <div style={{...S.card,marginBottom:24}}>
+          <span style={S.label}>Tokens by hour — today (gold bar = current hour)</span>
+          <div style={{marginTop:14}}><HourlyBars data={ts.hourly} valueKey="tokens" color={C.blue}/></div>
+        </div>
+      )}
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16,marginBottom:24}}>
         {stats.map(s=>(<div key={s.label} style={{...S.card,padding:"18px 20px",marginBottom:0}}><div style={{...S.stat,color:s.color}}>{s.value}</div><div style={S.statLabel}>{s.label}</div></div>))}
       </div>
@@ -644,6 +705,15 @@ function Dashboard({data}){
           <table style={{width:"100%",borderCollapse:"collapse",fontFamily:"Helvetica,sans-serif",fontSize:12}}>
             <thead><tr style={{borderBottom:`1px solid ${C.border}`}}>{["Agent","Calls","Tokens","Cost"].map(h=>(<th key={h} style={{padding:"6px 8px",textAlign:"left",color:C.muted,fontWeight:600,fontSize:10,letterSpacing:"0.08em",textTransform:"uppercase"}}>{h}</th>))}</tr></thead>
             <tbody>{data.token_report.by_agent.map((a,i)=>(<tr key={i} style={{borderBottom:`1px solid ${C.ltgray}`}}><td style={{padding:"8px",color:C.black,fontWeight:500}}>{a.agent}</td><td style={{padding:"8px",color:C.muted}}>{a.calls}</td><td style={{padding:"8px",color:C.muted}}>{(a.tokens||0).toLocaleString()}</td><td style={{padding:"8px",color:C.warm,fontWeight:600}}>${(a.cost||0).toFixed(4)}</td></tr>))}</tbody>
+          </table>
+        </div>
+      )}
+      {data.token_report?.by_purpose?.length>0&&(
+        <div style={S.card}>
+          <span style={S.label}>Token spend by purpose (30 days)</span>
+          <table style={{width:"100%",borderCollapse:"collapse",fontFamily:"Helvetica,sans-serif",fontSize:12}}>
+            <thead><tr style={{borderBottom:`1px solid ${C.border}`}}>{["Purpose","Calls","Tokens","Cost"].map(h=>(<th key={h} style={{padding:"6px 8px",textAlign:"left",color:C.muted,fontWeight:600,fontSize:10,letterSpacing:"0.08em",textTransform:"uppercase"}}>{h}</th>))}</tr></thead>
+            <tbody>{data.token_report.by_purpose.map((p,i)=>(<tr key={i} style={{borderBottom:`1px solid ${C.ltgray}`}}><td style={{padding:"8px",color:C.black,fontWeight:500}}>{p.purpose}</td><td style={{padding:"8px",color:C.muted}}>{p.calls}</td><td style={{padding:"8px",color:C.muted}}>{(p.tokens||0).toLocaleString()}</td><td style={{padding:"8px",color:C.warm,fontWeight:600}}>${(p.cost||0).toFixed(4)}</td></tr>))}</tbody>
           </table>
         </div>
       )}
@@ -918,7 +988,7 @@ function AgentsView({logs,onRun,runningAgents}){
   if(runningAgents){
     runningAgents.forEach(a=>{ running[a]=true; });
     // Also map short IDs used in the agent cards
-    const MAP={rag:"rag_agent",briefing:"briefing_agent",content:"content_agent",iso:"iso_coach"};
+    const MAP={rag:"rag_agent",briefing:"briefing_agent",content:"content_agent",iso:"iso_coach",consulting:"consulting_agent",ma:"ma_intelligence_agent"};
     Object.entries(MAP).forEach(([short,full])=>{if(runningAgents.has(full)) running[short]=true;});
   }
 
@@ -1045,6 +1115,7 @@ const AGENT_DISPLAY = {
   content_agent:"Content Draft", iso_coach:"ISO 13485 Coach",
   coaching_brief:"Coaching Brief", agent_learning:"Agent Learning",
   hr_agent:"HR Review",
+  consulting_agent:"Consulting Agent", ma_intelligence_agent:"M&A Intelligence",
 };
 
 // ── Toast notification system ──────────────────────────────────────────────

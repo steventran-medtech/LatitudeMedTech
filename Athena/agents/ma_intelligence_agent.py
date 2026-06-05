@@ -317,6 +317,12 @@ Quality standard: McKinsey M&A practice quality. Specific data, real deals, acti
     out_path = OUT_DIR / f"{datetime.now().strftime('%Y-%m-%d')}_{slug}.md"
     out_path.write_text(f"# M&A Intelligence Analysis\n*{datetime.now().strftime('%B %d, %Y')}*\n\n{content}", encoding="utf-8")
     log.info(f"M&A analysis: {out_path}")
+    # Surface the deliverable in the Human Review Queue (Phase 1A human gate).
+    try:
+        title = f"M&A Intelligence Analysis — {topic}" if topic else "M&A Intelligence Analysis"
+        mem.submit_for_review("ma_intelligence", "report", title, str(out_path))
+    except Exception as e:
+        log.warning(f"Could not submit analysis for review: {e}")
     return out_path
 
 def main():

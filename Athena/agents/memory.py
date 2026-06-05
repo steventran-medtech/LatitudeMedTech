@@ -431,29 +431,99 @@ class Memory:
         q += " GROUP BY agent ORDER BY items DESC"
         return [dict(r) for r in self.conn.execute(q, p).fetchall()]
 
+    def get_skill_accumulation(self, agent):
+        """
+        All-time accumulation for one agent across BOTH learning streams —
+        curated learning (agent_learning) + RAG ingestion (knowledge_items) —
+        matching every name variant the agent may have logged under.
+
+        Returns:
+          {learn_items, learn_chunks, kb_docs, kb_chunks,
+           total_items, total_chunks, domains[], last}
+        Single source of truth for the dashboards and the skills profiles.
+        """
+        names = self._name_variants(agent)
+        ph    = ",".join("?" * len(names))
+
+        lr = self.conn.execute(
+            f"SELECT COUNT(*) as items, COALESCE(SUM(chunks_added),0) as chunks, "
+            f"MAX(timestamp) as last FROM agent_learning WHERE agent IN ({ph})",
+            names,
+        ).fetchone()
+        kb = self.conn.execute(
+            f"SELECT COUNT(*) as docs, COALESCE(SUM(chunks),0) as chunks, "
+            f"MAX(timestamp) as last FROM knowledge_items WHERE agent IN ({ph})",
+            names,
+        ).fetchone()
+        domains = [
+            r["domain"] for r in self.conn.execute(
+                f"SELECT DISTINCT domain FROM agent_learning "
+                f"WHERE agent IN ({ph}) AND domain IS NOT NULL ORDER BY domain", names,
+            ).fetchall()
+        ]
+        last = max([t for t in (lr["last"], kb["last"]) if t], default=None)
+        return {
+            "learn_items":  lr["items"],
+            "learn_chunks": lr["chunks"],
+            "kb_docs":      kb["docs"],
+            "kb_chunks":    kb["chunks"],
+            "total_items":  lr["items"] + kb["docs"],
+            "total_chunks": lr["chunks"] + kb["chunks"],
+            "domains":      domains,
+            "last":         last,
+        }
+
+    # Agent names are logged inconsistently across the codebase — some modules
+    # log under a short key ("content") and others under the script name
+    # ("content_agent"). HR/Workforce queries use the short key, so without
+    # alias expansion "Last run / Last learned" always reads "Never".
+    _AGENT_ALIASES = {
+        "content":         ["content", "content_agent"],
+        "briefing":        ["briefing", "briefing_agent"],
+        "iso":             ["iso", "iso_coach", "iso_coach_agent"],
+        "coaching":        ["coaching", "coaching_brief", "coaching_brief_agent", "orchestrator"],
+        "fda":             ["fda", "fda_agent"],
+        "rag":             ["rag", "rag_agent"],
+        "consulting":      ["consulting", "consulting_agent"],
+        "ma_intelligence": ["ma_intelligence", "ma_intelligence_agent"],
+        "voice_bridge":    ["voice_bridge", "voice", "athena"],
+    }
+
+    @classmethod
+    def _name_variants(cls, agent):
+        """All name spellings an agent may have logged activity under."""
+        if agent in cls._AGENT_ALIASES:
+            return cls._AGENT_ALIASES[agent]
+        base = agent[:-6] if agent.endswith("_agent") else agent
+        # dict.fromkeys preserves order while de-duping
+        return list(dict.fromkeys([agent, base, base + "_agent"]))
+
     def get_last_learning(self, agent):
         """
         Check agent_learning first, then fall back to knowledge_items
         (RAG ingestion also counts as learning activity).
+        Matches every name variant the agent may have logged under.
         """
+        names = self._name_variants(agent)
+        ph    = ",".join("?" * len(names))
         row = self.conn.execute(
-            "SELECT timestamp, title, source_name FROM agent_learning "
-            "WHERE agent=? ORDER BY timestamp DESC LIMIT 1", (agent,)
+            f"SELECT timestamp, title, source_name FROM agent_learning "
+            f"WHERE agent IN ({ph}) ORDER BY timestamp DESC LIMIT 1", names
         ).fetchone()
         if row:
             return dict(row)
         # Fallback: check knowledge_items for this agent's ingestion activity
         row2 = self.conn.execute(
-            "SELECT timestamp, title FROM knowledge_items "
-            "WHERE agent=? ORDER BY timestamp DESC LIMIT 1", (agent,)
+            f"SELECT timestamp, title FROM knowledge_items "
+            f"WHERE agent IN ({ph}) ORDER BY timestamp DESC LIMIT 1", names
         ).fetchone()
         if row2:
             return {"timestamp": row2["timestamp"], "title": row2["title"],
                     "source_name": "knowledge_base"}
         # Fallback: any API call by this agent
         row3 = self.conn.execute(
-            "SELECT timestamp FROM api_calls WHERE agent=? ORDER BY timestamp DESC LIMIT 1",
-            (agent,)
+            f"SELECT timestamp FROM api_calls WHERE agent IN ({ph}) "
+            f"ORDER BY timestamp DESC LIMIT 1", names
         ).fetchone()
         if row3:
             return {"timestamp": row3["timestamp"], "title": "API activity",
@@ -505,27 +575,24 @@ class Memory:
         """
         Last time this agent did meaningful work. Checks events table,
         api_calls, and knowledge_items so past activity is reflected.
+        Matches every name variant the agent may have logged under.
         """
-        # Events table — explicit agent actions
+        names = self._name_variants(agent)
+        ph    = ",".join("?" * len(names))
+        # Take the most recent timestamp across all three activity tables so a
+        # learning run (knowledge_items) counts even if it never hit api_calls.
         row = self.conn.execute(
-            "SELECT timestamp FROM events WHERE agent=? "
-            "ORDER BY timestamp DESC LIMIT 1", (agent,)
+            f"""SELECT MAX(ts) AS ts FROM (
+                    SELECT timestamp AS ts FROM events         WHERE agent IN ({ph})
+                    UNION ALL
+                    SELECT timestamp AS ts FROM api_calls      WHERE agent IN ({ph})
+                    UNION ALL
+                    SELECT timestamp AS ts FROM knowledge_items WHERE agent IN ({ph})
+                    UNION ALL
+                    SELECT timestamp AS ts FROM agent_learning WHERE agent IN ({ph})
+                )""", names * 4
         ).fetchone()
-        if row:
-            return row["timestamp"]
-        # API calls — any time the agent called Claude
-        row2 = self.conn.execute(
-            "SELECT timestamp FROM api_calls WHERE agent=? ORDER BY timestamp DESC LIMIT 1",
-            (agent,)
-        ).fetchone()
-        if row2:
-            return row2["timestamp"]
-        # Knowledge items — RAG ingestion
-        row3 = self.conn.execute(
-            "SELECT timestamp FROM knowledge_items WHERE agent=? ORDER BY timestamp DESC LIMIT 1",
-            (agent,)
-        ).fetchone()
-        return row3["timestamp"] if row3 else None
+        return row["ts"] if row and row["ts"] else None
 
     # ── Context summary (used by voice assistant) ─────────────────────────────
 
