@@ -1,5 +1,5 @@
 # Latitude MedTech — Master Instructions
-**Version:** 2026-06-05 v7 · Compressed and updated after each session per Agent Principle #7.
+**Version:** 2026-06-05 v8 · Compressed and updated after each session per Agent Principle #7.
 
 ---
 
@@ -174,11 +174,36 @@ cd Athena\voice; venv\Scripts\activate         # Activate main venv
 
 ## Version Control *(Git)*
 **Repo:** private GitHub `steventran-medtech/LatitudeMedTech` · branch `main` · root `C:\Users\huann\LatitudeMedTech`. Auth: Git Credential Manager (browser sign-in, cached).
-**Push when necessary** — after any code change, agent addition, or end-of-session CLAUDE.md update, commit and push so the cloud backup stays current:
+
+**Session Start — pull first, every time:**
 ```powershell
-cd "C:\Users\huann\LatitudeMedTech"; git add -A; git commit -m "<what changed>"; git push
+cd "C:\Users\huann\LatitudeMedTech"; git pull
 ```
-**Secrets stay out of Git** — `.gitignore` excludes `*.pfx`, `.env`, `.athena.key`, venvs, `node_modules/`, logs. `StevenTran.pfx` / `voice/.env` / `voice/.athena.key` live local-only and are backed up separately; restore them manually on a fresh clone. Always glance at `git status` before committing to confirm no secret is staged.
+If `git pull` reports conflicts, resolve them before touching any other file. `git status` should be clean before starting work.
+
+**Session End — commit and push before closing:**
+```powershell
+cd "C:\Users\huann\LatitudeMedTech"
+git status                                    # confirm no secrets staged
+git add -A
+git commit -m "<concise summary of session changes>"
+git push
+```
+Update the CLAUDE.md version line (date + vN) in the same final commit.
+
+**Multi-session continuity:**
+- Read CLAUDE.md at the top of every new session — it is the canonical state document.
+- Check `## Current Phase` and any open ⏳ items before starting new work.
+- If a session ends mid-task, note the stopping point in CLAUDE.md before committing.
+
+**Safety rules:**
+- `git status` before every `git add` — verify `*.pfx`, `.env`, `.athena.key` are not staged.
+- **Never** `git push --force` or `git reset --hard` without Steven's explicit instruction.
+- If push is rejected (non-fast-forward): `git pull --rebase`, resolve any conflicts, then push.
+- If rebase has conflicts: edit the affected files, `git add` them, then `git rebase --continue`.
+- Only commit to `main` — no feature branches unless Steven requests one.
+
+**Secrets stay out of Git** — `.gitignore` excludes `*.pfx`, `.env`, `.athena.key`, venvs, `node_modules/`, logs. `StevenTran.pfx` / `voice/.env` / `voice/.athena.key` live local-only; restore manually on a fresh clone.
 
 ---
 

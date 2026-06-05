@@ -5,6 +5,7 @@ import HRView from "./HRView.jsx";
 import ISOView from "./ISOView.jsx";
 import FileViewer from "./FileViewer.jsx";
 import ReviewView from "./ReviewView.jsx";
+import MarketingView from "./MarketingView.jsx";
 
 const API = "http://localhost:8000";
 const WS  = "ws://localhost:8000/ws";
@@ -70,6 +71,7 @@ const NAV = [
   {id:"briefing",  label:"Daily Briefing", group:"work"},
   {id:"content",   label:"Content",        group:"work"},
   {id:"coaching",  label:"Coaching",       group:"work"},
+  {id:"marketing", label:"Marketing",      group:"work"},
   {id:"iso",       label:"ISO 13485",      group:"work"},
   {id:"documents", label:"Documents",      group:"work"},
   // System
@@ -634,8 +636,18 @@ function Dashboard({data}){
   const [history,setHistory]=useState([]);
   const [ts,setTs]=useState(null);
   const [hourlyDay,setHourlyDay]=useState("today");  // which day the hourly chart shows
+  const [kbGrowth,setKbGrowth]=useState([]);
+  const [kbTotal,setKbTotal]=useState(0);
+  const [companyKb,setCompanyKb]=useState(null);
   useEffect(()=>{
     fetch(`${API}/api/dashboard/history?days=30`).then(r=>r.json()).then(d=>setHistory(d.daily||[])).catch(()=>{});
+    fetch(`${API}/api/dashboard/knowledge-growth?days=90`).then(r=>r.json()).then(d=>{setKbGrowth(d.daily||[]);setKbTotal(d.total||0);}).catch(()=>{});
+    fetch(`${API}/api/hr/skills`).then(r=>r.json()).then(d=>{
+      const skills=Object.values(d.skills||{});
+      const totalChunks=skills.reduce((acc,s)=>acc+(s.total_chunks||0),0);
+      const domains=new Set(skills.flatMap(s=>s.domains||[]));
+      setCompanyKb({totalChunks,domains:domains.size});
+    }).catch(()=>{});
   },[]);
   // Refetch when the hourly day toggle changes (today/yesterday totals come back unchanged).
   useEffect(()=>{
@@ -713,6 +725,23 @@ function Dashboard({data}){
             <Sparkline data={history} valueKey="total_tokens" color={C.teal}  label="Tokens / day"/>
             <Sparkline data={history} valueKey="cache_hits"   color={C.green} label="Cache hits / day"/>
           </div>
+        </div>
+      )}
+      {/* Knowledge accumulation */}
+      {(kbGrowth.length>1||companyKb)&&(
+        <div style={{...S.card,marginBottom:24}}>
+          <span style={S.label}>Knowledge Accumulation · Company-wide · 90 days</span>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginTop:12,marginBottom:kbGrowth.length>1?20:0}}>
+            {[
+              {label:"Total KB Items",   value:(kbTotal||0).toLocaleString(),                                         color:C.teal},
+              {label:"Total Chunks",     value:companyKb?(companyKb.totalChunks||0).toLocaleString():"—",             color:C.ocean},
+              {label:"Domains Covered",  value:companyKb?(companyKb.domains||0):"—",                                  color:C.slate},
+            ].map(s=>(<div key={s.label} style={{background:C.cloud,borderRadius:7,padding:"12px 14px"}}>
+              <div style={{...S.stat,fontSize:22,color:s.color}}>{s.value}</div>
+              <div style={S.statLabel}>{s.label}</div>
+            </div>))}
+          </div>
+          {kbGrowth.length>1&&<Sparkline data={kbGrowth} valueKey="cumulative" color={C.teal} label="Cumulative items ingested"/>}
         </div>
       )}
       {data.token_report?.by_agent?.length>0&&(
@@ -1017,6 +1046,7 @@ function AgentsView({logs,onRun,runningAgents}){
     {id:"iso",         label:"ISO 13485 Coach",        desc:"Generate clause lesson content",       color:C.slate},
     {id:"consulting",  label:"Consulting Agent",       desc:"Frameworks, methodologies, case studies", color:"#7B3FA6"},
     {id:"ma",          label:"M&A Intelligence",       desc:"MedTech/Pharma deals, QARA analysis",  color:"#1A6FA3"},
+    {id:"marketing",   label:"Marketing Agent",        desc:"Guerilla brief, plan, outreach, events", color:"#5B7FA6"},
   ];
   const [overrides,setOverrides]=useState({});
   const [showOverride,setShowOverride]=useState(null);
@@ -1132,6 +1162,7 @@ const AGENT_DISPLAY = {
   coaching_brief:"Coaching Brief", agent_learning:"Agent Learning",
   hr_agent:"HR Review",
   consulting_agent:"Consulting Agent", ma_intelligence_agent:"M&A Intelligence",
+  marketing_agent:"Marketing Agent",
 };
 
 // ── Toast notification system ──────────────────────────────────────────────
@@ -1256,6 +1287,7 @@ export default function App(){
       rag:"/api/agents/rag", briefing:"/api/agents/briefing",
       content:"/api/agents/content", iso:"/api/agents/iso",
       consulting:"/api/agents/consulting", ma:"/api/agents/ma",
+      marketing:"/api/agents/marketing",
     };
     if(endpoints[id] && !pendingRef.current.has(id)){
       pendingRef.current.add(id);
@@ -1287,6 +1319,7 @@ export default function App(){
     voice:    <VoiceView/>,
     content:  <ContentView onGenerate={runAgent}/>,
     coaching: <CoachingView onGenerate={runAgent}/>,
+    marketing:<MarketingView/>,
     documents:<DocumentsView/>,
     iso:      <ISOView/>,
     review:   <ReviewView/>,

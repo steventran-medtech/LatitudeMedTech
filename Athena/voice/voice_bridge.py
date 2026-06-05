@@ -224,6 +224,14 @@ _INTENT_PATTERNS = {
     "coaching_brief": [
         r'\b(coaching brief|brief for|prep for|client brief|discovery call)\b'
     ],
+    # Marketing intents — brief, plan, outreach, events, pipeline
+    "marketing": [
+        r'\b(marketing brief|marketing plan|guerilla|go.to.market|gtm)\b',
+        r'\b(outreach (for|to)|pitch (to|for)|write to|email to|contact)\s+[A-Z]',
+        r'\b(sales pipeline|pipeline status|marketing pipeline|how many (leads|prospects|targets))\b',
+        r'\b(events? calendar|upcoming (conference|event|podcast)|what events)\b',
+        r'\b(thirty.sixty.ninety|30.60.90|ninety.day (plan|target|goal))\b',
+    ],
 }
 
 def _detect_intent(text: str):
@@ -242,23 +250,51 @@ def _detect_intent(text: str):
                     return agent, text
                 if agent == "briefing":
                     return agent, text   # pass full query so agent focuses on it
+                # Marketing: detect sub-mode and optional target
+                if agent == "marketing":
+                    tl = text.lower()
+                    if re.search(r'\b(outreach|pitch|write to|email to|contact)\b', tl):
+                        m = re.search(
+                            r'(?:outreach (?:for|to)|pitch (?:to|for)|write to|email to|contact)\s+'
+                            r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)',
+                            text
+                        )
+                        target = m.group(1) if m else ""
+                        return "marketing_outreach", target
+                    if re.search(r'\b(plan|30.60.90|ninety.day)\b', tl):
+                        return "marketing_plan", ""
+                    if re.search(r'\b(event|conference|calendar)\b', tl):
+                        return "marketing_events", ""
+                    if re.search(r'\b(pipeline|leads|prospects)\b', tl):
+                        return "marketing_scorecard", ""
+                    return "marketing", ""   # default → brief
                 return agent, ""
     return None, None
 
 def _trigger_agent(agent_id: str, override: str = "") -> bool:
     """Fire an agent via the local FastAPI backend. Returns True if accepted."""
-    endpoints = {
-        "content":        "/api/agents/content",
-        "briefing":       "/api/agents/briefing",
-        "rag":            "/api/agents/rag",
-        "iso":            "/api/agents/iso",
-        "coaching_brief": "/api/agents/brief",
+    # Map intent ids → endpoint + payload builder
+    def _marketing_payload(mode, target=""):
+        return json.dumps({"mode": mode, "target": target}).encode()
+
+    ROUTE_MAP = {
+        "content":           ("/api/agents/content",   lambda o: json.dumps({"override": o}).encode()),
+        "briefing":          ("/api/agents/briefing",  lambda o: json.dumps({"override": o}).encode()),
+        "rag":               ("/api/agents/rag",       lambda o: json.dumps({"override": o}).encode()),
+        "iso":               ("/api/agents/iso",       lambda _: json.dumps({}).encode()),
+        "coaching_brief":    ("/api/agents/brief",     lambda o: json.dumps({"client": o}).encode()),
+        "marketing":         ("/api/agents/marketing", lambda _: _marketing_payload("brief")),
+        "marketing_plan":    ("/api/agents/marketing", lambda _: _marketing_payload("plan")),
+        "marketing_events":  ("/api/agents/marketing", lambda _: _marketing_payload("events")),
+        "marketing_scorecard":("/api/agents/marketing",lambda _: _marketing_payload("scorecard")),
+        "marketing_outreach":("/api/agents/marketing", lambda t: _marketing_payload("outreach", t)),
     }
-    ep = endpoints.get(agent_id)
-    if not ep:
+    route = ROUTE_MAP.get(agent_id)
+    if not route:
         return False
+    ep, build_payload = route
     try:
-        payload = json.dumps({"override": override, "client": override}).encode()
+        payload = build_payload(override)
         req = urllib.request.Request(
             f"{BACKEND_URL}{ep}",
             data=payload,
@@ -272,11 +308,16 @@ def _trigger_agent(agent_id: str, override: str = "") -> bool:
         return False
 
 _AGENT_LABELS = {
-    "content":        "Content Draft",
-    "briefing":       "Daily Briefing",
-    "rag":            "RAG Ingestion",
-    "iso":            "ISO 13485 Coach",
-    "coaching_brief": "Coaching Brief",
+    "content":            "Content Draft",
+    "briefing":           "Daily Briefing",
+    "rag":                "RAG Ingestion",
+    "iso":                "ISO 13485 Coach",
+    "coaching_brief":     "Coaching Brief",
+    "marketing":          "Marketing Brief",
+    "marketing_plan":     "Marketing Plan",
+    "marketing_events":   "Events Calendar",
+    "marketing_scorecard":"Marketing Scorecard",
+    "marketing_outreach": "Outreach Copy",
 }
 
 # ── Kokoro persistent server ──────────────────────────────────────────────────
@@ -585,8 +626,10 @@ def _build_system_prompt():
         "a MedTech and Pharma management consulting firm in San Diego, CA. "
         "You serve Steven Tran, Managing Partner and CEO.\n\n"
         f"{firm_context}\n"
-        "You can trigger agents on Steven's behalf when he asks for content, briefings, "
-        "knowledge base updates, ISO coaching, or coaching briefs.\n\n"
+        "You can trigger agents on Steven's behalf when he asks for: content drafts, "
+        "daily briefings, knowledge base updates, ISO coaching, coaching briefs, "
+        "or marketing tasks (weekly brief, 30-60-90 plan, outreach copy, events calendar, "
+        "pipeline status).\n\n"
         "VOICE RULES — follow strictly:\n"
         "- Spoken British English. No markdown, lists, or symbols.\n"
         "- Maximum 2 sentences. Never more unless explicitly asked.\n"
@@ -743,17 +786,22 @@ def _speak(text: str):
 def _voice_loop():
     global _state
 
-    _state = VS.LOADING
-    _emit("loading", message=f"Mic: {DEVICE_NAME} @ {DEVICE_RATE} Hz")
+    # Skip loading state entirely if models are already warm from startup preload
+    already_ready = _models_ready.is_set()
 
-    # Start Kokoro server concurrently while waiting for models
+    if not already_ready:
+        _state = VS.LOADING
+        _emit("loading", message=f"Mic: {DEVICE_NAME} @ {DEVICE_RATE} Hz")
+
+    # Ensure Kokoro is running (fast no-op health check if already up)
     if TTS_BACKEND == "kokoro":
-        _emit("loading", message="Starting Kokoro TTS server…")
+        if not already_ready:
+            _emit("loading", message="Starting Kokoro TTS server…")
         kokoro_thread = threading.Thread(target=_start_kokoro_server, daemon=True)
         kokoro_thread.start()
 
-    # Wait for pre-loaded models (loaded in background at startup)
-    if not _models_ready.is_set():
+    # Wait for pre-loaded models only if not yet ready
+    if not already_ready:
         _emit("loading", message="Waiting for models to finish loading…")
         _models_ready.wait(timeout=60)
 
