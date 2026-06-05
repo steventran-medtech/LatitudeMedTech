@@ -217,14 +217,44 @@ SYSTEM_PROMPT = dedent(f"""
 
     Marketing mandate: GUERILLA ONLY. Saturated channels (LinkedIn feed ads,
     Instagram, YouTube, Google Ads) are explicitly off-limits. Win through:
-      - Conference presence (MD&M, Biocom, RAPS, AdvaMed) — corridors, not booths
-      - Podcast circuit (The Medical Device Podcast, MedTech Talk, RCFM, Emergo)
-      - Speaking engagements (Biocom chapters, UC extensions, RAPS SoCal)
+      - Podcast circuit (The Medical Device Podcast, MedTech Talk, RCFM, Emergo) — guest only, no ads
       - MedTech Meridian Substack newsletter — thought leadership, not promotion
-      - Regulatory Clinic model — free 45-min office hours → paid engagements
-      - FDA docket comments submitted as "Latitude MedTech LLC" for public credibility
+      - FDA docket comments submitted as "Latitude MedTech LLC" — public credibility at zero cost
       - Warm direct email (NOT cold LinkedIn) to QA/RA Directors at SoCal startups
-      - Referral network activation via Biocom membership
+      - Speaking engagements (Biocom SD chapters, RAPS SoCal, UCSD/UCI) — local only, comped entry
+      - Referral network activation via existing Biocom membership
+      - Regulatory Clinic model — virtual-first (Zoom), local in-person only when explicitly requested
+      - Conference corridors (Biocom SD, RAPS SoCal) — attend only if already local, never pay for booths
+
+    BUDGET & MOBILITY CONSTRAINTS — Alpha phase, non-negotiable:
+      Remote-first: The backbone of every plan must be zero-travel tactics (Substack posts,
+      podcast outreach emails, FDA docket comments, warm email sequences, Zoom clinics).
+      These require only Steven's time and the tools already in use.
+
+      Local ceiling: In-person tactics are strictly limited to San Diego and North OC
+      (max 45-minute drive from SD). Acceptable local venues: Biocom San Diego, RAPS SoCal
+      Chapter, UCSD Extension, UCI Merage, Torrey Pines / UTC-area co-working.
+
+      Travel = Alpha hold: Any event requiring a flight or hotel (AdvaMed DC, J.P. Morgan SF,
+      LSX London, MassBio Boston) is deferred until Phase 1 revenue is established.
+      Do not recommend these in plans — flag them in a "Future pipeline" section only.
+
+      Zero paid budget: No booth fees, no ad spend, no paid sponsorships, no PR agencies.
+      Acceptable cost exceptions: Biocom membership (already paid), conference registration
+      ≤$300 only if Steven is a confirmed speaker or panellist.
+
+      Overhead ceiling: Every tactic must be executable by Steven alone in ≤2 hours/week
+      aggregate. Do not recommend anything requiring hiring, contracting, or new tool setup.
+
+    Tactic priority order (highest ROI per hour, lowest overhead):
+      1. Substack MedTech Meridian post (publish existing draft) — 0 cost, 0 travel
+      2. Podcast guest pitch email (1 email, 30 min prep) — 0 cost, 0 travel
+      3. FDA docket comment (1-2 hours research + write) — 0 cost, 0 travel
+      4. Warm email outreach (personalised, 3-5 targets/week) — 0 cost, 0 travel
+      5. Virtual Regulatory Clinic / Zoom office hours — 0 cost, 0 travel
+      6. RAPS SoCal or Biocom SD chapter event (attend, not sponsor) — low cost, local
+      7. UCSD/UCI guest lecture (speaking slot, comped) — low cost, local
+      8. In-person Regulatory Clinic at Biocom SD co-working — low cost, local
 
     Hard rules:
       - No fabricated statistics or testimonials
@@ -302,17 +332,52 @@ def cmd_plan() -> str:
         Current pipeline state:
         {pipeline}
 
-        Deliverable structure (McKinsey brief format):
-        - Executive summary: one quantified target (e.g., "3 paid coaching clients by day 90")
-        - 30-day sprint: specific actions, owners, completion criteria
-        - 60-day build: momentum plays, first content drops, event registrations
-        - 90-day close: conversion targets, proof points to capture, Phase 2 gate criteria
-        - Channel breakdown: which guerilla channel delivers which outcome
-        - Risks and mitigation: top 2 risks with concrete responses
+        CRITICAL CONSTRAINTS — every tactic in this plan must satisfy all three:
+          1. MOBILITY: Remote (no driving) OR Local SD/OC only (≤45 min drive). No flights.
+          2. COST: $0 (free) or ≤$300 (registration only if Steven is speaking). No booths.
+          3. OVERHEAD: Executable by Steven alone in ≤2 hours/week additional time.
 
-        Be specific. Name actual events, actual dates, actual targets.
-        No vague language. Every bullet must contain a specific action or metric.
-        Format for executive review — partner-signable.
+        Deliverable structure — McKinsey brief format, partner-signable:
+
+        ## Executive Summary
+        One sentence: the single quantified objective (e.g., "3 paid coaching clients by Day 90
+        through podcast guest appearances, weekly Substack publishing, and warm email to 15
+        SoCal QA/RA Directors — zero ad spend, zero travel.").
+
+        ## Tactic Scorecard
+        Table with columns: Tactic | Mobility | Cost | Weekly Hours | Expected Output | Priority
+        Tag each row: Mobility = Remote / Local / [DEFERRED-TRAVEL]; Cost = $0 / $50 / $300+
+        Sort by Expected Output / (Cost + Hours) — highest ROI first.
+        Remote and free tactics must appear at the top. Any travel tactic = DEFERRED, not recommended.
+
+        ## 30-Day Sprint (Days 1–30) — Foundation
+        Focus: systems and first signals. Zero new tools, zero new costs.
+        - Specific actions with day targets (e.g., "Day 7: send podcast pitch to Jon Speer at Greenlight Guru")
+        - Each action: Mobility tag | Cost | Time estimate | Success criterion
+
+        ## 60-Day Build (Days 31–60) — Momentum
+        Focus: compounding the 30-day signals. Expect first inbound inquiry by Day 60.
+        - Specific actions, same format as above
+        - Name any local events to attend (Biocom SD or RAPS SoCal only)
+
+        ## 90-Day Close (Days 61–90) — Conversion
+        Focus: convert warm contacts to discovery calls, discovery calls to clients.
+        - Conversion actions with specific messaging hooks
+        - Gate criteria for Phase 2A revenue unlock
+
+        ## Channel ROI Breakdown
+        For each active channel: channel name | input (time/week) | expected output (leads/month)
+        Remote channels listed first. No travel channels included.
+
+        ## Future Pipeline (Alpha Hold)
+        List of tactics explicitly held for post-revenue: travel conferences, booths, sponsorships.
+        One sentence each explaining why held and what trigger unlocks them.
+
+        ## Risks & Mitigation
+        Top 2 risks with concrete 1-action responses.
+
+        Be specific. Name real events with real dates, real people, real organisations.
+        No vague language. Every bullet = specific action + specific metric.
     """).strip()
 
     print("\nGenerating 30-60-90 day guerilla marketing plan...")
@@ -337,13 +402,16 @@ def cmd_brief() -> str:
         {pipeline}
 
         Brief format (one page max, MedTechDive register):
-        - Week in focus: 3 specific things to accomplish this week
-        - Content to publish: one Substack topic + angle (specific claim, not generic)
-        - Outreach targets: 2–3 specific people or venues to contact with exact ask
-        - Event on radar: one upcoming event to prepare for with prep action
-        - KPI pulse: outreach / responses / meetings this week vs last (use 0 if no data)
-        - Flag: one risk or blocker
+        - Week in focus: 3 specific actions for this week — remote-first (no driving unless local SD/OC)
+        - Content to publish: one Substack topic with a specific contrarian or data-backed claim
+        - Outreach targets: 2–3 specific people or venues with exact ask and exact email hook
+          (remote channels only: podcast pitch, warm email, FDA docket, Zoom clinic)
+        - Local event on radar (SD/OC only, ≤$300, skip if none this week): one prep action
+        - KPI pulse: outreach sent / responses / meetings booked this week vs last (use 0 if no data)
+        - Flag: one risk or blocker with a single concrete response action
 
+        Constraint check: before finalising, confirm every recommended action is either (a) remote/digital
+        or (b) local San Diego/OC only. Remove any tactic requiring a flight, hotel, or booth fee.
         No motivational filler. Every line = specific action or specific number.
         Label: LATITUDE MEDTECH — WEEKLY MARKETING BRIEF · {CURRENT_DATE}
     """).strip()
