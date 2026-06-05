@@ -370,13 +370,49 @@ def list_briefings():
     )
     briefings = []
     for f in files[:10]:
+        title, fm_date = _briefing_meta(f)
+        # Prefer a date-prefixed filename (YYYY-MM-DD…); else the frontmatter date.
+        name_date = f.name[:10] if f.name[:4].isdigit() and f.name[4] == '-' else ""
         briefings.append({
             "filename": f.name,
-            "date":     f.name[:10],
+            "date":     name_date or fm_date or f.name[:10],
+            "title":    title,
             "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
             "path":     str(f),
         })
     return {"briefings": briefings}
+
+
+def _briefing_meta(f):
+    """Return (title, date). Title: frontmatter `title:`, else first H1, else prettified
+    filename. Date: frontmatter `date:` if present, else ""."""
+    title, fm_date = "", ""
+    try:
+        with open(f, 'r', encoding='utf-8') as fh:
+            in_front = False
+            for i, line in enumerate(fh):
+                if i > 60:
+                    break
+                s = line.strip()
+                if i == 0 and s == '---':
+                    in_front = True
+                    continue
+                if in_front:
+                    if s == '---':
+                        in_front = False
+                        continue
+                    low = s.lower()
+                    if not title and low.startswith('title:'):
+                        title = s.split(':', 1)[1].strip().strip('"\'')
+                    elif not fm_date and low.startswith('date:'):
+                        fm_date = s.split(':', 1)[1].strip().strip('"\'')
+                elif not title and s.startswith('# '):
+                    title = s[2:].strip()
+    except OSError:
+        pass
+    if not title:
+        title = f.stem.replace('_', ' ').strip().title()
+    return title, fm_date
 
 
 @app.get("/api/briefings/{filename}")

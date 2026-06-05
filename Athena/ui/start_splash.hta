@@ -1,5 +1,6 @@
 ﻿<html>
 <head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <title>Athena</title>
 <HTA:APPLICATION
@@ -19,40 +20,31 @@
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -ms-user-select:none; user-select:none; }
 
-  @-ms-keyframes shimmer {
-    0%   { background-position:-300% center; }
-    100% { background-position: 300% center; }
-  }
   @keyframes shimmer {
     0%   { background-position:-300% center; }
     100% { background-position: 300% center; }
-  }
-  @-ms-keyframes blink {
-    0%,80%,100% { opacity:0.15; }
-    40%         { opacity:0.9;  }
   }
   @keyframes blink {
     0%,80%,100% { opacity:0.15; }
     40%         { opacity:0.9;  }
   }
 
+  html { width:100%; height:100%; }
   body {
-    width:580px; height:360px;
+    width:100%; height:100%;
     font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;
     overflow:hidden;
     background:#02111f;
-    display:-ms-flexbox; display:flex;
-    -ms-flex-align:center; align-items:center;
-    -ms-flex-pack:center; justify-content:center;
   }
 
+  /* Card fills the window; size set by Window_OnLoad. IE=edge above lets
+     background-size:cover work (HTAs otherwise default to legacy IE mode). */
   #card {
-    width:564px; height:344px;
-    position:relative;
-    border-radius:16px;
+    position:absolute;
+    top:0; left:0; width:100%; height:100%;
     overflow:hidden;
-    background: #0d2a44 url('file:///C:/Users/huann/LatitudeMedTech/Athena/ui/splash_bg.jpg') no-repeat 28% center;
-    -ms-background-size: cover;
+    border-radius:16px;
+    background:#0d2a44 url('file:///C:/Users/huann/LatitudeMedTech/Athena/ui/splash_bg.jpg') no-repeat 28% center;
     background-size: cover;
   }
 
@@ -60,15 +52,6 @@
     position:absolute;
     top:0; right:0; bottom:0; left:0;
     z-index:1;
-    background: -ms-linear-gradient(top,
-      rgba(8,28,50,0.00)   0%,
-      rgba(8,28,50,0.00)  18%,
-      rgba(8,28,50,0.60)  44%,
-      rgba(8,28,50,0.88)  58%,
-      rgba(8,28,50,0.97)  70%,
-      rgba(8,28,50,1.00)  80%,
-      rgba(8,28,50,1.00) 100%
-    );
     background: linear-gradient(180deg,
       rgba(8,28,50,0.00)   0%,
       rgba(8,28,50,0.00)  18%,
@@ -83,41 +66,41 @@
   #content {
     position:absolute;
     bottom:0; left:0; right:0;
-    padding:0 40px 30px;
+    padding:0 60px 48px;
     z-index:2;
   }
 
   .eyebrow {
-    font-size:8px;
+    font-size:11px;
     letter-spacing:0.32em;
     color:#C4922A;
     text-transform:uppercase;
     font-weight:700;
-    margin-bottom:6px;
+    margin-bottom:9px;
     text-shadow:0 1px 8px rgba(0,0,0,0.7);
   }
   .name {
-    font-size:54px;
+    font-size:76px;
     font-weight:200;
     letter-spacing:0.04em;
     color:#EDE6D8;
     line-height:1;
-    margin-bottom:6px;
+    margin-bottom:9px;
     text-shadow:0 2px 24px rgba(0,0,0,0.85), 0 0 48px rgba(0,0,0,0.4);
   }
   .tagline {
-    font-size:9px;
+    font-size:13px;
     letter-spacing:0.20em;
     color:rgba(220,210,195,0.65);
     text-transform:uppercase;
-    margin-bottom:22px;
+    margin-bottom:30px;
     text-shadow:0 1px 8px rgba(0,0,0,0.6);
   }
   .bar-wrap {
-    width:100%; height:2px;
+    width:100%; height:3px;
     background:rgba(255,255,255,0.08);
     overflow:hidden;
-    margin-bottom:11px;
+    margin-bottom:15px;
   }
   .bar-fill {
     height:100%; width:0%;
@@ -127,39 +110,35 @@
       rgba(196,146,42,0.4)
     );
     background-size:300% auto;
-    -ms-animation: shimmer 2.4s linear infinite;
-    animation:     shimmer 2.4s linear infinite;
-    -ms-transition: width 0.5s ease;
-    transition:    width 0.5s ease;
+    animation: shimmer 2.4s linear infinite;
+    transition: width 0.5s ease;
   }
   .status-text {
-    font-size:10px;
+    font-size:13px;
     color:rgba(220,210,195,0.55);
     letter-spacing:0.04em;
   }
   #dot1, #dot2, #dot3 {
-    font-size:13px;
+    font-size:16px;
     color:rgba(196,146,42,0.5);
-    -ms-animation: blink 1.4s ease-in-out infinite both;
-    animation:     blink 1.4s ease-in-out infinite both;
+    animation: blink 1.4s ease-in-out infinite both;
   }
-  #dot2 { -ms-animation-delay:0.22s; animation-delay:0.22s; }
-  #dot3 { -ms-animation-delay:0.44s; animation-delay:0.44s; }
+  #dot2 { animation-delay:0.22s; }
+  #dot3 { animation-delay:0.44s; }
 </style>
 </head>
 <body>
 
-  <div id="card">
+  <div id="card"></div>
   <div id="overlay"></div>
 
   <div id="content">
     <div class="eyebrow">Latitude MedTech</div>
     <div class="name">Athena</div>
-    <div class="tagline">AI Operating System &nbsp;&middot;&nbsp; San Diego</div>
+    <div class="tagline">Advancing Human Intelligence</div>
     <div class="bar-wrap"><div class="bar-fill" id="bar"></div></div>
     <span class="status-text" id="status">Starting up</span><span id="dots">&#160;<span id="dot1">&#183;</span><span id="dot2">&#183;</span><span id="dot3">&#183;</span></span>
   </div>
-  </div><!-- #card -->
 
 <script language="VBScript">
 Dim bar, statusEl, dotsEl, stepVal, timer_id, poll_id, waited
@@ -171,10 +150,12 @@ MAX_WAIT = 60
 waited   = 0
 
 Sub Window_OnLoad
-  Dim sw, sh
-  sw = Screen.Width : sh = Screen.Height
-  window.moveTo (sw - 580) \ 2, (sh - 360) \ 2
-  window.resizeTo 580, 360
+  Dim aw, ah, al, at, pw, ph
+  aw = Screen.availWidth : ah = Screen.availHeight
+  al = Screen.availLeft  : at = Screen.availTop
+  pw = Int(aw * 0.7) : ph = Int(ah * 0.7)
+  window.resizeTo pw, ph
+  window.moveTo al + (aw - pw) \ 2, at + (ah - ph) \ 2
 
   Set bar      = document.getElementById("bar")
   Set statusEl = document.getElementById("status")
@@ -184,16 +165,9 @@ Sub Window_OnLoad
   timer_id = window.setInterval("Tick",       400)
   poll_id  = window.setInterval("PollBackend", 800)
 
-  ' Borderless window has no title bar, so a click-drag grabs the page
-  ' content instead of moving the window. Dragging the <img> makes IE pop
-  ' the "allow files from this website to be copied to your computer?"
-  ' security dialog. Cancel drag + text-selection at the document level.
-  ' NB: inline on* attributes are parsed as VBScript here, so a JScript
-  ' "return false" throws a script error - wire the handlers in VBScript.
   Set document.ondragstart   = GetRef("CancelEvent")
   Set document.onselectstart = GetRef("CancelEvent")
 
-  ' Click-drag anywhere to move the borderless window.
   dragging = False
   Set document.onmousedown = GetRef("Drag_Begin")
   Set document.onmousemove = GetRef("Drag_Move")
@@ -204,21 +178,17 @@ Sub CancelEvent
   window.event.returnValue = False
 End Sub
 
-' --- Drag-to-move for the borderless window --------------------------------
 Sub Drag_Begin
-  ' left button only
   If window.event.button = 1 Then
     dragging  = True
     dragLastX = window.event.screenX
     dragLastY = window.event.screenY
-    document.body.setCapture           ' keep events during fast drags
+    document.body.setCapture
   End If
 End Sub
 
 Sub Drag_Move
   If dragging Then
-    ' Move the window by the same delta the cursor moved. Using moveBy with
-    ' deltas avoids window.screenLeft/Top, which can be unreliable in an HTA.
     window.moveBy window.event.screenX - dragLastX, window.event.screenY - dragLastY
     dragLastX = window.event.screenX
     dragLastY = window.event.screenY
