@@ -1040,7 +1040,25 @@
       "ingested_at": "2026-06-05T12:57:14.804744",
       "source": "tavily:ISO 13485 audit finding MDSAP medical device quality",
       "hash": "dc2ad5e8bdda7200"
+    },
+    "tavily_4935a24271374f38": {
+      "name": "Public Calendar: July 16-22, 2023 | FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/news-events/public-calendar-meetings-fda-officials/public-calendar-july-16-22-2023",
+      "chunks": 2,
+      "ingested_at": "2026-06-05T13:09:24.163489",
+      "source": "tavily:Biocom California medical device regulatory news",
+      "hash": "e09bf90c27cdfdf0"
+    },
+    "tavily_b724ce8a2b848887": {
+      "name": "[PDF] Download - FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/media/114852/download",
+      "chunks": 27,
+      "ingested_at": "2026-06-05T13:16:54.976231",
+      "source": "tavily:FDA 510k guidance update medical device quality",
+      "hash": "6417fb4ef16838f4"
     }
   },
-  "last_run": "2026-06-05T12:57:22.025927"
+  "last_run": "2026-06-05T13:46:41.439411"
 }

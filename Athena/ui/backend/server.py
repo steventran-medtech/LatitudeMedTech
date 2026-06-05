@@ -1626,15 +1626,58 @@ def _pick_greeting() -> str:
     else:        pool = _GREETINGS_EVENING
     return _random.choice(pool)
 
-def _speak_phrase(text: str):
-    """Speak a phrase via the Kokoro server if available, else pyttsx3."""
+_phrase_cache: dict = {}   # phrase text → raw WAV bytes pre-synthesized at startup
+
+
+def _kokoro_synth(text: str) -> bytes | None:
+    """Fetch WAV bytes from the Kokoro TTS server. Returns None on any failure."""
     try:
-        import urllib.request, json, io, sounddevice as sd, soundfile as sf
+        import urllib.request, json
         payload = json.dumps({"text": text, "voice": os.getenv("VOICE_KOKORO_VOICE", "bf_emma")}).encode()
         req = urllib.request.Request("http://127.0.0.1:8002/speak", data=payload,
                                      headers={"Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            wav = resp.read()
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            return resp.read()
+    except Exception:
+        return None
+
+
+def _preload_phrases():
+    """Synthesize all greeting + goodbye phrases once, immediately after models load.
+
+    Blocks until voice_bridge._models_ready fires (guaranteed before Chrome opens),
+    then hits Kokoro for each phrase and stores the WAV bytes in _phrase_cache.
+    _speak_phrase plays cached audio instantly with zero synthesis latency.
+    """
+    if not VOICE_AVAILABLE:
+        return
+    try:
+        from voice_bridge import _models_ready
+        _models_ready.wait(timeout=300)
+    except Exception:
+        import time; time.sleep(30)
+    all_phrases = (_GREETINGS_MORNING + _GREETINGS_AFTERNOON +
+                   _GREETINGS_EVENING + _GOODBYES)
+    for phrase in all_phrases:
+        if phrase not in _phrase_cache:
+            wav = _kokoro_synth(phrase)
+            if wav:
+                _phrase_cache[phrase] = wav
+
+
+def _speak_phrase(text: str):
+    """Play a greeting or goodbye phrase.
+
+    Uses pre-synthesized WAV from _phrase_cache when available (zero latency);
+    falls back to on-demand Kokoro synthesis, then pyttsx3.
+    """
+    try:
+        import io, sounddevice as sd, soundfile as sf
+        wav = _phrase_cache.get(text) or _kokoro_synth(text)
+        if wav is None:
+            raise RuntimeError("no Kokoro audio")
+        if text not in _phrase_cache:
+            _phrase_cache[text] = wav   # cache opportunistically
         data, sr = sf.read(io.BytesIO(wav))
         sd.play(data.astype("float32"), sr); sd.wait()
     except Exception:
@@ -1645,6 +1688,12 @@ def _speak_phrase(text: str):
             pass
     # Allow speaker audio to fully drain before the mic reopens for wake word detection
     import time; time.sleep(1.0)
+
+
+@app.on_event("startup")
+async def _startup_preload():
+    import threading
+    threading.Thread(target=_preload_phrases, daemon=True, name="tts-preloader").start()
 
 _session_greeted = False   # plays once per server restart, regardless of tab refreshes
 

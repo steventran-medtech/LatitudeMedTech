@@ -77,8 +77,8 @@ class CoachingState(TypedDict, total=False):
 def intake(state: CoachingState) -> dict:
     client = cb.parse_input(state["raw_input"])
     return {"client": client,
-            "title": f"Discovery Call Brief — {client['name']}",
-            "steps": [f"intake: parsed '{client['name']}' ({client['type']})"]}
+            "title": cb.brief_title(client),
+            "steps": [f"intake: parsed '{client.get('label', client['name'])}' ({client['type']})"]}
 
 
 def generate_brief(state: CoachingState) -> dict:
@@ -168,7 +168,10 @@ def _slug(name: str) -> str:
 def start_coaching(raw_input: str, thread_id: str = None) -> dict:
     """Run the workflow up to the human gate. Returns the pause payload."""
     client    = cb.parse_input(raw_input)
-    thread_id = thread_id or f"coaching-{_slug(client['name'])}-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    if client["type"] == "insufficient":
+        # Guardrail: don't fabricate a brief from empty/garbage input.
+        raise ValueError("Enter a client name, LinkedIn URL, or topic — that input is too short to brief.")
+    thread_id = thread_id or f"coaching-{_slug(client.get('label', client['name']))}-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
     config    = {"configurable": {"thread_id": thread_id}}
     graph().invoke({"raw_input": raw_input, "thread_id": thread_id}, config)
     values = graph().get_state(config).values
