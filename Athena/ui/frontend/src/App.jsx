@@ -527,7 +527,7 @@ function FileItem({title, subtitle, selected, checked, onSelect, onCheck, onDele
 
       {/* Main row */}
       <div onClick={onSelect} style={{
-        flex:1, padding:"9px 12px",
+        flex:1, minWidth:0, padding:"9px 12px",
         background: selected ? C.sand : hover ? "#F4F7FA" : C.pearl,
         border:`1px solid ${selected?C.ocean:C.mist}`,
         borderLeft: selected?`3px solid ${C.ocean}`:`1px solid ${C.mist}`,
@@ -538,7 +538,8 @@ function FileItem({title, subtitle, selected, checked, onSelect, onCheck, onDele
           color:selected?C.ink:C.slate,
           fontWeight:selected?600:400,
           lineHeight:1.4,
-        }}>{title?.slice(0,44)}</div>
+          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+        }}>{title}</div>
         {subtitle&&<div style={{fontFamily:F.sans,fontSize:10,color:C.fog,marginTop:2}}>{subtitle}</div>}
       </div>
 
@@ -573,16 +574,21 @@ function FileItem({title, subtitle, selected, checked, onSelect, onCheck, onDele
 // ── Bulk action bar ───────────────────────────────────────────────────────
 function BulkBar({count, onDeleteSelected, onClear, onSelectAll}){
   if(count===0) return null;
+  const link = {background:"none",border:"none",cursor:"pointer",
+    fontFamily:F.sans,fontSize:10,color:C.fog,padding:"2px 5px",lineHeight:1};
   return(
-    <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",background:"#EBF3FB",border:`1px solid ${C.blue}33`,borderRadius:6,marginBottom:8}}>
-      <span style={{fontFamily:"Helvetica,sans-serif",fontSize:11,color:C.blue,fontWeight:600,flex:1}}>
+    <div style={{display:"flex",alignItems:"center",gap:2,padding:"5px 10px",
+      background:"rgba(26,111,163,0.06)",borderRadius:6,marginBottom:8,
+      borderLeft:`2px solid ${C.ocean}`}}>
+      <span style={{fontFamily:F.sans,fontSize:11,color:C.ocean,fontWeight:600,flex:1}}>
         {count} selected
       </span>
-      <button onClick={onSelectAll} style={{...S.btn("ghost"),padding:"3px 8px",fontSize:10}}>All</button>
-      <button onClick={onClear}     style={{...S.btn("ghost"),padding:"3px 8px",fontSize:10}}>None</button>
+      <button onClick={onSelectAll} style={link}>all</button>
+      <button onClick={onClear}     style={link}>none</button>
+      <span style={{color:C.mist,fontSize:10}}>·</span>
       <button onClick={onDeleteSelected}
-        style={{...S.btn("ghost"),padding:"3px 8px",fontSize:10,color:C.red,borderColor:C.red}}>
-        Delete {count}
+        style={{...link,color:C.red,fontWeight:600}}>
+        delete
       </button>
     </div>
   );
@@ -1017,7 +1023,7 @@ function CoachingView({onGenerate}){
     <div>
       <h2 style={{...S.h2,marginBottom:20}}>Coaching Briefs</h2>
       <div style={{...S.card,display:"flex",gap:12,alignItems:"center",marginBottom:20}}>
-        <input value={client} onChange={e=>setClient(e.target.value)} onKeyDown={e=>e.key==="Enter"&&runBrief()} placeholder="Client name or LinkedIn URL" style={{...S.input,flex:1}}/>
+        <input value={client} onChange={e=>setClient(e.target.value)} onKeyDown={e=>e.key==="Enter"&&runBrief()} placeholder="Client name, LinkedIn URL, or topic" style={{...S.input,flex:1}}/>
         <button style={S.btn()} onClick={runBrief}>Generate Brief</button>
         {content&&<button style={S.btn("teal")} onClick={exportDoc}>Save as Word Doc</button>}
         {status&&<span style={{fontFamily:"Helvetica,sans-serif",fontSize:11,color:C.teal}}>{status}</span>}
@@ -1025,7 +1031,13 @@ function CoachingView({onGenerate}){
       <div style={{display:"flex",gap:20}}>
         <div style={{width:240,flexShrink:0}}>
           <BulkBar count={ms.checked.size} onDeleteSelected={deleteSelected} onClear={ms.clear} onSelectAll={()=>ms.selectAll(allIds)}/>
-          {briefs.map(b=>(<FileItem key={b.filename} title={b.filename.replace('.md','').slice(11)} subtitle={b.filename.slice(0,10)} selected={selected===b.filename} checked={ms.checked.has(b.filename)} onCheck={()=>ms.toggle(b.filename)} onSelect={()=>{setSelected(b.filename);setEditing(false);}} onDelete={()=>deleteFile(b.filename)} onEdit={()=>{setSelected(b.filename);setEditing(true);}}/>))}
+          {briefs.map(b=>{
+            const noExt=b.filename.replace(/\.md$/,"");
+            const dated=/^(\d{4}-\d{2}-\d{2})_(.+)$/.exec(noExt);
+            const briefTitle=(dated?dated[2]:noExt.replace(/^brief_/,"")).replace(/_/g," ");
+            const briefDate=dated?dated[1]:"";
+            return(<FileItem key={b.filename} title={briefTitle} subtitle={briefDate} selected={selected===b.filename} checked={ms.checked.has(b.filename)} onCheck={()=>ms.toggle(b.filename)} onSelect={()=>{setSelected(b.filename);setEditing(false);}} onDelete={()=>deleteFile(b.filename)} onEdit={()=>{setSelected(b.filename);setEditing(true);}}/>);
+          })}
           {briefs.length===0&&<div style={{fontFamily:"Helvetica,sans-serif",fontSize:12,color:C.muted}}>No briefs yet.</div>}
         </div>
         <div style={{flex:1}}>
@@ -1232,7 +1244,7 @@ const AGENT_DISPLAY = {
   rag_agent:"RAG Ingestion", briefing_agent:"Daily Briefing",
   content_agent:"Content Draft", iso_coach:"ISO 13485 Coach",
   coaching_brief:"Coaching Brief", agent_learning:"Agent Learning",
-  hr_agent:"HR Review",
+  hr_agent:"HR Review", skills_profile:"Skills Profile",
   consulting_agent:"Consulting Agent", ma_intelligence_agent:"M&A Intelligence",
   marketing_agent:"Marketing Agent",
 };
@@ -1248,6 +1260,8 @@ const AGENT_ETA_SECONDS = {
   ma_intelligence_agent: 210,
   marketing_agent:       120,
   agent_learning:        180,
+  hr_agent:               90,
+  skills_profile:         60,
 };
 
 // Maps agent IDs to the tab to navigate to when the task completes
@@ -1311,7 +1325,7 @@ function AboutModal({version,onClose}){
       zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:24,
     }}>
       <div onClick={e=>e.stopPropagation()} style={{
-        background:C.pearl,borderRadius:12,maxWidth:640,width:"100%",
+        background:C.pearl,borderRadius:20,maxWidth:640,width:"100%",
         maxHeight:"82vh",display:"flex",flexDirection:"column",
         boxShadow:"0 20px 60px rgba(10,37,64,0.3)",overflow:"hidden",
       }}>
@@ -1661,10 +1675,10 @@ export default function App(){
     coaching: <CoachingView onGenerate={runAgent}/>,
     marketing:<MarketingView runningAgents={runningAgents}/>,
     documents:<DocumentsView/>,
-    iso:      <ISOView/>,
+    iso:      <ISOView runningAgents={runningAgents}/>,
     review:   <ReviewView/>,
     agents:   <AgentsView logs={logs} onRun={runAgent} runningAgents={runningAgents}/>,
-    hr:       <HRView/>,
+    hr:       <HRView runningAgents={runningAgents}/>,
     tokens:   <TokenView data={data}/>,
     settings: <SettingsView/>,
   };
@@ -1740,7 +1754,7 @@ export default function App(){
           zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",
         }} onClick={()=>setExitDialog(false)}>
           <div onClick={e=>e.stopPropagation()} style={{
-            background:C.pearl,borderRadius:12,padding:"32px 36px",
+            background:C.pearl,borderRadius:20,padding:"32px 36px",
             maxWidth:380,width:"90%",boxShadow:"0 20px 60px rgba(10,37,64,0.3)",
           }}>
             <div style={{fontFamily:F.sans,fontSize:17,fontWeight:700,color:C.ink,marginBottom:8}}>

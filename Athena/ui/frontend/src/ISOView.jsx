@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const API = "http://localhost:8000";
 
@@ -180,7 +180,7 @@ function MarkdownView({ content: rawContent }) {
 }
 
 // ── Main view ─────────────────────────────────────────────────────────────
-export default function ISOView() {
+export default function ISOView({ runningAgents }) {
   const [lessons,  setLessons]  = useState([]);
   const [selected, setSelected] = useState(null);
   const [content,  setContent]  = useState("");
@@ -189,6 +189,9 @@ export default function ISOView() {
   const [clause,   setClause]   = useState("");
   const [status,   setStatus]   = useState("");
   const ms = useSelect();
+
+  const prevIsoRef  = useRef(false);
+  const fallbackRef = useRef(null);
 
   const load = () =>
     fetch(`${API}/api/iso/lessons`).then(r => r.json())
@@ -202,6 +205,22 @@ export default function ISOView() {
       .then(d => setContent(d.content || "")).catch(() => {});
   }, [selected]);
 
+  // WS-driven completion: react when iso_coach flips running → idle.
+  const isoRunning = runningAgents?.has?.("iso_coach") || false;
+  useEffect(() => {
+    const wasRunning = prevIsoRef.current;
+    if (wasRunning && !isoRunning) {
+      if (fallbackRef.current) { clearTimeout(fallbackRef.current); fallbackRef.current = null; }
+      load();
+      setRunning(false);
+      setStatus("Lesson ready — see the list on the left.");
+    }
+    prevIsoRef.current = isoRunning;
+  }, [isoRunning]);
+
+  // Clear safety-net timer on unmount.
+  useEffect(() => () => { if (fallbackRef.current) clearTimeout(fallbackRef.current); }, []);
+
   const selectLesson = (filename) => {
     setSelected(filename);
     setEditing(false);
@@ -210,13 +229,21 @@ export default function ISOView() {
   const generateLesson = () => {
     setRunning(true);
     setStatus("Generating lesson…");
+    if (fallbackRef.current) clearTimeout(fallbackRef.current);
+    fallbackRef.current = setTimeout(() => {
+      load(); setRunning(false); fallbackRef.current = null;
+      setStatus("Done — refresh if your lesson isn't listed yet.");
+    }, 120000);
     fetch(`${API}/api/agents/iso`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ clause: clause.trim() || null }),
     }).then(() => {
       setStatus("Generating — check Run Agents log");
-      setTimeout(() => { load(); setRunning(false); }, 6000);
-    }).catch(() => { setStatus("Error"); setRunning(false); });
+    }).catch(() => {
+      setStatus("Error");
+      setRunning(false);
+      if (fallbackRef.current) { clearTimeout(fallbackRef.current); fallbackRef.current = null; }
+    });
   };
 
   const deleteOne = async (filename) => {

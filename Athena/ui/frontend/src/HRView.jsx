@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const API = "http://localhost:8000";
 
@@ -194,13 +194,19 @@ function AgentRow({ agent, skills, onLearn, running }) {
   );
 }
 
-export default function HRView() {
+export default function HRView({ runningAgents }) {
   const [health,   setHealth]   = useState([]);
   const [learning, setLearning] = useState([]);
   const [skills,   setSkills]   = useState({});
   const [running,  setRunning]  = useState({});
   const [last,     setLast]     = useState(null);
   const [growth,   setGrowth]   = useState([]);
+
+  // Track previous WS state for each watched agent so we catch running→idle transitions.
+  const prevLearningRef      = useRef(false);
+  const prevHrRef            = useRef(false);
+  const prevSkillsRef        = useRef(false);
+  const fallbacksRef         = useRef({});
 
   const load = () => {
     fetch(`${API}/api/hr/health`).then(r => r.json()).then(d => setHealth(d.agents || [])).catch(() => {});
@@ -212,13 +218,71 @@ export default function HRView() {
 
   useEffect(() => { load(); }, []);
 
+  // Clear all fallback timers on unmount.
+  useEffect(() => () => {
+    Object.values(fallbacksRef.current).forEach(t => clearTimeout(t));
+  }, []);
+
+  // WS-driven completion for agent_learning (covers Learn One, Bulk Learn).
+  const learningRunning = runningAgents?.has?.("agent_learning") || false;
+  useEffect(() => {
+    const wasRunning = prevLearningRef.current;
+    if (wasRunning && !learningRunning) {
+      if (fallbacksRef.current.learning) { clearTimeout(fallbacksRef.current.learning); delete fallbacksRef.current.learning; }
+      load();
+      setRunning(p => {
+        const next = { ...p };
+        delete next.learn_all;
+        Object.keys(next).filter(k => k.startsWith("learn_")).forEach(k => delete next[k]);
+        return next;
+      });
+    }
+    prevLearningRef.current = learningRunning;
+  }, [learningRunning]);
+
+  // WS-driven completion for hr_agent (covers HR Review button).
+  const hrRunning = runningAgents?.has?.("hr_agent") || false;
+  useEffect(() => {
+    const wasRunning = prevHrRef.current;
+    if (wasRunning && !hrRunning) {
+      if (fallbacksRef.current.hr) { clearTimeout(fallbacksRef.current.hr); delete fallbacksRef.current.hr; }
+      load();
+      setRunning(p => { const next = { ...p }; delete next.hr; return next; });
+    }
+    prevHrRef.current = hrRunning;
+  }, [hrRunning]);
+
+  // WS-driven completion for skills_profile (covers Refresh Skills button).
+  const skillsRunning = runningAgents?.has?.("skills_profile") || false;
+  useEffect(() => {
+    const wasRunning = prevSkillsRef.current;
+    if (wasRunning && !skillsRunning) {
+      if (fallbacksRef.current.skills_profile) { clearTimeout(fallbacksRef.current.skills_profile); delete fallbacksRef.current.skills_profile; }
+      load();
+      setRunning(p => { const next = { ...p }; delete next.skills_profile; return next; });
+    }
+    prevSkillsRef.current = skillsRunning;
+  }, [skillsRunning]);
+
+  // Fallback timeouts (used only when WS drops): generous enough for real runtimes.
+  const FALLBACK_MS = { learn_all: 300000, hr: 120000, skills_profile: 120000, run_all: 300000 };
+
   const trigger = (endpoint, key, body = {}) => {
     setRunning(p => ({ ...p, [key]: true }));
+    const fbKey = key.startsWith("learn_") ? "learning" : key;
+    if (fallbacksRef.current[fbKey]) clearTimeout(fallbacksRef.current[fbKey]);
+    fallbacksRef.current[fbKey] = setTimeout(() => {
+      load();
+      setRunning(p => { const next = { ...p }; delete next[key]; return next; });
+      delete fallbacksRef.current[fbKey];
+    }, FALLBACK_MS[key] || 300000);
     fetch(`${API}${endpoint}`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-    }).then(() => setTimeout(() => { load(); setRunning(p => ({ ...p, [key]: false })); }, 8000))
-      .catch(() => setRunning(p => ({ ...p, [key]: false })));
+    }).catch(() => {
+      setRunning(p => ({ ...p, [key]: false }));
+      if (fallbacksRef.current[fbKey]) { clearTimeout(fallbacksRef.current[fbKey]); delete fallbacksRef.current[fbKey]; }
+    });
   };
 
   const learnOne = (agent) => trigger("/api/agents/learn", `learn_${agent}`, { agent });
@@ -266,10 +330,7 @@ export default function HRView() {
             {running.hr ? "Running…" : "HR Review"}
           </button>
           <button
-            onClick={() => {
-              trigger("/api/agents/skills-profile", "skills_profile");
-              setTimeout(load, 5000);
-            }}
+            onClick={() => trigger("/api/agents/skills-profile", "skills_profile")}
             disabled={running.skills_profile}
             style={{ ...gBtn, background: "#3C5470", color: "#fff", border: "none" }}>
             {running.skills_profile ? "Building…" : "Refresh Skills"}
