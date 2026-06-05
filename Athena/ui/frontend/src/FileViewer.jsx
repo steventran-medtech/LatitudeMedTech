@@ -48,7 +48,7 @@ export default function FileViewer({ folder, filename, onClose }) {
       onClick={e => { if (e.target === e.currentTarget) onClose?.(); }}
     >
       <div style={{
-        background: "#fff", borderRadius: 10, width: "90vw", height: "90vh",
+        background: "#fff", borderRadius: 20, width: "90vw", height: "90vh",
         display: "flex", flexDirection: "column", overflow: "hidden",
         boxShadow: "0 8px 40px rgba(0,0,0,0.25)",
       }}>
