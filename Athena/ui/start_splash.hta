@@ -1,4 +1,4 @@
-﻿<html>
+<html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <title>Athena</title>
@@ -189,8 +189,10 @@ Sub Window_OnLoad
   window.moveTo al + (aw - pw) \ 2, at + (ah - ph) \ 2
 
   ' Cover-fill the card with the background image (source 1400x350).
-  ' Scale so it covers both dimensions, then center; bias slightly left
-  ' so the cliffs + palms stay visible and the waves fall on the right.
+  ' Scale so it covers both dimensions, then center; bias slightly left so
+  ' the cliffs + palms stay visible and the waves fall on the right.
+  ' HTAs render in legacy IE mode, which ignores background-size:cover, so
+  ' we scale a real <img> here instead.
   Dim img, sW, sH, scaleW, scaleH, scale, newW, newH
   sW = 1400.0 : sH = 350.0
   scaleW = pw / sW : scaleH = ph / sH
