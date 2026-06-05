@@ -40,15 +40,20 @@
     width:580px; height:360px;
     font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;
     overflow:hidden;
-    position:relative;
-    background:#0d2a44;
+    background:#02111f;
+    display:-ms-flexbox; display:flex;
+    -ms-flex-align:center; align-items:center;
+    -ms-flex-pack:center; justify-content:center;
   }
 
-  /* Sized by Window_OnLoad — known source dims 1400x350 */
-  #bgImg {
-    position:absolute;
-    display:none;
-    z-index:0;
+  #card {
+    width:564px; height:344px;
+    position:relative;
+    border-radius:16px;
+    overflow:hidden;
+    background: #0d2a44 url('file:///C:/Users/huann/LatitudeMedTech/Athena/ui/splash_bg.jpg') no-repeat 28% center;
+    -ms-background-size: cover;
+    background-size: cover;
   }
 
   #overlay {
@@ -144,7 +149,7 @@
 </head>
 <body>
 
-  <img id="bgImg" src="file:///C:/Users/huann/LatitudeMedTech/Athena/ui/splash_bg.jpg" alt=""/>
+  <div id="card">
   <div id="overlay"></div>
 
   <div id="content">
@@ -154,11 +159,12 @@
     <div class="bar-wrap"><div class="bar-fill" id="bar"></div></div>
     <span class="status-text" id="status">Starting up</span><span id="dots">&#160;<span id="dot1">&#183;</span><span id="dot2">&#183;</span><span id="dot3">&#183;</span></span>
   </div>
+  </div><!-- #card -->
 
 <script language="VBScript">
 Dim bar, statusEl, dotsEl, stepVal, timer_id, poll_id, waited
 Dim BACKEND, FRONTEND, MAX_WAIT
-Dim dragging, dragOffX, dragOffY
+Dim dragging, dragLastX, dragLastY
 BACKEND  = "http://127.0.0.1:8000/"
 FRONTEND = "http://localhost:3000"
 MAX_WAIT = 60
@@ -169,17 +175,6 @@ Sub Window_OnLoad
   sw = Screen.Width : sh = Screen.Height
   window.moveTo (sw - 580) \ 2, (sh - 360) \ 2
   window.resizeTo 580, 360
-
-  ' Cover-fill: source 1400x350, target 580x360
-  ' Scale by height: 360/350 = 1.02857 -> newW=1440, newH=360
-  ' Bias left 28% so cliffs+palms show on left, waves on right
-  Dim img
-  Set img = document.getElementById("bgImg")
-  img.style.width   = "1440px"
-  img.style.height  = "360px"
-  img.style.left    = "-241px"
-  img.style.top     = "0px"
-  img.style.display = "block"
 
   Set bar      = document.getElementById("bar")
   Set statusEl = document.getElementById("status")
@@ -211,17 +206,22 @@ End Sub
 
 ' --- Drag-to-move for the borderless window --------------------------------
 Sub Drag_Begin
-  If window.event.button = 1 Then            ' left button only
-    dragging = True
-    dragOffX = window.event.screenX - window.screenLeft
-    dragOffY = window.event.screenY - window.screenTop
-    document.body.setCapture                 ' keep events during fast drags
+  ' left button only
+  If window.event.button = 1 Then
+    dragging  = True
+    dragLastX = window.event.screenX
+    dragLastY = window.event.screenY
+    document.body.setCapture           ' keep events during fast drags
   End If
 End Sub
 
 Sub Drag_Move
   If dragging Then
-    window.moveTo window.event.screenX - dragOffX, window.event.screenY - dragOffY
+    ' Move the window by the same delta the cursor moved. Using moveBy with
+    ' deltas avoids window.screenLeft/Top, which can be unreliable in an HTA.
+    window.moveBy window.event.screenX - dragLastX, window.event.screenY - dragLastY
+    dragLastX = window.event.screenX
+    dragLastY = window.event.screenY
   End If
 End Sub
 
