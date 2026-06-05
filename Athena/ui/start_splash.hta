@@ -1,4 +1,4 @@
-﻿<html>
+<html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <title>Athena</title>
@@ -36,8 +36,9 @@
     40%         { opacity:0.9;  }
   }
 
+  html { width:100%; height:100%; }
   body {
-    width:580px; height:360px;
+    width:100%; height:100%;
     font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;
     overflow:hidden;
     background:#02111f;
@@ -47,13 +48,19 @@
   }
 
   #card {
-    width:564px; height:344px;
+    width:100%; height:100%;
     position:relative;
     border-radius:16px;
     overflow:hidden;
-    background: #0d2a44 url('file:///C:/Users/huann/LatitudeMedTech/Athena/ui/splash_bg.jpg') no-repeat 28% center;
-    -ms-background-size: cover;
-    background-size: cover;
+    background:#0d2a44;
+  }
+
+  /* Sized by Window_OnLoad to cover the card. HTAs render in legacy IE
+     mode, which ignores background-size:cover, so we scale a real <img>. */
+  #bgImg {
+    position:absolute;
+    display:none;
+    z-index:0;
   }
 
   #overlay {
@@ -83,41 +90,41 @@
   #content {
     position:absolute;
     bottom:0; left:0; right:0;
-    padding:0 40px 30px;
+    padding:0 60px 48px;
     z-index:2;
   }
 
   .eyebrow {
-    font-size:8px;
+    font-size:11px;
     letter-spacing:0.32em;
     color:#C4922A;
     text-transform:uppercase;
     font-weight:700;
-    margin-bottom:6px;
+    margin-bottom:9px;
     text-shadow:0 1px 8px rgba(0,0,0,0.7);
   }
   .name {
-    font-size:54px;
+    font-size:76px;
     font-weight:200;
     letter-spacing:0.04em;
     color:#EDE6D8;
     line-height:1;
-    margin-bottom:6px;
+    margin-bottom:9px;
     text-shadow:0 2px 24px rgba(0,0,0,0.85), 0 0 48px rgba(0,0,0,0.4);
   }
   .tagline {
-    font-size:9px;
+    font-size:13px;
     letter-spacing:0.20em;
     color:rgba(220,210,195,0.65);
     text-transform:uppercase;
-    margin-bottom:22px;
+    margin-bottom:30px;
     text-shadow:0 1px 8px rgba(0,0,0,0.6);
   }
   .bar-wrap {
-    width:100%; height:2px;
+    width:100%; height:3px;
     background:rgba(255,255,255,0.08);
     overflow:hidden;
-    margin-bottom:11px;
+    margin-bottom:15px;
   }
   .bar-fill {
     height:100%; width:0%;
@@ -133,12 +140,12 @@
     transition:    width 0.5s ease;
   }
   .status-text {
-    font-size:10px;
+    font-size:13px;
     color:rgba(220,210,195,0.55);
     letter-spacing:0.04em;
   }
   #dot1, #dot2, #dot3 {
-    font-size:13px;
+    font-size:16px;
     color:rgba(196,146,42,0.5);
     -ms-animation: blink 1.4s ease-in-out infinite both;
     animation:     blink 1.4s ease-in-out infinite both;
@@ -150,12 +157,13 @@
 <body>
 
   <div id="card">
+  <img id="bgImg" src="file:///C:/Users/huann/LatitudeMedTech/Athena/ui/splash_bg.jpg" alt=""/>
   <div id="overlay"></div>
 
   <div id="content">
     <div class="eyebrow">Latitude MedTech</div>
     <div class="name">Athena</div>
-    <div class="tagline">AI Operating System &nbsp;&middot;&nbsp; San Diego</div>
+    <div class="tagline">Advancing Human Intelligence</div>
     <div class="bar-wrap"><div class="bar-fill" id="bar"></div></div>
     <span class="status-text" id="status">Starting up</span><span id="dots">&#160;<span id="dot1">&#183;</span><span id="dot2">&#183;</span><span id="dot3">&#183;</span></span>
   </div>
@@ -171,10 +179,31 @@ MAX_WAIT = 60
 waited   = 0
 
 Sub Window_OnLoad
-  Dim sw, sh
-  sw = Screen.Width : sh = Screen.Height
-  window.moveTo (sw - 580) \ 2, (sh - 360) \ 2
-  window.resizeTo 580, 360
+  Dim aw, ah, al, at, pw, ph
+  ' availWidth/Height = desktop work area (full screen minus the taskbar)
+  aw = Screen.availWidth : ah = Screen.availHeight
+  al = Screen.availLeft  : at = Screen.availTop
+  ' Centered panel at 70% of the work area
+  pw = Int(aw * 0.7) : ph = Int(ah * 0.7)
+  window.resizeTo pw, ph
+  window.moveTo al + (aw - pw) \ 2, at + (ah - ph) \ 2
+
+  ' Cover-fill the card with the background image (source 1400x350).
+  ' Scale so it covers both dimensions, then center; bias slightly left so
+  ' the cliffs + palms stay visible and the waves fall on the right.
+  ' HTAs render in legacy IE mode, which ignores background-size:cover, so
+  ' we scale a real <img> here instead.
+  Dim img, sW, sH, scaleW, scaleH, scale, newW, newH
+  sW = 1400.0 : sH = 350.0
+  scaleW = pw / sW : scaleH = ph / sH
+  If scaleW > scaleH Then scale = scaleW Else scale = scaleH
+  newW = Int(sW * scale) : newH = Int(sH * scale)
+  Set img = document.getElementById("bgImg")
+  img.style.width   = newW & "px"
+  img.style.height  = newH & "px"
+  img.style.left    = Int((pw - newW) / 2 - newW * 0.04) & "px"
+  img.style.top     = Int((ph - newH) / 2) & "px"
+  img.style.display = "block"
 
   Set bar      = document.getElementById("bar")
   Set statusEl = document.getElementById("status")
