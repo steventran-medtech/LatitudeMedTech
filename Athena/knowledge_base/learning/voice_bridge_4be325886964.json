@@ -1,0 +1,15 @@
+{
+  "agent": "voice_bridge",
+  "doc_name": "How we used Gemini to build Google I/O 2026",
+  "category": "Conversational AI",
+  "source": "Google AI Blog",
+  "url": "https://blog.google/innovation-and-ai/technology/ai/io-2026-google-ai/",
+  "ingested": "2026-06-05T13:14:47.378052",
+  "chunks": [
+    {
+      "text": "A collage of I/O-related images, including the Antigravity Coffee Co. pop-up, a colorful jellyfish and a still from the Timmy TPU video. The word AI repeats three times on the left of the image, and there are colorful icons, including a sparkle, as well.",
+      "doc_name": "How we used Gemini to build Google I/O 2026",
+      "category": "Conversational AI"
+    }
+  ]
+}

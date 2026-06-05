@@ -1,0 +1,15 @@
+{
+  "agent": "voice_bridge",
+  "doc_name": "The Download: AI hacking beyond Mythos, and chatbots’ impact on our brains",
+  "category": "AI Technology",
+  "source": "MIT Technology Review",
+  "url": "https://www.technologyreview.com/2026/06/05/1138452/the-download-ai-hacking-mythos-chatbots-brain-impacts/",
+  "ingested": "2026-06-05T13:14:46.184513",
+  "chunks": [
+    {
+      "text": "This is today&#8217;s edition of The Download, our weekday newsletter that provides a daily dose of what&#8217;s going on in the world of technology. The Meta hack shows there’s more to AI security than Mythos On Monday, reports emerged that attackers had used Meta’s AI customer support agent to steal Instagram accounts. Their approach was&#8230;",
+      "doc_name": "The Download: AI hacking beyond Mythos, and chatbots’ impact on our brains",
+      "category": "AI Technology"
+    }
+  ]
+}

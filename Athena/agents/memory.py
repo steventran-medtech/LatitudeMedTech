@@ -717,5 +717,19 @@ class Memory:
         ).fetchone()
         return dict(row) if row else {"pending": 0, "approved": 0, "rejected": 0}
 
+    def get_reviewed_items(self, limit: int = 200):
+        rows = self.conn.execute(
+            "SELECT * FROM review_queue WHERE status IN ('approved','rejected') "
+            "ORDER BY reviewed_at DESC LIMIT ?", (limit,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def reopen_review(self, item_id: int):
+        self.conn.execute(
+            "UPDATE review_queue SET status='pending', reviewed_at=NULL, notes=NULL WHERE id=?",
+            (item_id,)
+        )
+        self.conn.commit()
+
     def close(self):
         self.conn.close()

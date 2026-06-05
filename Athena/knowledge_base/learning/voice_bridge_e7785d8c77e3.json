@@ -1,0 +1,15 @@
+{
+  "agent": "voice_bridge",
+  "doc_name": "Google just redesigned the search box for the first time in 25 years — here’s why it matters more than you think.",
+  "category": "AI Industry",
+  "source": "VentureBeat AI",
+  "url": "https://venturebeat.com/technology/google-just-redesigned-the-search-box-for-the-first-time-in-25-years-heres-why-it-matters-more-than-you-think",
+  "ingested": "2026-06-05T13:19:57.410114",
+  "chunks": [
+    {
+      "text": "For a quarter century, the Google search box has been one of the most recognizable interfaces in computing: a thin white rectangle, a blinking cursor, a few typed words, and a list of blue links. On Tuesday, Google will formally retire that paradigm.At its annual I/O developer conference, Google announced a sweeping redesign of the search box itself — the literal text field where billions of queries begin every day — transforming it from a simple keyword input into a dynamic, AI-driven conversation starter that can accept text, images, PDFs, videos, and even open Chrome tabs as inputs. The company is also merging its AI Overviews and AI Mode features into a single, seamless search flow, eliminating the friction that previously forced users to choose between a traditional results page and an AI-forward experience.Liz Reid, Google&#x27;s vice president and head of Search, called it &quot;the biggest upgrade to our iconic search box since its debut over 25 years ago&quot; during a press briefing on Monday.The announcement arrived alongside a blizzard of other news — new Gemini models, a personal AI agent called Spark, an intelligent shopping cart, a reimagined developer platform — but the search box redesign may prove to be the most consequential. It is the clearest signal yet that Google views the future of its flagship product not as a place where users type fragmented keywords, but as an interface where they hold open-ended, multimodal conversations with an AI system backed by the entire web.The new search box expands, accepts files, and coaches you on what to askThe changes show a fundamental shift in how Google expects people to interact with the product that generates the vast majority of Alphabet&#x27;s revenue.The box itself now dynamically expands to accommodate longer, more conversational queries. Where the old interface subtly encouraged brevity — a narrow field suited to two- or three-word keyword strings — the new design invites users to fully articulate c",
+      "doc_name": "Google just redesigned the search box for the first time in 25 years — here’s why it matters more than you think.",
+      "category": "AI Industry"
+    }
+  ]
+}

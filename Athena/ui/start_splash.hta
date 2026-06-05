@@ -142,9 +142,9 @@
   #dot3 { -ms-animation-delay:0.44s; animation-delay:0.44s; }
 </style>
 </head>
-<body ondragstart="return false;" onselectstart="return false;">
+<body>
 
-  <img id="bgImg" src="file:///C:/Users/huann/LatitudeMedTech/Athena/ui/splash_bg.jpg" alt="" ondragstart="return false;"/>
+  <img id="bgImg" src="file:///C:/Users/huann/LatitudeMedTech/Athena/ui/splash_bg.jpg" alt=""/>
   <div id="overlay"></div>
 
   <div id="content">
@@ -158,6 +158,7 @@
 <script language="VBScript">
 Dim bar, statusEl, dotsEl, stepVal, timer_id, poll_id, waited
 Dim BACKEND, FRONTEND, MAX_WAIT
+Dim dragging, dragOffX, dragOffY
 BACKEND  = "http://127.0.0.1:8000/"
 FRONTEND = "http://localhost:3000"
 MAX_WAIT = 60
@@ -187,6 +188,48 @@ Sub Window_OnLoad
 
   timer_id = window.setInterval("Tick",       400)
   poll_id  = window.setInterval("PollBackend", 800)
+
+  ' Borderless window has no title bar, so a click-drag grabs the page
+  ' content instead of moving the window. Dragging the <img> makes IE pop
+  ' the "allow files from this website to be copied to your computer?"
+  ' security dialog. Cancel drag + text-selection at the document level.
+  ' NB: inline on* attributes are parsed as VBScript here, so a JScript
+  ' "return false" throws a script error - wire the handlers in VBScript.
+  Set document.ondragstart   = GetRef("CancelEvent")
+  Set document.onselectstart = GetRef("CancelEvent")
+
+  ' Click-drag anywhere to move the borderless window.
+  dragging = False
+  Set document.onmousedown = GetRef("Drag_Begin")
+  Set document.onmousemove = GetRef("Drag_Move")
+  Set document.onmouseup   = GetRef("Drag_End")
+End Sub
+
+Sub CancelEvent
+  window.event.returnValue = False
+End Sub
+
+' --- Drag-to-move for the borderless window --------------------------------
+Sub Drag_Begin
+  If window.event.button = 1 Then            ' left button only
+    dragging = True
+    dragOffX = window.event.screenX - window.screenLeft
+    dragOffY = window.event.screenY - window.screenTop
+    document.body.setCapture                 ' keep events during fast drags
+  End If
+End Sub
+
+Sub Drag_Move
+  If dragging Then
+    window.moveTo window.event.screenX - dragOffX, window.event.screenY - dragOffY
+  End If
+End Sub
+
+Sub Drag_End
+  If dragging Then
+    dragging = False
+    document.releaseCapture
+  End If
 End Sub
 
 Sub SetStatus(msg, showDots)

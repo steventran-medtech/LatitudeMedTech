@@ -174,23 +174,22 @@ class ConnectionManager:
 manager = ConnectionManager()
 running_agents = set()  # Prevent duplicate runs
 
-_shutting_down = False           # set True once /api/shutdown is called
-_goodbye_task  = None            # asyncio.Task — delayed goodbye after WS disconnect
+_shutting_down = False          # set True once /api/shutdown is called
+_goodbye_task: "asyncio.Task | None" = None  # delayed goodbye after WS disconnect
 
 
 async def _ws_goodbye():
-    """Play TTS farewell 3 s after all WebSocket clients disconnect.
+    """Plays TTS farewell after all WebSocket clients disconnect.
 
-    The 3-second window absorbs page-refresh reconnects without triggering TTS.
-    Guarded by _shutting_down so the in-app exit button never double-speaks.
+    Waits 3 s for a page-refresh reconnect before acting.  Guarded by
+    _shutting_down so the in-app exit button flow never double-speaks.
     """
-    import asyncio as _asyncio
-    await _asyncio.sleep(3)
+    await asyncio.sleep(3)
     if manager.active or _shutting_down:
         return
     stop_script = ATHENA / "ui" / "stop_athena.ps1"
     phrase = _random.choice(_GOODBYES)
-    await _asyncio.get_event_loop().run_in_executor(None, _speak_phrase, phrase)
+    await asyncio.get_event_loop().run_in_executor(None, _speak_phrase, phrase)
     try:
         flags = (getattr(subprocess, "CREATE_NO_WINDOW", 0) |
                  getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
@@ -206,13 +205,16 @@ async def _ws_goodbye():
 
 # ── Agent runner ──────────────────────────────────────────────────────────────
 
-async def run_agent(agent_name: str, script: str, args: list = None):
+async def run_agent(agent_name: str, script: str, args: list = None, context: str = ""):
     """Run an agent script and stream output via WebSocket."""
     if agent_name in running_agents:
         await manager.broadcast({"type": "agent_log", "agent": agent_name, "line": f"[SKIPPED] {agent_name} already running"})
         return
     running_agents.add(agent_name)
-    await manager.broadcast({"type": "agent_start", "agent": agent_name, "ts": datetime.now().isoformat()})
+    msg = {"type": "agent_start", "agent": agent_name, "ts": datetime.now().isoformat()}
+    if context:
+        msg["context"] = context
+    await manager.broadcast(msg)
 
     cmd = [str(VENV_PYTHON), str(AGENTS_DIR / script)] + (args or [])
     proc = await asyncio.create_subprocess_exec(
@@ -518,8 +520,10 @@ async def trigger_run_all(background_tasks: BackgroundTasks):
 async def trigger_consulting(request: Request, background_tasks: BackgroundTasks):
     body = await request.json()
     mode = body.get("mode", "learn")   # "learn" | "report"
+    override = _safe_arg(body.get("override", ""))
     args = ["--generate", "report"] if mode == "report" else []
-    background_tasks.add_task(run_agent, "consulting_agent", "consulting_agent.py", args)
+    context = override or (mode if mode != "learn" else "")
+    background_tasks.add_task(run_agent, "consulting_agent", "consulting_agent.py", args, context)
     return {"status": "started", "agent": "consulting_agent", "mode": mode}
 
 
@@ -630,14 +634,15 @@ def get_marketing_output(filename: str):
 async def trigger_ma(request: Request, background_tasks: BackgroundTasks):
     body  = await request.json()
     mode  = body.get("mode", "learn")   # "learn" | "analyse" | "historical"
-    topic = body.get("topic", "")
+    topic = _safe_arg(body.get("topic", ""))
     if mode == "analyse":
         args = ["--analyse"] + (["--topic", topic] if topic else [])
     elif mode == "historical":
         args = ["--historical"]
     else:
         args = []
-    background_tasks.add_task(run_agent, "ma_intelligence_agent", "ma_intelligence_agent.py", args)
+    context = topic or (mode if mode != "learn" else "")
+    background_tasks.add_task(run_agent, "ma_intelligence_agent", "ma_intelligence_agent.py", args, context)
     return {"status": "started", "agent": "ma_intelligence_agent", "mode": mode}
 
 
@@ -654,16 +659,18 @@ async def trigger_rag(request: Request, background_tasks: BackgroundTasks):
 @app.post("/api/agents/briefing")
 async def trigger_briefing(request: Request, background_tasks: BackgroundTasks):
     body = await request.json()
-    args = ["--override", _safe_arg(body["override"])] if body.get("override") else []
-    background_tasks.add_task(run_agent, "briefing_agent", "briefing_agent.py", args)
+    override = _safe_arg(body.get("override", ""))
+    args = ["--override", override] if override else []
+    background_tasks.add_task(run_agent, "briefing_agent", "briefing_agent.py", args, override)
     return {"status": "started", "agent": "briefing_agent"}
 
 
 @app.post("/api/agents/content")
 async def trigger_content(request: Request, background_tasks: BackgroundTasks):
     body = await request.json()
-    args = ["--override", _safe_arg(body["override"])] if body.get("override") else []
-    background_tasks.add_task(run_agent, "content_agent", "content_agent.py", args)
+    override = _safe_arg(body.get("override", ""))
+    args = ["--override", override] if override else []
+    background_tasks.add_task(run_agent, "content_agent", "content_agent.py", args, override)
     return {"status": "started", "agent": "content_agent"}
 
 
@@ -711,6 +718,24 @@ async def trigger_iso(req: ISORequest, background_tasks: BackgroundTasks):
     args = ["--clause", req.clause] if req.clause else ["--next"]
     background_tasks.add_task(run_agent, "iso_coach", "iso_coach_agent.py", args)
     return {"status": "started", "agent": "iso_coach"}
+
+
+@app.post("/api/agents/voice-optimizer")
+async def trigger_voice_optimizer(request: Request, background_tasks: BackgroundTasks):
+    """
+    Run one PDCA optimization cycle for Athena's voice pipeline.
+    Tunes wake_threshold, silence params, Whisper model, and voice_assistant
+    system prompt — all within safe bounds. Code-level improvements are queued
+    to the review queue for Steven's approval.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    dry_run  = body.get("dry_run", False)
+    args     = ["--dry-run"] if dry_run else []
+    background_tasks.add_task(run_agent, "voice_optimizer", "voice_optimizer.py", args)
+    return {"status": "started", "agent": "voice_optimizer", "dry_run": dry_run}
 
 
 # ── Document generation ───────────────────────────────────────────────────────
@@ -1103,7 +1128,7 @@ def open_document(filename: str):
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     global _goodbye_task
-    # Cancel any pending goodbye — client is reconnecting (e.g. page refresh).
+    # Cancel any pending goodbye — this is a reconnect (e.g. page refresh).
     if _goodbye_task and not _goodbye_task.done():
         _goodbye_task.cancel()
     await manager.connect(ws)
@@ -1407,6 +1432,16 @@ async def review_reject(item_id: int, request: Request):
     await _resume_workflow(item_id, "rejected", notes)
     return {"status": "rejected", "id": item_id}
 
+@app.get("/api/review/history")
+def review_history():
+    if not mem: return {"items": []}
+    return {"items": mem.get_reviewed_items()}
+
+@app.post("/api/review/{item_id}/reopen")
+def review_reopen(item_id: int):
+    if mem: mem.reopen_review(item_id)
+    return {"status": "pending", "id": item_id}
+
 
 def _resolve_review_file(item_id: int):
     """Locate the file backing a review item by its stored path, falling back
@@ -1661,58 +1696,15 @@ def _pick_greeting() -> str:
     else:        pool = _GREETINGS_EVENING
     return _random.choice(pool)
 
-_phrase_cache: dict = {}   # phrase text → raw WAV bytes pre-synthesized at startup
-
-
-def _kokoro_synth(text: str) -> Optional[bytes]:
-    """Fetch WAV bytes from the Kokoro TTS server. Returns None on any failure."""
+def _speak_phrase(text: str):
+    """Speak a phrase via the Kokoro server if available, else pyttsx3."""
     try:
-        import urllib.request, json
+        import urllib.request, json, io, sounddevice as sd, soundfile as sf
         payload = json.dumps({"text": text, "voice": os.getenv("VOICE_KOKORO_VOICE", "bf_emma")}).encode()
         req = urllib.request.Request("http://127.0.0.1:8002/speak", data=payload,
                                      headers={"Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            return resp.read()
-    except Exception:
-        return None
-
-
-def _preload_phrases():
-    """Synthesize all greeting + goodbye phrases once, immediately after models load.
-
-    Blocks until voice_bridge._models_ready fires (guaranteed before Chrome opens),
-    then hits Kokoro for each phrase and stores the WAV bytes in _phrase_cache.
-    _speak_phrase plays cached audio instantly with zero synthesis latency.
-    """
-    if not VOICE_AVAILABLE:
-        return
-    try:
-        from voice_bridge import _models_ready
-        _models_ready.wait(timeout=300)
-    except Exception:
-        import time; time.sleep(30)
-    all_phrases = (_GREETINGS_MORNING + _GREETINGS_AFTERNOON +
-                   _GREETINGS_EVENING + _GOODBYES)
-    for phrase in all_phrases:
-        if phrase not in _phrase_cache:
-            wav = _kokoro_synth(phrase)
-            if wav:
-                _phrase_cache[phrase] = wav
-
-
-def _speak_phrase(text: str):
-    """Play a greeting or goodbye phrase.
-
-    Uses pre-synthesized WAV from _phrase_cache when available (zero latency);
-    falls back to on-demand Kokoro synthesis, then pyttsx3.
-    """
-    try:
-        import io, sounddevice as sd, soundfile as sf
-        wav = _phrase_cache.get(text) or _kokoro_synth(text)
-        if wav is None:
-            raise RuntimeError("no Kokoro audio")
-        if text not in _phrase_cache:
-            _phrase_cache[text] = wav   # cache opportunistically
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            wav = resp.read()
         data, sr = sf.read(io.BytesIO(wav))
         sd.play(data.astype("float32"), sr); sd.wait()
     except Exception:
@@ -1723,12 +1715,6 @@ def _speak_phrase(text: str):
             pass
     # Allow speaker audio to fully drain before the mic reopens for wake word detection
     import time; time.sleep(1.0)
-
-
-@app.on_event("startup")
-async def _startup_preload():
-    import threading
-    threading.Thread(target=_preload_phrases, daemon=True, name="tts-preloader").start()
 
 _session_greeted = False   # plays once per server restart, regardless of tab refreshes
 
@@ -1756,7 +1742,7 @@ async def shutdown_app(background_tasks: BackgroundTasks):
     so they fire after the response has been fully sent to the client.
     """
     global _shutting_down
-    _shutting_down = True      # prevent WS-disconnect from double-speaking
+    _shutting_down = True          # prevent WebSocket-disconnect goodbye from double-firing
     phrase = _random.choice(_GOODBYES)
     stop_script = ATHENA / "ui" / "stop_athena.ps1"
 

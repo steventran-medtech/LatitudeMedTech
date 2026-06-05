@@ -37,14 +37,22 @@ export function useVoiceSession() {
     fetch(`${API}/api/voice/devices`).then(r => r.json())
       .then(d => setDevices(d.devices ?? [])).catch(() => {});
 
-    fetch(`${API}/api/voice/status`).then(r => r.json())
-      .then(d => {
-        if (d.active) {
-          setRunning(true); setState(d.state ?? "idle"); setStatus(d);
-          sessionStart.current = Date.now(); queryCount.current = 0;
-        } else {
-          // Play greeting first (blocks until TTS finishes + 1s drain),
-          // then open the mic — prevents Athena from recording her own voice.
+    // Poll until models_ready before greeting or starting voice — guarantees
+    // Athena never opens in a loading state regardless of startup script timing.
+    const pollReady = (attempt) => {
+      fetch(`${API}/api/voice/status`).then(r => r.json())
+        .then(d => {
+          if (d.active) {
+            setRunning(true); setState(d.state ?? "idle"); setStatus(d);
+            sessionStart.current = Date.now(); queryCount.current = 0;
+            return;
+          }
+          if (!d.models_ready) {
+            // Models still loading — retry every 800 ms, up to ~3 minutes
+            if (attempt < 225) setTimeout(() => pollReady(attempt + 1), 800);
+            return;
+          }
+          // All models ready — greet then start
           fetch(`${API}/api/voice/greet`, { method: "POST" })
             .catch(() => {})
             .finally(() => {
@@ -56,8 +64,11 @@ export function useVoiceSession() {
                   }
                 }).catch(() => {});
             });
-        }
-      }).catch(() => {});
+        }).catch(() => {
+          if (attempt < 225) setTimeout(() => pollReady(attempt + 1), 800);
+        });
+    };
+    pollReady(0);
   }, []);
 
   // WebSocket to voice event stream — lives for app lifetime, not just Voice tab

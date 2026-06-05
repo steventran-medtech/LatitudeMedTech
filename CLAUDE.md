@@ -1,5 +1,5 @@
 # Latitude MedTech — Master Instructions
-**Version:** 2026-06-05 v8 · Compressed and updated after each session per Agent Principle #7.
+**Version:** 2026-06-05 v9 · Compressed and updated after each session per Agent Principle #7.
 
 ---
 
@@ -64,6 +64,13 @@ Subdirs: `learning/` · `consulting/` (frameworks, methodologies) · `ma/` (deal
 | Secrets | `voice/.env` user-only permissions | AWS Secrets Manager |
 | Infra | Local Windows | AWS ECS + RDS + S3 |
 
+### Athena as Work Coordinator
+Athena is the primary interface and coordinator — not just a voice assistant. She can delegate to any agent and report back.
+- **Voice → agent trigger**: Athena classifies intent via Claude Haiku + tool_use, dispatches the agent, and confirms with ETA ("Starting the M&A Intelligence analysis. Should be ready in three to four minutes.").
+- **Task queue** (`WorkQueuePanel` in sidebar): All running/completed agents appear here with live countdown timers, context (e.g., client name), and navigation links to the output tab. Persists across tab switches.
+- **Spoken completion**: When an agent finishes, Athena says "Your [X] is ready for review" via `/api/voice/notify` → `_notification_queue` in voice_bridge.py → spoken at the next listening cycle. Only fires when voice is active.
+- **Agent ETAs** are in `_AGENT_ETA_SECONDS` (voice_bridge.py) and `AGENT_ETA_SECONDS` (App.jsx) — update both when agent runtimes change.
+
 ### Voice Architecture *(CAPA-Voice-001 closed)*
 - **Streaming TTS**: Claude streams → sentence split → Kokoro per sentence. First audio ~1.2s.
 - **SILENCE_DURATION**: **1.5s** (0.8 cut off speech mid-sentence; 2.0 was too slow)
@@ -94,6 +101,10 @@ Subdirs: `learning/` · `consulting/` (frameworks, methodologies) · `ma/` (deal
 - **Marketing Agent** (`marketing_agent.py`) — SoCal guerilla pipeline; `ops/marketing/pipeline.db` **lazy-created on first run** (20+ targets, 6 channel types). Modes: `brief`, `--plan`, `--outreach TARGET`, `--pipeline`, `--events`, `--scorecard`. Full UI: **MarketingView.jsx** (`POST /api/agents/marketing`).
 
 ## Recent Changes *(2026-06-05)*
+- **Persistent Athena Voice** — `useVoiceSession.js` hook lifts voice state to app level; tab switches no longer reset the session or close the WebSocket. `VoiceStatusBadge` in header shows live state on every tab.
+- **Athena Work Queue** — `WorkQueuePanel` in sidebar shows all running/completed agents with live countdown timers, context (e.g., client name), and one-click navigation to the output tab.
+- **Spoken task notifications** — `/api/voice/notify` endpoint + `_notification_queue` in `voice_bridge.py`; Athena speaks "Your [X] is ready for review" at the next listening cycle when voice is active.
+- **AI audio filtering** — `webrtcvad` (aggressiveness 2) gates OpenWakeWord predictions so keyboard noise can't accumulate wake-word scores; VAD also assists silence detection in `_record_query`. Post-response echo flush extended to 1.5s.
 - **Review edit-prompt** — `POST /api/review/{item_id}/edit` rewrites a pending document via natural-language instruction at consulting quality (Claude Sonnet 4.6). Button in ReviewView.jsx.
 - **Dashboard charts** — `/api/dashboard/timeseries` (today/yesterday hourly token toggle) and `/api/dashboard/knowledge-growth` (daily + cumulative KB items).
 - **Learning infrastructure** — `agent_learning.py` + `learning_sources.py` drive autonomous RSS/scrape feeds. `skills_profile.py` generates per-agent profiles (`knowledge_base/skills/<agent>.md`) + master `SKILLS.md`. Endpoints: `/api/agents/learn`, `/api/agents/skills-profile`.
@@ -106,6 +117,7 @@ Subdirs: `learning/` · `consulting/` (frameworks, methodologies) · `ma/` (deal
 
 **Non-negotiable rules:**
 - Article title: H1 (`#`), sections: H2 (`##`) — no forced uppercase
+- Canonical title = the body H1 (`title_from_body()`); frontmatter/slug/review-queue titles are derived from it, never written raw, and are scrubbed of non-Latin script (`clean_title()`)
 - YAML frontmatter stripped before rendering; shown as metadata badge only
 - BANNED: "it is important to note" · "in today's rapidly evolving" · "robust" · "leverage" · "synergy" · "in conclusion" · any generic opener
 - Every claim: specific citation (21 CFR §, ISO clause, company name, dollar amount)
@@ -130,6 +142,12 @@ Subdirs: `learning/` · `consulting/` (frameworks, methodologies) · `ma/` (deal
 4. Per session: trace golden path · check regressions · verify launchers · flag unverifiable (UI/voice/audio)
 - P0 = fix now · P1 = fix this session · P2 = flag and defer
 - **Auto-fix**: bugs found during QA fixed in same response, no prompt.
+
+**Deliverable rendering & title invariants** *(CAPA-Content-002)* — verify after any change to these:
+- `renderInline` / `MarkdownView` (`App.jsx`, `ReviewView.jsx`) is the **shared** renderer for Briefing, Content, HR, M&A, ISO views. After touching it, confirm markdown **links**, **bold/italic/code**, and **frontmatter stripping** all still render — regress every view, not just the one in front.
+- Generated **titles** must contain no non-Latin script and must match the deliverable's own H1. Content titles are derived from the body H1 via `title_from_body()` and passed through `clean_title()` (`content_agent.py`); never write a raw model title to frontmatter / slug / review queue.
+- Generators must not emit their own title/date/label when the surface adds a header — labels (`Alpha — Steve Review Required`, `DRAFT — …`) belong in `status:` frontmatter (rendered as a badge), never the body.
+- Long-form outputs: confirm `max_tokens` clears the worst case so nothing truncates mid-sentence/URL.
 
 ---
 

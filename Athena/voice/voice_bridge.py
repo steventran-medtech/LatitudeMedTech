@@ -29,6 +29,7 @@ import tempfile
 import time
 import urllib.request
 import urllib.error
+from collections import deque
 
 import numpy as np
 import sounddevice as sd
@@ -46,7 +47,7 @@ try:
 except ImportError:
     _vad = None
     _VAD_FRAME = 480
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 
 ATHENA = Path(__file__).resolve().parent.parent          # voice/ -> Athena/
 RULES  = ATHENA.parent / ".claude" / "agents"
@@ -376,6 +377,11 @@ def _trigger_agent(agent_id: str, override: str = "") -> bool:
         )
         with urllib.request.urlopen(req, timeout=5):
             pass
+        _emit("voice_agent_queued",
+              agentId=agent_id,
+              label=_AGENT_LABELS.get(agent_id, agent_id),
+              context=override,
+              etaSeconds=_AGENT_ETA_SECONDS.get(agent_id, 120))
         return True
     except Exception:
         return False
@@ -409,6 +415,25 @@ _AGENT_ETA = {
     "marketing_scorecard": "about two minutes",
     "marketing_outreach":  "about a minute",
 }
+
+_AGENT_ETA_SECONDS = {
+    "content":             240,
+    "briefing":            120,
+    "rag":                  60,
+    "iso":                  60,
+    "coaching_brief":      120,
+    "consulting":          180,
+    "ma":                  210,
+    "marketing":           120,
+    "marketing_plan":      300,
+    "marketing_events":     60,
+    "marketing_scorecard": 120,
+    "marketing_outreach":   60,
+}
+
+# Queue of short spoken notifications Athena delivers between listening turns.
+# Populated by the /api/voice/notify endpoint; drained in _voice_loop.
+_notification_queue: deque = deque()
 
 # ── Kokoro persistent server ──────────────────────────────────────────────────
 
@@ -1026,6 +1051,21 @@ def _voice_loop():
     _emit("listening", message="Say 'Alexa' to activate")
 
     while _active:
+        # Deliver queued agent-completion notifications before the next listen cycle.
+        if _notification_queue:
+            while _notification_queue and _active:
+                note = _notification_queue.popleft()
+                _state = VS.SPEAKING
+                _emit("speaking", response=note)
+                for s in _split_sentences(note):
+                    _emit("speaking_partial", sentence=s)
+                    _speak_sentence(s)
+                _post_response_cooldown(oww)
+            if not _active:
+                break
+            _state = VS.LISTENING
+            _emit("listening", message="Say 'Alexa' to activate")
+
         if not _listen_for_wake(oww) or not _active:
             break
 
@@ -1181,6 +1221,20 @@ async def voice_status():
             "wake_phrase": WAKE_PHRASE, "device": DEVICE_NAME,
             "device_rate": DEVICE_RATE, "voice": KOKORO_VOICE,
             "models_ready": _models_ready.is_set()}
+
+
+@router.post("/notify")
+async def voice_notify(request: Request):
+    """Queue a short spoken notification for Athena to deliver between listening turns."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    text = str(body.get("text", "")).strip()
+    if text and _active:
+        _notification_queue.append(text)
+        return {"ok": True}
+    return {"ok": False, "reason": "voice not active" if not _active else "empty text"}
 
 
 @router.get("/devices")

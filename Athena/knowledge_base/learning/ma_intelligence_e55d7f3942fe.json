@@ -1,0 +1,15 @@
+{
+  "agent": "ma_intelligence",
+  "doc_name": "Senior NIH official pushes MAHA strategy to skeptical ADA audience",
+  "category": "Deal News",
+  "source": "STAT News",
+  "url": "https://www.statnews.com/2026/06/05/ada-conference-new-orleans-richard-woychik-synergy-nih-maha/?utm_campaign=rss",
+  "ingested": "2026-06-05T13:14:17.147893",
+  "chunks": [
+    {
+      "text": "An NIH advisor told researchers gathered at the American Diabetes Association conference that MAHA goals match the agency's priorities.",
+      "doc_name": "Senior NIH official pushes MAHA strategy to skeptical ADA audience",
+      "category": "Deal News"
+    }
+  ]
+}

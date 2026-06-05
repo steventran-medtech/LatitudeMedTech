@@ -1,0 +1,15 @@
+{
+  "agent": "voice_bridge",
+  "doc_name": "Take our I/O 2026 quiz, vibe coded in Google AI Studio.",
+  "category": "Conversational AI",
+  "source": "Google AI Blog",
+  "url": "https://blog.google/innovation-and-ai/technology/ai/io-2026-vibe-coded-quiz/",
+  "ingested": "2026-06-05T13:14:47.381123",
+  "chunks": [
+    {
+      "text": "We used Google AI Studio to vibe code a quiz about our top I/O 2026 announcements.",
+      "doc_name": "Take our I/O 2026 quiz, vibe coded in Google AI Studio.",
+      "category": "Conversational AI"
+    }
+  ]
+}

@@ -334,38 +334,43 @@ Items from monitored sources:
 
 {items_text}
 
-Write a clean, scannable morning briefing:
+Write a tight, management-consultant-grade morning briefing — the register of a
+McKinsey / Big-4 daily flash note. Lead with the implication, then the fact.
 
 ## Breaking
-(Real-time items from Brave search — most recent developments. One sentence each with URL. Skip if none.)
+(Real-time items from Brave search — most recent developments. One sentence each. Skip if none.)
 
 ## Need to Know
-(2-3 highest-priority regulatory actions, recalls, or guidance updates. Why it matters to a QA/RA professional. Include URL.)
+(2-3 highest-priority regulatory actions, recalls, or guidance updates. For each: a
+bolded headline, then the "so what" for a QA/RA leader in one crisp line.)
 
 ## Industry Pulse
-(3-5 notable industry items. One sentence each. Include URLs.)
+(3-5 notable industry items. One sentence each.)
 
 ## QA/RA Learning
-(1-2 educational items. Include URLs.)
+(1-2 educational items.)
 
 ## SoCal Watch
 (San Diego / Southern California MedTech items. Skip if none.)
 
 ## Worth Reading Later
-(2-3 interesting but non-urgent items. Title and URL only.)
+(2-3 interesting but non-urgent items.)
 
 Rules:
-- Every item must have its direct URL
-- Skip sections with no relevant items
-- No filler, no opener
-- Under 450 words total"""
+- Do NOT write a title, an "# MedTech…" heading, a "BRIEFING:" line, or a date — the
+  document header and review label are added automatically. Start directly with "## Breaking".
+- Do NOT add an "Alpha — Steve Review Required" line — it is shown as a status badge.
+- Cite every item with an inline markdown link woven into the sentence, e.g.
+  "…FDA issued an [Early Alert](URL)." Never drop a bare URL or a link on its own line.
+- One link per item; put it on the most load-bearing noun, not the word "here".
+- Skip sections with no relevant items. No filler, no preamble. Under 450 words total."""
 
     try:
         import time as _time
         t0   = _time.time()
         resp = client.messages.create(
             model="claude-haiku-4-5",
-            max_tokens=900,
+            max_tokens=1400,
             messages=[{"role": "user", "content": prompt}],
         )
         ms = int((_time.time() - t0) * 1000)
@@ -408,6 +413,7 @@ def save_briefing(content: str, date_str: str, item_count: int, brave_count: int
         title    = f"MedTech Intelligence Briefing - {datetime.now().strftime('%B %d, %Y')}"
     header   = f"""---
 date: {date_str}
+status: Alpha — Steve Review Required
 focus: {focus.strip() or 'general daily'}
 items_reviewed: {item_count}
 brave_items: {brave_count}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const API = "http://localhost:8000";
 
@@ -268,7 +268,7 @@ function OutputList({ files, selected, onSelect }) {
 }
 
 // ── Main MarketingView ────────────────────────────────────────────────────────
-export default function MarketingView() {
+export default function MarketingView({ runningAgents }) {
   const [pipeline,    setPipeline]    = useState(null);
   const [outputs,     setOutputs]     = useState([]);
   const [selected,    setSelected]    = useState(null);
@@ -276,6 +276,15 @@ export default function MarketingView() {
   const [running,     setRunning]     = useState(null);
   const [outreach,    setOutreach]    = useState("");
   const [status,      setStatus]      = useState("");
+
+  // ── Live progress, driven by the global WebSocket agent lifecycle ───────────
+  // App.jsx tracks every active agent in `runningAgents` (updated on the
+  // agent_start / agent_done WS events). We watch the marketing_agent entry so
+  // this view reflects the *real* run instead of guessing with a fixed timer.
+  const agentRunning   = runningAgents?.has?.("marketing_agent") || false;
+  const busy           = !!running || agentRunning;
+  const prevRunningRef = useRef(false);
+  const fallbackRef    = useRef(null);
 
   const loadPipeline = () => {
     fetch(`${API}/api/marketing/pipeline`).then(r => r.json()).then(setPipeline).catch(() => {});
@@ -297,17 +306,50 @@ export default function MarketingView() {
       .then(r => r.json()).then(d => setContent(d.content || "")).catch(() => setContent(""));
   }, [selected]);
 
+  // React to the real agent lifecycle: when marketing_agent flips running → idle
+  // (the agent_done WS event), pull the freshly written output and pipeline.
+  // Also reflects runs started elsewhere (e.g. the Run Agents tab).
+  useEffect(() => {
+    const wasRunning = prevRunningRef.current;
+    if (!wasRunning && agentRunning) {
+      // Started — surface it even if it was triggered from another view.
+      setStatus(s => s || "Marketing agent running…");
+    } else if (wasRunning && !agentRunning) {
+      // Finished — refresh outputs/pipeline and clear the busy state.
+      if (fallbackRef.current) { clearTimeout(fallbackRef.current); fallbackRef.current = null; }
+      loadOutputs();
+      loadPipeline();
+      setRunning(null);
+      setStatus("Output ready — see the file list below.");
+    }
+    prevRunningRef.current = agentRunning;
+  }, [agentRunning]);
+
+  // Clear the safety-net timer if the view unmounts mid-run.
+  useEffect(() => () => { if (fallbackRef.current) clearTimeout(fallbackRef.current); }, []);
+
   const trigger = (mode, target = "") => {
     setRunning(mode);
-    setStatus(`Running ${mode}…`);
+    setStatus(`Starting ${mode}…`);
+    // Safety net only: if we somehow never observe agent_done (e.g. the WS drops),
+    // refresh anyway so the view can't get stuck "running" forever. The real
+    // completion path is the agentRunning effect below.
+    if (fallbackRef.current) clearTimeout(fallbackRef.current);
+    fallbackRef.current = setTimeout(() => {
+      loadOutputs(); loadPipeline(); setRunning(null);
+      setStatus("Done — refresh if your output isn't listed yet.");
+      fallbackRef.current = null;
+    }, 180000);
     fetch(`${API}/api/agents/marketing`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mode, target }),
     }).then(() => {
-      setStatus(`${mode} started — output will appear in the file list when done`);
-      // Poll for new outputs after a delay
-      setTimeout(() => { loadOutputs(); loadPipeline(); setRunning(null); }, 12000);
-    }).catch(() => { setStatus("Error starting agent"); setRunning(null); });
+      setStatus(`${mode} running — this can take a minute or two…`);
+    }).catch(() => {
+      setStatus("Error starting agent");
+      setRunning(null);
+      if (fallbackRef.current) { clearTimeout(fallbackRef.current); fallbackRef.current = null; }
+    });
   };
 
   const runOutreach = () => {
@@ -340,9 +382,9 @@ export default function MarketingView() {
           ].map(({ mode, label, v }) => (
             <button
               key={mode}
-              disabled={!!running}
+              disabled={busy}
               onClick={() => trigger(mode)}
-              style={{ ...S.btn(v), opacity: running === mode ? 0.6 : 1 }}>
+              style={{ ...S.btn(v), opacity: busy ? 0.6 : 1, cursor: busy ? "not-allowed" : "pointer" }}>
               {running === mode ? "Running…" : label}
             </button>
           ))}
@@ -352,13 +394,21 @@ export default function MarketingView() {
       {/* Status strip */}
       {status && (
         <div style={{
-          background: running ? "#EBF3FB" : "#EAF7EE",
-          border: `1px solid ${running ? C.ocean + "44" : C.teal + "44"}`,
+          background: busy ? "#EBF3FB" : "#EAF7EE",
+          border: `1px solid ${busy ? C.ocean + "44" : C.teal + "44"}`,
           borderRadius: 7, padding: "8px 14px", marginBottom: 14,
           fontFamily: F.sans, fontSize: 12,
-          color: running ? C.ocean : C.teal,
+          color: busy ? C.ocean : C.teal,
+          display: "flex", alignItems: "center", gap: 8,
         }}>
+          {busy && (
+            <span style={{
+              width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+              background: C.ocean, animation: "mktPulse 1s ease-in-out infinite",
+            }}/>
+          )}
           {status}
+          <style>{`@keyframes mktPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
         </div>
       )}
 
@@ -403,9 +453,10 @@ export default function MarketingView() {
           />
         </div>
         <button
-          disabled={!!running || !outreach.trim()}
+          disabled={busy || !outreach.trim()}
           onClick={runOutreach}
-          style={{ ...S.btn("primary"), marginTop: 22, flexShrink: 0, whiteSpace: "nowrap" }}>
+          style={{ ...S.btn("primary"), marginTop: 22, flexShrink: 0, whiteSpace: "nowrap",
+            opacity: busy || !outreach.trim() ? 0.6 : 1 }}>
           {running === "outreach" ? "Generating…" : "Generate Outreach"}
         </button>
       </div>

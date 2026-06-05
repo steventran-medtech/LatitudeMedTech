@@ -11,6 +11,10 @@ const path = require("path");
 const http = require("http");
 const fs   = require("fs");
 
+// ── Suppress Windows Script Error dialogs from legacy system components ───────
+process.on("uncaughtException",   err => console.error("[main] uncaughtException:", err));
+process.on("unhandledRejection",  err => console.error("[main] unhandledRejection:", err));
+
 // ── Single-instance lock — must run BEFORE app.whenReady ────────────────────
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -136,6 +140,12 @@ function createMainWindow() {
 
   mainWindow.loadURL(FRONTEND_URL);
 
+  // Route renderer errors to console instead of native Windows dialogs
+  mainWindow.webContents.on("render-process-gone", (_e, details) => {
+    log(`[renderer] gone: ${details.reason}`);
+  });
+  mainWindow.webContents.on("unresponsive", () => log("[renderer] unresponsive"));
+
   mainWindow.on("close", e => {
     if (!isQuitting) {
       e.preventDefault();
@@ -152,9 +162,11 @@ function createMainWindow() {
 // ── Tray ──────────────────────────────────────────────────────────────────────
 
 function createTray() {
-  const icon = nativeImage.createFromDataURL(
-    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHklEQVQ4jWNgYGD4z8BAAoxqGAVDGwAA//8DAAQIAgEBNjQ4AAAAAElFTkSuQmCC"
-  );
+  // Prefer the ICO (multi-res) at the project root; fall back to the 32px PNG
+  const icoPath = path.join(ROOT, "athena.ico");
+  const pngPath = path.join(ROOT, "ui", "frontend", "public", "icon-32.png");
+  const iconPath = fs.existsSync(icoPath) ? icoPath : pngPath;
+  const icon = nativeImage.createFromPath(iconPath);
   tray = new Tray(icon);
   tray.setToolTip("Athena — Latitude MedTech");
   tray.setContextMenu(Menu.buildFromTemplate([
@@ -199,18 +211,10 @@ function confirmQuit() {
 // ── App lifecycle ─────────────────────────────────────────────────────────────
 
 app.on("second-instance", () => {
-  // Bring existing window to front and notify user
+  // Bring existing window to front — no dialog, session continues uninterrupted
   if (mainWindow) {
     mainWindow.show();
     mainWindow.focus();
-    dialog.showMessageBox(mainWindow, {
-      type: "info",
-      title: "Athena Already Running",
-      message: "Athena is already open.",
-      detail: "Only one instance of Athena can run at a time. The existing window has been brought to focus.",
-      buttons: ["OK"],
-      defaultId: 0,
-    });
   }
 });
 

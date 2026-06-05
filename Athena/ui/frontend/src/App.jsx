@@ -90,7 +90,7 @@ const NAV_GROUPS = [
   {key:"system",  label:"System"},
 ];
 
-function Sidebar({active,setActive,runningAgents,pendingReview,version,onAbout}){
+function Sidebar({active,setActive,runningAgents,pendingReview,version,onAbout,taskQueue}){
   const grouped = NAV_GROUPS.map(g=>({...g, items: NAV.filter(n=>n.group===g.key)}));
   const numRunning = runningAgents?.size || 0;
   return(
@@ -163,6 +163,9 @@ function Sidebar({active,setActive,runningAgents,pendingReview,version,onAbout})
         ))}
       </nav>
 
+      {/* Work queue */}
+      <WorkQueuePanel taskQueue={taskQueue||[]} onNavigate={setActive}/>
+
       {/* Footer */}
       <div style={{padding:"14px 22px",borderTop:"1px solid rgba(255,255,255,0.08)"}}>
         <div style={{fontFamily:F.sans,fontSize:9,color:"rgba(255,255,255,0.3)",lineHeight:1.7}}>
@@ -194,10 +197,24 @@ function Sidebar({active,setActive,runningAgents,pendingReview,version,onAbout})
 }
 
 // ── McKinsey-quality Markdown renderer ────────────────────────────────────────
+const LINK_STYLE = { color: C.ocean, textDecoration: "none",
+  borderBottom: `1px solid ${C.ocean}55`, fontWeight: 500 };
+
 function renderInline(text) {
-  // Bold, italic, inline code
-  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
+  // Markdown links [text](url), bare URLs, bold, italic, inline code.
+  // Link alternatives come first so a URL inside [..](..) is consumed as one token.
+  const parts = text.split(
+    /(\[[^\]]+\]\([^)\s]+\)|https?:\/\/[^\s)\]]+|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g
+  );
   return parts.map((p, i) => {
+    if (!p) return null;
+    const md = p.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
+    if (md)
+      return <a key={i} href={md[2]} target="_blank" rel="noopener noreferrer"
+        style={LINK_STYLE}>{md[1]}</a>;
+    if (/^https?:\/\//.test(p))
+      return <a key={i} href={p} target="_blank" rel="noopener noreferrer"
+        style={LINK_STYLE}>{p.replace(/^https?:\/\/(www\.)?/, "")}</a>;
     if (p.startsWith("**") && p.endsWith("**"))
       return <strong key={i} style={{ color: C.ink, fontWeight: 700 }}>{p.slice(2, -2)}</strong>;
     if (p.startsWith("*") && p.endsWith("*"))
@@ -1088,7 +1105,7 @@ function AgentsView({logs,onRun,runningAgents}){
   if(runningAgents){
     runningAgents.forEach(a=>{ running[a]=true; });
     // Also map short IDs used in the agent cards
-    const MAP={rag:"rag_agent",briefing:"briefing_agent",content:"content_agent",iso:"iso_coach",consulting:"consulting_agent",ma:"ma_intelligence_agent"};
+    const MAP={rag:"rag_agent",briefing:"briefing_agent",content:"content_agent",iso:"iso_coach",consulting:"consulting_agent",ma:"ma_intelligence_agent",marketing:"marketing_agent"};
     Object.entries(MAP).forEach(([short,full])=>{if(runningAgents.has(full)) running[short]=true;});
   }
 
@@ -1220,6 +1237,30 @@ const AGENT_DISPLAY = {
   marketing_agent:"Marketing Agent",
 };
 
+// Estimated completion times in seconds (mirrors _AGENT_ETA_SECONDS in voice_bridge.py)
+const AGENT_ETA_SECONDS = {
+  briefing_agent:        120,
+  content_agent:         240,
+  rag_agent:              60,
+  iso_coach:              60,
+  coaching_brief:        120,
+  consulting_agent:      180,
+  ma_intelligence_agent: 210,
+  marketing_agent:       120,
+  agent_learning:        180,
+};
+
+// Maps agent IDs to the tab to navigate to when the task completes
+const AGENT_TAB = {
+  briefing_agent:        "briefing",
+  content_agent:         "content",
+  marketing_agent:       "marketing",
+  iso_coach:             "iso",
+  coaching_brief:        "review",
+  consulting_agent:      "documents",
+  ma_intelligence_agent: "documents",
+};
+
 // ── Toast notification system ──────────────────────────────────────────────
 function Toaster({toasts}){
   return(
@@ -1315,6 +1356,100 @@ function AboutModal({version,onClose}){
   );
 }
 
+// ── Work queue timer ───────────────────────────────────────────────────────
+function CountdownTimer({ startedAt, estSeconds, status }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (status !== "running") return;
+    const t = setInterval(() => setNow(Date.now()), 5000);
+    return () => clearInterval(t);
+  }, [status]);
+  if (status !== "running") return null;
+  const rem = Math.max(0, estSeconds - (now - startedAt) / 1000);
+  if (rem < 15) return (
+    <span style={{fontFamily:F.sans,fontSize:9,color:"#1F7A6D",flexShrink:0}}>soon</span>
+  );
+  return (
+    <span style={{fontFamily:F.sans,fontSize:9,color:"rgba(255,255,255,0.3)",flexShrink:0}}>
+      ~{Math.ceil(rem / 60)}m
+    </span>
+  );
+}
+
+// ── Work queue sidebar panel ───────────────────────────────────────────────
+function WorkQueuePanel({ taskQueue, onNavigate }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 10000);
+    return () => clearInterval(t);
+  }, []);
+  const visible = taskQueue.filter(t =>
+    t.status === "running" ||
+    t.status === "awaiting_review" ||
+    (t.doneAt && now - t.doneAt < 10 * 60 * 1000)
+  );
+  if (!visible.length) return null;
+
+  const DOT = {
+    running:          { color:"#1A6FA3", anim:"agentPing 1.2s ease-in-out infinite" },
+    done:             { color:"#1F7A6D", anim:"none" },
+    awaiting_review:  { color:"#C4922A", anim:"badgePulse 2s ease-in-out infinite" },
+    failed:           { color:"#C0392B", anim:"none" },
+  };
+
+  return (
+    <div style={{borderTop:"1px solid rgba(255,255,255,0.08)",padding:"12px 16px 4px"}}>
+      <div style={{fontFamily:F.sans,fontSize:8,fontWeight:700,letterSpacing:"0.16em",
+        textTransform:"uppercase",color:"rgba(255,255,255,0.28)",marginBottom:8}}>
+        Working On
+      </div>
+      {visible.map(t => {
+        const dot = DOT[t.status] ?? DOT.done;
+        const clickable = t.status !== "running" && AGENT_TAB[t.agentId];
+        return (
+          <div key={t.id}
+            onClick={() => clickable && onNavigate(AGENT_TAB[t.agentId])}
+            style={{
+              display:"flex", alignItems:"flex-start", gap:8, marginBottom:8,
+              cursor: clickable ? "pointer" : "default",
+              opacity: t.status === "failed" ? 0.55 : 1,
+            }}>
+            {/* Status dot */}
+            <div style={{
+              width:6, height:6, borderRadius:"50%", marginTop:3, flexShrink:0,
+              background:dot.color, animation:dot.anim,
+              boxShadow: t.status==="running" ? `0 0 0 2px ${dot.color}33` : "none",
+            }}/>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontFamily:F.sans,fontSize:11,color:"rgba(255,255,255,0.75)",
+                lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                {t.label}
+              </div>
+              {t.context && (
+                <div style={{fontFamily:F.sans,fontSize:9,color:"rgba(255,255,255,0.35)",
+                  marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                  {t.context}
+                </div>
+              )}
+              {t.status==="done" && (
+                <div style={{fontFamily:F.sans,fontSize:9,color:"#1F7A6D",marginTop:1}}>
+                  ready{clickable?" · view →":""}
+                </div>
+              )}
+              {t.status==="awaiting_review" && (
+                <div style={{fontFamily:F.sans,fontSize:9,color:"#C4922A",marginTop:1}}>
+                  awaiting your review →
+                </div>
+              )}
+            </div>
+            <CountdownTimer startedAt={t.startedAt} estSeconds={t.estSeconds} status={t.status}/>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const VOICE_BADGE = {
   idle:      { color: "#7B90A0", pulse: false },
   loading:   { color: "#C4922A", pulse: true  },
@@ -1371,6 +1506,9 @@ export default function App(){
   const [aboutOpen,setAboutOpen]=useState(false);
   const wsRef=useRef(null);
   const voice=useVoiceSession();
+  const [taskQueue,setTaskQueue]=useState([]);
+  const voiceRunningRef=useRef(false);
+  useEffect(()=>{voiceRunningRef.current=voice.running;},[voice.running]);
 
   const addToast=useCallback((message,type="info")=>{
     const id=Date.now()+Math.random();
@@ -1388,17 +1526,44 @@ export default function App(){
           const msg=JSON.parse(e.data);
           msg._id = `${msg.type}-${msg.agent||""}-${msg.ts||""}-${msg.line||""}`;
 
-          // Agent lifecycle notifications
+          // Agent lifecycle — task queue + running badge
           if(msg.type==="agent_start"){
             const label=AGENT_DISPLAY[msg.agent]||msg.agent;
             addToast(`${label} is running…`,"running");
             setRunningAgents(prev=>new Set([...prev,msg.agent]));
+            const now=Date.now();
+            setTaskQueue(prev=>[...prev,{
+              id:`${msg.agent}-${now}`,
+              agentId:msg.agent,
+              label,
+              context:msg.context||"",
+              status:"running",
+              startedAt:now,
+              estSeconds:AGENT_ETA_SECONDS[msg.agent]||120,
+              doneAt:null,
+            }]);
           }
           if(msg.type==="agent_done"){
             const label=AGENT_DISPLAY[msg.agent]||msg.agent;
+            const finalStatus=msg.status==="awaiting_review"?"awaiting_review":msg.status==="success"?"done":"failed";
             const ok=msg.status==="success";
-            addToast(`${label} ${ok?"complete":"failed"}`,ok?"success":"error");
+            addToast(`${label} ${ok?"ready for review":"failed"}`,ok?"success":"error");
             setRunningAgents(prev=>{const s=new Set(prev);s.delete(msg.agent);return s;});
+            const doneAt=Date.now();
+            setTaskQueue(prev=>prev.map(t=>
+              t.agentId===msg.agent&&t.status==="running"
+                ?{...t,status:finalStatus,doneAt}
+                :t
+            ));
+            // Auto-remove completed tasks after 10 minutes
+            setTimeout(()=>setTaskQueue(prev=>prev.filter(t=>!(t.agentId===msg.agent&&t.doneAt===doneAt))),10*60*1000);
+            // Spoken notification if Athena is live
+            if(voiceRunningRef.current&&ok){
+              fetch(`${API}/api/voice/notify`,{
+                method:"POST",headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({text:`Your ${label} is ready for review.`}),
+              }).catch(()=>{});
+            }
           }
 
           setLogs(prev=>{
@@ -1459,8 +1624,23 @@ export default function App(){
   },[]);
 
   const [exitDialog, setExitDialog] = useState(false);
+  const shuttingDownRef = useRef(false);
+
+  // Fire goodbye TTS when the Chrome window is closed via the X button.
+  // sendBeacon survives page unload; the guard prevents double-fire when
+  // handleExit already awaited the full /api/shutdown response.
+  useEffect(() => {
+    const onUnload = () => {
+      if (!shuttingDownRef.current) {
+        navigator.sendBeacon(`${API}/api/shutdown`);
+      }
+    };
+    window.addEventListener("beforeunload", onUnload);
+    return () => window.removeEventListener("beforeunload", onUnload);
+  }, []);
 
   const handleExit = async () => {
+    shuttingDownRef.current = true;
     setExitDialog(false);
     try {
       // Await the response — the backend blocks until TTS finishes before replying.
@@ -1478,7 +1658,7 @@ export default function App(){
     voice:    <VoiceView voice={voice}/>,
     content:  <ContentView onGenerate={runAgent}/>,
     coaching: <CoachingView onGenerate={runAgent}/>,
-    marketing:<MarketingView/>,
+    marketing:<MarketingView runningAgents={runningAgents}/>,
     documents:<DocumentsView/>,
     iso:      <ISOView/>,
     review:   <ReviewView/>,
@@ -1491,7 +1671,7 @@ export default function App(){
   return(
     <div style={S.app}>
       <Toaster toasts={toasts}/>
-      <Sidebar active={active} setActive={setActive} runningAgents={runningAgents} pendingReview={pendingReview} version={version} onAbout={()=>setAboutOpen(true)}/>
+      <Sidebar active={active} setActive={setActive} runningAgents={runningAgents} pendingReview={pendingReview} version={version} onAbout={()=>setAboutOpen(true)} taskQueue={taskQueue}/>
       <div style={S.main}>
         {/* Top bar */}
         <div style={S.header}>

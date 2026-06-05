@@ -13,6 +13,7 @@ Output: ~/Athena/content/drafts/YYYY-MM-DD_title.md
 import os
 import sys
 if hasattr(sys.stdout, "reconfigure"): sys.stdout.reconfigure(encoding="utf-8")
+import re
 import json
 import logging
 import feedparser
@@ -505,6 +506,31 @@ Write the full article now. Follow the MedTech Meridian voice and structure. 900
         return f"# {topic['title']}\n\n[Draft generation failed: {e}]\n"
 
 
+# ── Title hygiene ─────────────────────────────────────────────────────────────
+
+# Occasionally the model slips a stray non-Latin token (e.g. a CJK glyph for
+# "review") into a generated title. It renders as mojibake in the review queue and
+# the published header, so we strip foreign-script characters from titles before
+# they reach any client-facing surface. Em-dashes and curly quotes are below these
+# ranges and are preserved.
+_FOREIGN_SCRIPT = re.compile(r'[⺀-鿿぀-ヿ가-힯＀-￯]+')
+
+def clean_title(title: str) -> str:
+    cleaned = _FOREIGN_SCRIPT.sub('', title or '')
+    cleaned = re.sub(r'\s{2,}', ' ', cleaned).strip(' -–—:')
+    return cleaned or (title or '').strip()
+
+
+_BODY_H1 = re.compile(r'^\s*#\s+(.+?)\s*$', re.MULTILINE)
+
+def title_from_body(article: str, fallback: str) -> str:
+    """Canonical title is the article's own H1 — it is what the reader sees in the
+    header, so the queue/frontmatter title must match it exactly. Falls back to the
+    generated title field if no H1 is present. Always passed through clean_title()."""
+    m = _BODY_H1.search(article or '')
+    return clean_title(m.group(1)) if m else clean_title(fallback)
+
+
 # ── Save draft ────────────────────────────────────────────────────────────────
 
 def save_draft(topic: dict, article: str) -> Path:
@@ -573,6 +599,10 @@ def main():
         if attempts == 3:
             log.info("  Could not find unique topic after 3 attempts — proceeding anyway")
 
+    # Scrub any stray foreign-script tokens from the title before it flows into the
+    # draft frontmatter, the slug, and the review queue.
+    topic['title'] = clean_title(topic['title'])
+
     log.info("Drafting article...")
     # Query local KB for relevant context
     kb_context = ""
@@ -583,6 +613,11 @@ def main():
         if kb_context:
             log.info(f"  KB: injecting {len(chunks)} chunks from local knowledge base")
     article = draft_article(topic, news, kb_context=kb_context)
+
+    # Canonicalize the title to the article's own H1 (what the reader sees), so the
+    # frontmatter, slug, and review-queue title can never diverge from the header or
+    # carry a stray token. Falls back to the cleaned generated title.
+    topic['title'] = title_from_body(article, topic['title'])
 
     out_path = save_draft(topic, article)
     log.info(f"Draft saved: {out_path}")

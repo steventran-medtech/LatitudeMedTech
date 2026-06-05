@@ -76,16 +76,49 @@ PROGRAMS = {
 
 # ── Input parsing ─────────────────────────────────────────────────────────────
 
+# Domain terms that mark an input as a *topic* rather than a person's name.
+TOPIC_SIGNALS = re.compile(
+    r"\b(iso|fda|mdr|mdsap|capa|510\(?k\)?|pma|qms|qa|ra|risk|hazard|14971|13485|"
+    r"820|part\s*11|compliance|regulatory|quality|audit|design\s*control|validation|"
+    r"verification|framework|reporting|submission|clinical|post[- ]?market|"
+    r"nonconformance|complaint|ce\s*mark|notified\s*body|gmp|gdp|software|saas|samd)\b",
+    re.IGNORECASE,
+)
+
+def _looks_like_person(raw: str) -> bool:
+    """Conservative person-name heuristic: 1–3 alphabetic tokens, no digits, no
+    domain jargon. Ambiguous multi-word inputs fall through to 'topic'."""
+    tokens = raw.split()
+    if not (1 <= len(tokens) <= 3):
+        return False
+    if any(ch.isdigit() for ch in raw) or TOPIC_SIGNALS.search(raw):
+        return False
+    return all(re.fullmatch(r"[A-Za-z][A-Za-z.'\-]*", tok) for tok in tokens)
+
+
 def parse_input(raw: str) -> dict:
-    raw = raw.strip()
+    raw = (raw or "").strip()
+    if len(raw) < 2:
+        return {"type": "insufficient", "name": raw, "label": raw, "url": None}
+
     if "linkedin.com/in/" in raw.lower():
-        # Extract name from URL slug
         match = re.search(r"linkedin\.com/in/([^/\?]+)", raw, re.IGNORECASE)
         slug  = match.group(1) if match else "unknown"
-        name  = slug.replace("-", " ").title()
-        return {"type": "linkedin", "url": raw, "name": name, "slug": slug}
-    else:
-        return {"type": "name", "name": raw, "url": None}
+        name  = slug.replace("-", " ").replace(".", " ").title()
+        return {"type": "linkedin", "url": raw, "name": name, "slug": slug, "label": name}
+
+    if _looks_like_person(raw):
+        return {"type": "name", "name": raw, "url": None, "label": raw}
+
+    # Anything else is a topic signal, not a client identity.
+    return {"type": "topic", "topic": raw, "name": raw, "url": None, "label": raw}
+
+
+def brief_title(client: dict) -> str:
+    """Title reflects the input type — a topic is never labeled as a client."""
+    if client.get("type") == "topic":
+        return f"Discovery Call Prep — Topic: {client['topic']}"
+    return f"Discovery Call Brief — {client['name']}"
 
 
 # ── Brief generation ──────────────────────────────────────────────────────────
@@ -184,6 +217,9 @@ status: Review before call
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
     print("""
 +----------------------------------------------+
 |  Latitude MedTech Coaching Brief Agent       |

@@ -2,7 +2,7 @@
  * Human Review Queue — Phase 1A Gate
  * Every client-facing output (briefs, articles) lands here before Steven approves it.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import mammoth from "mammoth";
 
 const API = "http://localhost:8000";
@@ -159,11 +159,13 @@ function renderMarkdown(md) {
   return out;
 }
 
-function ReviewViewer({ itemId, title, onClose }) {
+function ReviewViewer({ itemId, title, onClose, editState, onEdit, readOnly = false }) {
   const [state, setState] = useState({ loading: true, ext: "", content: "", html: "", error: "" });
   const [instruction, setInstruction] = useState("");
-  const [editing, setEditing] = useState(false);
-  const [editMsg, setEditMsg] = useState("");
+  // Edit lifecycle is owned by the parent (ReviewView) so it survives closing the
+  // modal. We derive the in-flight flag and status message from the parent's state.
+  const editing = editState?.status === "editing";
+  const editMsg = editState?.msg || "";
 
   const loadContent = async (signal) => {
     setState({ loading: true, ext: "", content: "", html: "", error: "" });
@@ -193,29 +195,31 @@ function ReviewViewer({ itemId, title, onClose }) {
     return () => ctrl.abort();
   }, [itemId]);
 
-  const applyEdit = async () => {
-    if (!instruction.trim() || editing) return;
-    setEditing(true); setEditMsg("");
-    try {
-      const r = await fetch(`${API}/api/review/${itemId}/edit`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instruction }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw d.error || "Edit failed";
-      setState({ loading: false, ext: d.ext, content: d.content || "", html: "", error: "" });
-      setInstruction(""); setEditMsg("✓ Document revised and saved.");
-    } catch (err) {
-      setEditMsg("✕ " + (typeof err === "string" ? err : "Edit failed"));
-    } finally {
-      setEditing(false);
+  // When an edit owned by the parent finishes while this viewer is open, fold the
+  // revised content into the view. Keyed on the completion timestamp so it applies
+  // exactly once per edit (and not again on unrelated re-renders).
+  const lastAppliedAt = useRef(0);
+  useEffect(() => {
+    if (editState?.status === "done" && editState.at && editState.at !== lastAppliedAt.current) {
+      lastAppliedAt.current = editState.at;
+      setState({ loading: false, ext: editState.ext || "md",
+        content: editState.content || "", html: "", error: "" });
     }
+  }, [editState]);
+
+  const applyEdit = () => {
+    if (!instruction.trim() || editing) return;
+    const instr = instruction.trim();
+    setInstruction("");
+    // Fire-and-forget: the parent tracks status, so progress persists even if the
+    // user closes this modal before the revision returns.
+    onEdit(instr);
   };
 
   const serveUrl = `${API}/api/review/${itemId}/serve`;
-  const editable = state.ext === "md" || state.ext === "txt";
+  const editable = !readOnly && (state.ext === "md" || state.ext === "txt");
   return (
-    <div onClick={e => { if (e.target === e.currentTarget && !editing) onClose(); }}
+    <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
       style={{ position: "fixed", inset: 0, background: "rgba(10,37,64,0.45)",
         zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ background: "#fff", borderRadius: 10, width: "82vw", maxWidth: 900,
@@ -242,10 +246,18 @@ function ReviewViewer({ itemId, title, onClose }) {
         <div style={{ flex: 1, overflow: "auto", padding: "32px 48px",
           fontFamily: "Inter,sans-serif", background: "#FCFDFE", position: "relative" }}>
           {editing && (
-            <div style={{ position: "absolute", inset: 0, background: "rgba(252,253,254,0.75)",
-              display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5,
-              fontFamily: "Inter,sans-serif", fontSize: 13, color: "#1A6FA3", fontWeight: 600 }}>
-              Revising document…
+            <div style={{ position: "absolute", inset: 0, background: "rgba(252,253,254,0.78)",
+              display: "flex", flexDirection: "column", gap: 6, alignItems: "center",
+              justifyContent: "center", zIndex: 5, fontFamily: "Inter,sans-serif" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8,
+                fontSize: 13, color: "#1A6FA3", fontWeight: 600 }}>
+                <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#1A6FA3",
+                  animation: "revPulse 1s ease-in-out infinite" }} />
+                Revising document…
+              </div>
+              <div style={{ fontSize: 11, color: "#7B90A0" }}>
+                You can close this preview — progress continues in the Review Queue.
+              </div>
             </div>
           )}
           {state.loading && <div style={{ color: "#7B90A0", fontSize: 13 }}>Loading…</div>}
@@ -322,14 +334,47 @@ export default function ReviewView() {
   const [stats,  setStats]  = useState({});
   const [notes,  setNotes]  = useState({});
   const [acting, setActing] = useState({});
-  const [viewing, setViewing] = useState(null);   // {id, title} of item open in viewer
+  const [viewing, setViewing] = useState(null);   // {id, title, readOnly} of item open in viewer
+  // In-flight / recently-finished edits, keyed by item id. Lives here (not in the
+  // modal) so a revision keeps showing progress in the queue after the preview closes.
+  const [edits, setEdits] = useState({});          // id -> { status, msg, content, ext, at }
+
+  const [tab,       setTab]       = useState("queue");   // "queue" | "history"
+  const [histItems, setHistItems] = useState([]);
+  const [reopening, setReopening] = useState({});        // id -> true while in-flight
 
   const load = () => {
     fetch(`${API}/api/review/pending`).then(r => r.json())
       .then(d => { setItems(d.items || []); setStats(d.stats || {}); }).catch(() => {});
   };
 
+  const loadHistory = () => {
+    fetch(`${API}/api/review/history`).then(r => r.json())
+      .then(d => setHistItems(d.items || [])).catch(() => {});
+  };
+
   useEffect(() => { load(); }, []);
+  useEffect(() => { if (tab === "history") loadHistory(); }, [tab]);
+
+  const runEdit = async (id, instruction) => {
+    setEdits(p => ({ ...p, [id]: { status: "editing", msg: "" } }));
+    try {
+      const r = await fetch(`${API}/api/review/${id}/edit`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instruction }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw d.error || "Edit failed";
+      setEdits(p => ({ ...p, [id]: { status: "done", msg: "✓ Document revised and saved.",
+        content: d.content || "", ext: d.ext || "md", at: Date.now() } }));
+      load();   // title/content may have changed
+      setTimeout(() => setEdits(p => p[id]?.status === "done"
+        ? (({ [id]: _drop, ...rest }) => rest)(p) : p), 8000);
+    } catch (err) {
+      setEdits(p => ({ ...p, [id]: { status: "error",
+        msg: "✕ " + (typeof err === "string" ? err : "Edit failed") } }));
+    }
+  };
 
   const act = async (id, action) => {
     setActing(p => ({ ...p, [id]: true }));
@@ -341,13 +386,21 @@ export default function ReviewView() {
     load();
   };
 
+  const reopen = async (id) => {
+    setReopening(p => ({ ...p, [id]: true }));
+    await fetch(`${API}/api/review/${id}/reopen`, { method: "POST" });
+    setReopening(p => ({ ...p, [id]: false }));
+    load();
+    loadHistory();
+  };
+
   const C = { navy:"#0A2540", ocean:"#1A6FA3", teal:"#1F7A6D", red:"#C0392B",
     gold:"#C4922A", fog:"#7B90A0", mist:"#DDE4EB", pearl:"#FFFFFF", cloud:"#F8FAFC" };
 
   return (
     <div style={{ maxWidth: 780 }}>
       {/* Header */}
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16 }}>
         <div>
           <h2 style={{ fontSize:"1.15rem", fontWeight:700, color:C.navy, margin:0 }}>
             Review Queue
@@ -367,8 +420,24 @@ export default function ReviewView() {
         </div>
       </div>
 
-      {/* Items */}
-      {items.length === 0 ? (
+      {/* Tabs */}
+      <div style={{ display:"flex", gap:0, marginBottom:20, borderBottom:`1px solid ${C.mist}` }}>
+        {[["queue","Pending"], ["history","History"]].map(([key, label]) => (
+          <button key={key} onClick={() => setTab(key)} style={{
+            padding:"7px 20px", background:"transparent", border:"none",
+            borderBottom: tab === key ? `2px solid ${C.ocean}` : "2px solid transparent",
+            fontFamily:"Inter,sans-serif", fontSize:12.5, fontWeight: tab === key ? 700 : 500,
+            color: tab === key ? C.ocean : C.fog,
+            cursor:"pointer", marginBottom:-1, transition:"color 0.15s",
+          }}>{label}{key === "queue" && (stats.pending||0) > 0 &&
+            <span style={{ marginLeft:6, background:C.gold, color:"#fff", fontSize:9,
+              fontWeight:700, padding:"1px 6px", borderRadius:8 }}>{stats.pending}</span>}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Pending Queue ── */}
+      {tab === "queue" && (items.length === 0 ? (
         <div style={{ padding:"48px 0", textAlign:"center",
           border:`1px dashed ${C.mist}`, borderRadius:10,
           fontFamily:"Inter,sans-serif", fontSize:13, color:C.fog }}>
@@ -402,6 +471,30 @@ export default function ReviewView() {
                     color:C.fog }}>{item.agent}</span>
                   <span style={{ fontFamily:"Inter,sans-serif", fontSize:9,
                     color:C.fog }}>{date} {time}</span>
+                  {edits[item.id]?.status === "editing" && (
+                    <span style={{ display:"inline-flex", alignItems:"center", gap:5,
+                      fontFamily:"Inter,sans-serif", fontSize:9, fontWeight:700,
+                      letterSpacing:"0.06em", textTransform:"uppercase",
+                      background:C.ocean+"18", color:C.ocean, padding:"2px 8px", borderRadius:4 }}>
+                      <span style={{ width:6, height:6, borderRadius:"50%", background:C.ocean,
+                        animation:"revPulse 1s ease-in-out infinite" }} />
+                      Revising…
+                    </span>
+                  )}
+                  {edits[item.id]?.status === "done" && (
+                    <span style={{ fontFamily:"Inter,sans-serif", fontSize:9, fontWeight:700,
+                      letterSpacing:"0.06em", textTransform:"uppercase",
+                      background:C.teal+"18", color:C.teal, padding:"2px 8px", borderRadius:4 }}>
+                      ✓ Revised
+                    </span>
+                  )}
+                  {edits[item.id]?.status === "error" && (
+                    <span title={edits[item.id]?.msg} style={{ fontFamily:"Inter,sans-serif",
+                      fontSize:9, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase",
+                      background:C.red+"18", color:C.red, padding:"2px 8px", borderRadius:4 }}>
+                      ✕ Edit failed
+                    </span>
+                  )}
                 </div>
                 <div
                   onClick={() => setViewing({ id: item.id, title: item.title })}
@@ -421,6 +514,7 @@ export default function ReviewView() {
             </div>
 
             {/* Notes + actions */}
+            {(() => { const busy = acting[item.id] || edits[item.id]?.status === "editing"; return (
             <div style={{ marginTop:12, display:"flex", gap:8, alignItems:"flex-end" }}>
               <input
                 value={notes[item.id] || ""}
@@ -434,33 +528,118 @@ export default function ReviewView() {
               />
               <button
                 onClick={() => act(item.id, "approve")}
-                disabled={acting[item.id]}
+                disabled={busy}
+                title={edits[item.id]?.status === "editing" ? "Wait for the revision to finish" : ""}
                 style={{
-                  padding:"7px 18px", background: acting[item.id] ? C.fog : C.teal,
-                  color:"#fff", border:"none", borderRadius:6, cursor: acting[item.id] ? "not-allowed" : "pointer",
+                  padding:"7px 18px", background: busy ? C.fog : C.teal,
+                  color:"#fff", border:"none", borderRadius:6, cursor: busy ? "not-allowed" : "pointer",
                   fontFamily:"Inter,sans-serif", fontSize:12, fontWeight:700, whiteSpace:"nowrap",
                 }}>
                 ✓ Approve
               </button>
               <button
                 onClick={() => act(item.id, "reject")}
-                disabled={acting[item.id]}
+                disabled={busy}
                 style={{
                   padding:"7px 14px", background:"transparent", color:C.red,
                   border:`1px solid ${C.red}55`, borderRadius:6,
-                  cursor: acting[item.id] ? "not-allowed" : "pointer",
+                  cursor: busy ? "not-allowed" : "pointer",
                   fontFamily:"Inter,sans-serif", fontSize:12, fontWeight:600,
                 }}>
                 ✕ Reject
               </button>
             </div>
+          ); })()}
           </div>
         );
-      })}
+      }))}
+
+      {/* ── History ── */}
+      {tab === "history" && (histItems.length === 0 ? (
+        <div style={{ padding:"48px 0", textAlign:"center",
+          border:`1px dashed ${C.mist}`, borderRadius:10,
+          fontFamily:"Inter,sans-serif", fontSize:13, color:C.fog }}>
+          No reviewed documents yet.
+        </div>
+      ) : histItems.map(item => {
+        const typeColor = TYPE_COLOR[item.item_type] || C.fog;
+        const typeLabel = TYPE_LABEL[item.item_type] || item.item_type;
+        const approved  = item.status === "approved";
+        const statusCol = approved ? C.teal : C.red;
+        const reviewedDate = item.reviewed_at?.slice(0, 10);
+        const reviewedTime = item.reviewed_at?.slice(11, 16);
+        return (
+          <div key={item.id} style={{
+            background: C.pearl, border:`1px solid ${C.mist}`,
+            borderLeft: `3px solid ${statusCol}`,
+            borderRadius:"0 10px 10px 0", padding:"14px 20px",
+            marginBottom:10, opacity: reopening[item.id] ? 0.5 : 1,
+            transition:"opacity 0.2s",
+          }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
+              <div style={{ flex:1 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+                  {/* Status pill */}
+                  <span style={{ fontFamily:"Inter,sans-serif", fontSize:9, fontWeight:700,
+                    letterSpacing:"0.1em", textTransform:"uppercase",
+                    background: statusCol + "18", color: statusCol,
+                    padding:"2px 8px", borderRadius:4 }}>
+                    {approved ? "✓ Approved" : "✕ Rejected"}
+                  </span>
+                  <span style={{ fontFamily:"Inter,sans-serif", fontSize:9, fontWeight:700,
+                    letterSpacing:"0.1em", textTransform:"uppercase",
+                    background: typeColor + "18", color: typeColor,
+                    padding:"2px 8px", borderRadius:4 }}>{typeLabel}</span>
+                  <span style={{ fontFamily:"Inter,sans-serif", fontSize:9, color:C.fog }}>
+                    {item.agent}
+                  </span>
+                  {reviewedDate && (
+                    <span style={{ fontFamily:"Inter,sans-serif", fontSize:9, color:C.fog }}>
+                      reviewed {reviewedDate} {reviewedTime}
+                    </span>
+                  )}
+                </div>
+                <div
+                  onClick={() => setViewing({ id: item.id, title: item.title, readOnly: true })}
+                  title="Open to read"
+                  style={{ fontFamily:"Inter,sans-serif", fontWeight:600, fontSize:14,
+                    color:C.ocean, lineHeight:1.4, cursor:"pointer",
+                    textDecoration:"underline", textDecorationColor:C.mist, textUnderlineOffset:3 }}>
+                  {item.title}
+                </div>
+                {item.notes && (
+                  <div style={{ fontFamily:"Inter,sans-serif", fontSize:11, color:C.fog,
+                    marginTop:5, fontStyle:"italic" }}>
+                    "{item.notes}"
+                  </div>
+                )}
+                {item.file_path && (
+                  <div style={{ fontFamily:"monospace", fontSize:10, color:C.fog, marginTop:4 }}>
+                    {item.file_path.split("\\").slice(-2).join("\\")}
+                  </div>
+                )}
+              </div>
+              {/* Reopen button */}
+              <button
+                onClick={() => reopen(item.id)}
+                disabled={!!reopening[item.id]}
+                title="Move back to pending queue"
+                style={{
+                  flexShrink:0, padding:"6px 14px", background:"transparent",
+                  border:`1px solid ${C.ocean}55`, borderRadius:6,
+                  color: C.ocean, cursor: reopening[item.id] ? "not-allowed" : "pointer",
+                  fontFamily:"Inter,sans-serif", fontSize:11, fontWeight:600, whiteSpace:"nowrap",
+                }}>
+                {reopening[item.id] ? "Moving…" : "↩ Reopen"}
+              </button>
+            </div>
+          </div>
+        );
+      }))}
 
       {/* Refresh */}
       <div style={{ textAlign:"right", marginTop:16 }}>
-        <button onClick={load} style={{
+        <button onClick={tab === "queue" ? load : loadHistory} style={{
           padding:"5px 12px", background:"transparent",
           border:`1px solid ${C.mist}`, borderRadius:6,
           fontFamily:"Inter,sans-serif", fontSize:11, color:C.fog, cursor:"pointer",
@@ -468,8 +647,12 @@ export default function ReviewView() {
       </div>
 
       {viewing && (
-        <ReviewViewer itemId={viewing.id} title={viewing.title} onClose={() => setViewing(null)} />
+        <ReviewViewer itemId={viewing.id} title={viewing.title} onClose={() => setViewing(null)}
+          readOnly={!!viewing.readOnly}
+          editState={edits[viewing.id]} onEdit={instr => runEdit(viewing.id, instr)} />
       )}
+
+      <style>{`@keyframes revPulse { 0%,100%{opacity:1} 50%{opacity:0.25} }`}</style>
     </div>
   );
 }

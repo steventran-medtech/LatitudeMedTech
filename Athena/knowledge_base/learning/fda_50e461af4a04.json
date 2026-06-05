@@ -1,0 +1,15 @@
+{
+  "agent": "fda",
+  "doc_name": "Target Recalls Up & Up Fragrance Free and Fresh Cucumber Scented Baby Wipes Due to Potential Microbial Contamination",
+  "category": "FDA Recalls",
+  "source": "FDA Recalls",
+  "url": "http://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts/target-recalls-fragrance-free-and-fresh-cucumber-scented-baby-wipes-due-potential-microbial",
+  "ingested": "2026-06-05T13:19:56.107024",
+  "chunks": [
+    {
+      "text": "Target is voluntarily recalling Up &amp; Up Fragrance Free and Up &amp; Up Fresh Cucumber Scented Baby Wipes following customer complaints of product discoloration, and FDA testing that identified the presence of Burkholderia cepacia complex and Burkholderia gladioli in product samples.",
+      "doc_name": "Target Recalls Up & Up Fragrance Free and Fresh Cucumber Scented Baby Wipes Due to Potential Microbial Contamination",
+      "category": "FDA Recalls"
+    }
+  ]
+}

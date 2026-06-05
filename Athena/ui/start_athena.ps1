@@ -55,7 +55,7 @@ if (-not $backendUp) {
 # ── Wait for voice models to finish loading ────────────────────────────────
 # Models preload in a background thread; we block here so Chrome never opens
 # before Athena is fully ready to take requests.
-$modelTimeout = 60   # seconds
+$modelTimeout = 180  # seconds — Kokoro model download can take ~2 min on first run
 $modelElapsed = 0
 while ($modelElapsed -lt $modelTimeout) {
     try {
@@ -79,11 +79,11 @@ if ($chrome) {
     # closes exactly that instance by matching on this path — the user's main
     # Chrome (default profile) is never touched.
     $chromeArgs = @(
-        "--app=http://localhost:3000",
-        "--window-size=1440,900",
+        "--start-maximized",
         "--user-data-dir=$CHROME_PROFILE",
         "--no-first-run",
-        "--no-default-browser-check"
+        "--no-default-browser-check",
+        "http://localhost:3000"
     )
     Start-Process $chrome -ArgumentList $chromeArgs
 } else {

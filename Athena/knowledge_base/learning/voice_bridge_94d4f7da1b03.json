@@ -1,0 +1,15 @@
+{
+  "agent": "voice_bridge",
+  "doc_name": "The Meta hack shows there’s more to AI security than Mythos",
+  "category": "AI Technology",
+  "source": "MIT Technology Review",
+  "url": "https://www.technologyreview.com/2026/06/05/1138437/the-meta-hack-shows-theres-more-to-ai-security-than-mythos/",
+  "ingested": "2026-06-05T13:14:46.207610",
+  "chunks": [
+    {
+      "text": "On June 5, 404 Media reported that attackers had been using Meta’s AI customer support agent to steal Instagram accounts. Their approach was simple: They asked the agent to link the accounts to email addresses that they controlled, and the agent complied. One attacker broke into the dormant Obama White House account and made pro-Iran&#8230;",
+      "doc_name": "The Meta hack shows there’s more to AI security than Mythos",
+      "category": "AI Technology"
+    }
+  ]
+}

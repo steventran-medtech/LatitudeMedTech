@@ -1,0 +1,15 @@
+{
+  "agent": "voice_bridge",
+  "doc_name": "The latest AI news we announced in May 2026",
+  "category": "Conversational AI",
+  "source": "Google AI Blog",
+  "url": "https://blog.google/innovation-and-ai/technology/ai/google-ai-updates-may-2026/",
+  "ingested": "2026-06-05T13:14:47.369290",
+  "chunks": [
+    {
+      "text": "May AI recap",
+      "doc_name": "The latest AI news we announced in May 2026",
+      "category": "Conversational AI"
+    }
+  ]
+}
