@@ -1,0 +1,28 @@
+{
+  "doc_id": "fda_recalls_index",
+  "doc_name": "FDA Enforcement Reports Index",
+  "category": "FDA_Recalls",
+  "source": "deep_scrape",
+  "ingested_at": "2026-06-03T18:11:55.207767",
+  "chunk_count": 2,
+  "chunks": [
+    {
+      "id": "fda_recalls_index_chunk_0",
+      "doc_id": "fda_recalls_index",
+      "doc_name": "FDA Enforcement Reports Index",
+      "category": "FDA_Recalls",
+      "chunk_num": 0,
+      "text": "Recalls, Market Withdrawals, & Safety Alerts | FDA Skip to main content Skip to FDA Search Skip to in this section menu Skip to footer links Home Safety Recalls, Market Withdrawals, & Safety Alerts Safety In this section The list below provides information gathered from press releases and other public notices about certain recalls of FDA-regulated products. Not all recalls have press releases or are posted on this page. See Additional information about recalls for a more complete listing. The Recalls, Market Withdrawals & Safety Alerts are available on FDA’s website for three years before being archived. To search archived content, visit Search FDA Archive and input the name of the product and/or company name in the Search terms box as well as the year to get the most inclusive search results. To scroll through archived Recalls, Market Withdrawals & Safety Alerts content by year, see the Recall and Safety Alerts Archive. Sign up to receive Recalls, Market Withdrawals and Safety Alerts . * FDA Employees: Use Chrome to Subscribe until further notice. Search Filter by Product Type - Any - Animal & Veterinary Biologics Cosmetics Dietary Supplements Drugs Food & Beverages Medical Devices Radiation-Emitting Products Tobacco Terminated Recall - Any - Yes No A Terminated Recall is a recall where the FDA has determined that all reasonable efforts have been made to remove or correct the violative product in accordance with the recall strategy, and proper disposition has been made according to the degree of hazard. Recalls that are not indicated as being terminated are either ongoing or completed. Date Brand Name(s) Product Description Product Type Recall Reason Description Company Name Terminated Recall Excerpt 06/03/2026 TNVitamins and Doctor’s Pride TNVitamins Ultra Potent Complete Green Superfood Capsules and Doctor’s Pride Complete Green Superfood capsules Food & Beverages, Foodborne Illness Possible Salmonella Contamination Total Nutrition Inc. 06/01/2026 Motor City Pizza Co. Motor City Pizza Co. 5 Cheese Bread Single and 2 Packs Food & Beverages, Foodborne Illness Possible Salmonella Contamination Champion Foods LLC 05/29/2026 Dexcom G7 Continuous Glucose Monitoring System Medical Devices Sensors identified as scrap were diverted and sold by third-party Dexcom, Inc. 05/28/2026 Better Weather Fix Elixir 15ml Dietary Supplements Undeclared Mitragynine and Mitragynine Pseudoindoxyl (Kratom) Better Weather Activities LLC 05/27/2026 D’Dioses Fruit popsicles Food & Beverages, Allergens May Contain undeclared milk, pecans, pistachios, yellow #5 and red #40 De Dios’s Ice Pops II LLC 05/27/2026 SkinnyDipped Dark Chocolate Coconut Almond Bites Food & Beverages, Allergens May Contain undeclared peanuts Bazzini, LLC 05/26/2026 TNVitamins and Doctor’s Pride TNVitamins Ultra Potent Complete Green Superfood Capsules and Doctor’s Pride Complete Green Superfood capsules Food & Beverages, Foodborne Illness Possible Salmonella Contamination Total Nutrition Inc. 05/26/2026 Omnipod Device intended for the subcutaneous delivery of insulin into a patient Medical Devices Manufacturing issue that could result in under delivery of insulin Insulet Corporation, Inc. 05/26/2026 Mogo Mogo Moringa Oleifera Capsules Food & Beverages, Foodborne Illness Possible Salmonella Contamination Mogo Moringa LLC 05/23/2026 Angel Specialty Products, Royal Gold, Boba Time, Fanale, Denda Specialty Beverages Food & Beverages, Foodborne Illness Due to contamination of Salmonella SKS Copack",
+      "word_count": 512
+    },
+    {
+      "id": "fda_recalls_index_chunk_1",
+      "doc_id": "fda_recalls_index",
+      "doc_name": "FDA Enforcement Reports Index",
+      "category": "FDA_Recalls",
+      "chunk_num": 1,
+      "text": "the subcutaneous delivery of insulin into a patient Medical Devices Manufacturing issue that could result in under delivery of insulin Insulet Corporation, Inc. 05/26/2026 Mogo Mogo Moringa Oleifera Capsules Food & Beverages, Foodborne Illness Possible Salmonella Contamination Mogo Moringa LLC 05/23/2026 Angel Specialty Products, Royal Gold, Boba Time, Fanale, Denda Specialty Beverages Food & Beverages, Foodborne Illness Due to contamination of Salmonella SKS Copack Download XLSX Feedback Back to Top",
+      "word_count": 70
+    }
+  ]
+}

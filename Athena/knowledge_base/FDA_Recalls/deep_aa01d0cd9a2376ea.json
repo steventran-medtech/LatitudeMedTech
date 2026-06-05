@@ -1,0 +1,28 @@
+{
+  "doc_id": "deep_aa01d0cd9a2376ea",
+  "doc_name": "Medtronic Recalls StealthStation S8 Application Versions 1.2.0, 1.1.0, 1.0.3, 1.0.2, and 1.0.1 for Software Error that May Cause Incorrect Measurements During Cranial Surgery | FDA",
+  "category": "FDA_Recalls",
+  "source": "deep_scrape",
+  "ingested_at": "2026-06-03T18:12:58.975604",
+  "chunk_count": 2,
+  "chunks": [
+    {
+      "id": "deep_aa01d0cd9a2376ea_chunk_0",
+      "doc_id": "deep_aa01d0cd9a2376ea",
+      "doc_name": "Medtronic Recalls StealthStation S8 Application Versions 1.2.0, 1.1.0, 1.0.3, 1.0.2, and 1.0.1 for Software Error that May Cause Incorrect Measurements During Cranial Surgery | FDA",
+      "category": "FDA_Recalls",
+      "chunk_num": 0,
+      "text": "![U.S. flag](/themes/custom/preview/assets/images/US_Flag.png) ![Dot gov](/themes/custom/preview/assets/images/icon-dot-gov.svg) **The .gov means it’s official.** Federal government websites often end in .gov or .mil. Before sharing sensitive information, make sure you're on a federal government site. ![SSL](/themes/custom/preview/assets/images/icon-https.svg) **The site is secure.** The **https://** ensures that you are connecting to the official website and that any information you provide is encrypted and transmitted securely. ![U.S. Food and Drug Administration logo](/themes/custom/preview/assets/images/FDA_Logo_Icon_White.svg) ## Featured ## Products ## Topics ## Information For # Medtronic Recalls StealthStation S8 Application Versions 1.2.0, 1.1.0, 1.0.3, 1.0.2, and 1.0.1 for Software Error that May Cause Incorrect Measurements During Cranial Surgery Please be aware, this recall is a correction, not a product removal. *The FDA has identified this as a Class I recall, the most serious type of recall. Use of these devices may cause serious injuries or death.* ## Recalled Product ## Device Use The StealthStation System with StealthStation Cranial software is intended as an aid for locating anatomical structures during neurosurgery (treatment of diseases or disorders of the brain and spine). The StealthStation is indicated for use in any medical condition where stereotactic surgery of the brain or spine may be appropriate and where reference to a rigid anatomical structure, such as the skull, can be identified in relation to images of the anatomy. Cranial procedures using the StealthStation System with StealthStation Cranial software may include: ## Reason for Recall Medtronic is recalling the StealthStation S8 Application Versions 1.2.0, 1.1.0, 1.0.3, 1.0.2, and 1.0.1 after customer complaints about a software error causing numbers or letters to be missing from the displayed text and replaced by a space, in either the \"distance to target\" or \"tip stop point\" display during navigation. The missing digit may result in the mechanical depth stop being set too short or too long and may cause the surgeon to use an incorrect measurement for placement of the biopsy tip stop during navigation. Performing a cranial procedure using incorrect placement could lead to serious permanent injuries, including brain, nerve, or cerebrovascular damage, abnormal functions to the brain, spine, or muscles, paralysis, or death. Medtronic reports 28 complaints related to this issue. There have been no reported injuries or deaths. ## Who May Be Affected ## What to Do On April 10, 2024, Medtronic issued an Urgent Medical Device Correction letter stating that the company will work to coordinate a software update at no charge to resolve the error. The letter also included the following required actions for customers: ## Contact Information Customers with questions related to this issue should contact Medtronic Technical Services for help at 1-888-826-5603 or email at [rs.navtechsupport@medtronic.com](mailto:rs.navtechsupport@medtronic.com). ## Additional Resources ## How do I report a problem? Health care professionals and consumers may [report adverse reactions or quality problems](https://www.accessdata.fda.gov/scripts/medwatch/index.cfm?action=reporting.home) they experienced using these devices to MedWatch: The FDA Safety Information and Adverse Event Reporting Program using an online form, regular mail, or FAX. ## Content current as of: 06/05/2024 ## Regulated Product(s) Subscribe to Medical Device Safety and Recalls ![Food and Drug Administration Logo](/themes/custom/preview/assets/images/FDA_Logo_Icon_White.svg)",
+      "word_count": 498
+    },
+    {
+      "id": "deep_aa01d0cd9a2376ea_chunk_1",
+      "doc_id": "deep_aa01d0cd9a2376ea",
+      "doc_name": "Medtronic Recalls StealthStation S8 Application Versions 1.2.0, 1.1.0, 1.0.3, 1.0.2, and 1.0.1 for Software Error that May Cause Incorrect Measurements During Cranial Surgery | FDA",
+      "category": "FDA_Recalls",
+      "chunk_num": 1,
+      "text": "adverse reactions or quality problems](https://www.accessdata.fda.gov/scripts/medwatch/index.cfm?action=reporting.home) they experienced using these devices to MedWatch: The FDA Safety Information and Adverse Event Reporting Program using an online form, regular mail, or FAX. ## Content current as of: 06/05/2024 ## Regulated Product(s) Subscribe to Medical Device Safety and Recalls ![Food and Drug Administration Logo](/themes/custom/preview/assets/images/FDA_Logo_Icon_White.svg)",
+      "word_count": 50
+    }
+  ]
+}

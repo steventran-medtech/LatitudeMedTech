@@ -1,0 +1,19 @@
+{
+  "doc_id": "deep_7f8b5e9a0e11c0c9",
+  "doc_name": "FDA lifts Boston Scientific corporate warning letter",
+  "category": "FDA_Warning_Letters",
+  "source": "deep_scrape",
+  "ingested_at": "2026-06-03T18:13:13.183833",
+  "chunk_count": 1,
+  "chunks": [
+    {
+      "id": "deep_7f8b5e9a0e11c0c9_chunk_0",
+      "doc_id": "deep_7f8b5e9a0e11c0c9",
+      "doc_name": "FDA lifts Boston Scientific corporate warning letter",
+      "category": "FDA_Warning_Letters",
+      "chunk_num": 0,
+      "text": "[![img](/pf/resources/images/sectionsLogo/medtech-insight.svg?d=146)](/medtech-insight/) # FDA lifts Boston Scientific corporate warning letter Summary not available. Article must contain at least 300 words. Translate not available. Article must contain at least 300 words. Listen to this article ![Beta](/pf/resources/images/icons/beta.svg?d=146) Listen not available. Article must contain at least 300 words. Boston Scientific has resolved all outstanding issues cited in a 2006 corporate warning letter that identified \"serious systemic problems\" with its quality system and adverse event reporting programs, the firm announced Aug. 11. The letter barred Boston Scientific from marketing high-risk Class III devices until the violations were corrected, but the company made enough progress to convince FDA to lift the marketing restrictions in October 2008. Nevertheless, the full resolution of the corporate letter marks a \"major milestone,\" CEO Ray Elliott said in a statement. \"We have revolutionized our approach and transformed our culture. ## More from Archive --- ## More from Medtech Insight",
+      "word_count": 148
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "doc_id": "deep_49b48fe77cc47e6b",
+  "doc_name": "Applicator Recall: Integra LifeSciences Removes MicroMyst Applicators Due to Potential Sterility Concerns | FDA",
+  "category": "FDA_Recalls",
+  "source": "deep_scrape",
+  "ingested_at": "2026-06-03T18:13:39.362744",
+  "chunk_count": 2,
+  "chunks": [
+    {
+      "id": "deep_49b48fe77cc47e6b_chunk_0",
+      "doc_id": "deep_49b48fe77cc47e6b",
+      "doc_name": "Applicator Recall: Integra LifeSciences Removes MicroMyst Applicators Due to Potential Sterility Concerns | FDA",
+      "category": "FDA_Recalls",
+      "chunk_num": 0,
+      "text": "![U.S. flag](/themes/custom/preview/assets/images/US_Flag.png) ![Dot gov](/themes/custom/preview/assets/images/icon-dot-gov.svg) **The .gov means it’s official.** Federal government websites often end in .gov or .mil. Before sharing sensitive information, make sure you're on a federal government site. ![SSL](/themes/custom/preview/assets/images/icon-https.svg) **The site is secure.** The **https://** ensures that you are connecting to the official website and that any information you provide is encrypted and transmitted securely. ![U.S. Food and Drug Administration logo](/themes/custom/preview/assets/images/FDA_Logo_Icon_White.svg) ## Featured ## Products ## Topics ## Information For # Applicator Recall: Integra LifeSciences Removes MicroMyst Applicators Due to Potential Sterility Concerns ***This*** [***recall***](/medical-devices/medical-device-recalls-and-early-alerts/what-medical-device-recall \"What is a Medical Device Recall?\") ***involves removing devices from where they are used or sold. The FDA has identified this recall as the most serious type.** This device may cause serious injury or death if you continue to use it.* ## Affected Product | | | | | | | --- | --- | --- | --- | --- | | **Manufacturer's Product Number** **(Catalog Number)** | **Product Name (Description)** | **UDI Number** | **Lot Number** | **Expiration Date** | | 205000DS | MicroMyst Applicator, Box of 5 | 10381780000112 | All expired and unexpired lots | All expired and unexpired lots | **Manufacturer's Product Number** **(Catalog Number)** **Product Name (Description)** **UDI Number** **Lot Number** **Expiration Date** 205000DS MicroMyst Applicator, Box of 5 10381780000112 ## What to Do On May 23, 2025, Integra LifeSciences sent all affected customers an Urgent Voluntary Medical Device Recall letter recommending the following actions: **For customers** **For distributors/sales representatives** ## Reason for Recall Integra LifeSciences is recalling MicroMyst Applicators due to incomplete bioburden assessments and incomplete sterilization location transfer documentation, both of which help ensure the products were effectively sterilized. The use of affected product may cause serious adverse health consequences, including inflammation, infection, and death. Integra LifeSciences has not reported any serious injuries or deaths associated with this issue. ## Device Use The MicroMyst Applicator is intended for use in the delivery of the two DuraSeal precursor solutions onto a surgical site at the same time. It is a sterile, single-use device with a 14 cm, dual lumen, stainless steel cannula and an outer sheath used during surgical procedures. ## Contact Information Customers in the U.S. with questions about this recall should contact their Integra sales representative or customer service at 1-800-654-2873 or [custsvcnj@integralife.com](mailto:custsvcnj@integralife.com ) ## Additional FDA Resources: [FDA’s Enforcement Report](https://www.accessdata.fda.gov/scripts/ires/index.cfm?Product=214105) [Medical Device Recall Database](https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfRES/res.cfm?id=214105) ## Unique Device Identifier (UDI) The unique device identifier (UDI) helps identify individual medical devices sold in the United States from manufacturing through distribution to patient use. The UDI allows for more accurate reporting, reviewing, and analyzing of adverse event reports so that devices can be identified, and problems potentially corrected more quickly. ## How do I report a problem? Health care professionals and consumers may [report adverse reactions or quality problems](https://www.accessdata.fda.gov/scripts/medwatch/index.cfm?action=reporting.home) they experienced using these devices to MedWatch: The FDA Safety Information and Adverse Event Reporting Program. ## Content current as of: 07/21/2025 ## Regulated Product(s) Subscribe to Medical Device Safety and Recalls ![Food and Drug Administration Logo](/themes/custom/preview/assets/images/FDA_Logo_Icon_White.svg)",
+      "word_count": 499
+    },
+    {
+      "id": "deep_49b48fe77cc47e6b_chunk_1",
+      "doc_id": "deep_49b48fe77cc47e6b",
+      "doc_name": "Applicator Recall: Integra LifeSciences Removes MicroMyst Applicators Due to Potential Sterility Concerns | FDA",
+      "category": "FDA_Recalls",
+      "chunk_num": 1,
+      "text": "a problem? Health care professionals and consumers may [report adverse reactions or quality problems](https://www.accessdata.fda.gov/scripts/medwatch/index.cfm?action=reporting.home) they experienced using these devices to MedWatch: The FDA Safety Information and Adverse Event Reporting Program. ## Content current as of: 07/21/2025 ## Regulated Product(s) Subscribe to Medical Device Safety and Recalls ![Food and Drug Administration Logo](/themes/custom/preview/assets/images/FDA_Logo_Icon_White.svg)",
+      "word_count": 51
+    }
+  ]
+}

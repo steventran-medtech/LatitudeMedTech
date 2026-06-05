@@ -1,0 +1,19 @@
+{
+  "doc_id": "tavily_93631071dfe2ea8e",
+  "doc_name": "Notified bodies for medical devices - Public Health - European Union",
+  "category": "EU_MDR",
+  "source": "tavily:EU MDR notified body medical device regulatory",
+  "ingested_at": "2026-06-03T18:05:41.715606",
+  "chunk_count": 1,
+  "chunks": [
+    {
+      "id": "tavily_93631071dfe2ea8e_chunk_0",
+      "doc_id": "tavily_93631071dfe2ea8e",
+      "doc_name": "Notified bodies for medical devices - Public Health - European Union",
+      "category": "EU_MDR",
+      "chunk_num": 0,
+      "text": "![European Commission logo](/themes/contrib/oe_theme/dist/ec/images/logo/logo-ec--mute.svg) # Notified bodies for medical devices ## What a notified body is and what does it do A [notified body](https://single-market-economy.ec.europa.eu/single-market/goods/building-blocks/notified-bodies_en) is an organisation designated by an EU Member State (or other countries under specific agreements) to assess the conformity of certain products before being placed on the market. These bodies are entitled to carry out tasks related to conformity assessment procedures set out in the applicable legislation when a third-party intervention is required. ## Designation of a notified body To be designated, a candidate organisation must fulfil specific requirements on organisational aspects, quality management, resources and processes verified by national authorities responsible for notified bodies with the involvement of other European experts. The Commission publishes a list of designated notified bodies in the [NANDO information system](https://webgate.ec.europa.eu/single-market-compliance-space/notified-bodies). The information can be filtered by legislation to identify: Additional information on the designation process and other aspects related to notified bodies: ## Monitoring of Notified Bodies Article 44 (12) of Regulation (EU) 2017/745 and Article 40 (12) of Regulation (EU) 2017/746 require to make publicly available Member States summaries of the annual reports on the monitoring and on-site assessment activities regarding notified bodies. The individual summary reports of the Member States that have been provided can be found by year in the table below, starting from 2023. ## Notified Body list of standard fees In accordance with Article 50 of Regulation (EU) 2017/745 on medical devices and Article 46 of Regulation (EU) 2017/746 on in vitro diagnostic medical devices, notified bodies establish lists of their standard fees for the conformity assessment activities that they carry out and make those lists publicly available. ## Notified Body Coordination Group – NBCG-Med A coordination group of notified bodies in the field of medical devices (NBCG-Med) is established in accordance with Article 49 of Regulation (EU) 2017/745 on medical devices and Article 45 of Regulation (EU) 2017/746 on in vitro diagnostic medical devices. ## Latest updates ## Documents ![](https://health.ec.europa.eu/sites/default/files/styles/oe_theme_ratio_3_2_medium/public/2021-12/publications-icon.jpg?h=f2329d93&itok=_e0oEKA8) Share this page ![European Commission logo](/themes/contrib/oe_theme/dist/ec/images/logo/negative/logo-ec--en.svg) Follow the European Commission",
+      "word_count": 335
+    }
+  ]
+}

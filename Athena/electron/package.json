@@ -1,0 +1,27 @@
+{
+  "name": "latitude-medtech-athena",
+  "version": "1.0.0",
+  "description": "Latitude MedTech — Athena AI Operating System",
+  "main": "main.js",
+  "author": "Steven Tran <steven.tran@latitudemedtech.com>",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable",
+    "pack":  "electron-builder --dir"
+  },
+  "build": {
+    "appId": "com.latitudemedtech.athena",
+    "productName": "Athena — Latitude MedTech",
+    "win": {
+      "target": "portable",
+      "icon": "../frontend/public/icon.ico"
+    },
+    "extraResources": [
+      { "from": "../", "to": "athena", "filter": ["**/*", "!node_modules", "!frontend/node_modules"] }
+    ]
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.0.0"
+  }
+}

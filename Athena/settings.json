@@ -1,0 +1,99 @@
+{
+  "meta": {
+    "version": "1.0",
+    "updated_at": "2026-06-03T10:27:51.802232",
+    "company": "Latitude MedTech LLC",
+    "location": "San Diego, CA",
+    "website": "latitudemedtech.com"
+  },
+  "voice": {
+    "wake_word": "alexa",
+    "wake_threshold": 0.5,
+    "silence_threshold": 0.005,
+    "silence_duration": 2.5,
+    "max_record_sec": 30,
+    "whisper_model": "base.en",
+    "tts_enabled": true
+  },
+  "rag": {
+    "chunk_size": 512,
+    "chunk_overlap": 64,
+    "max_rss_items": 20,
+    "tavily_results": 3,
+    "schedule_time": "02:00"
+  },
+  "briefing": {
+    "max_items": 30,
+    "schedule_time": "07:00",
+    "brave_queries": 6,
+    "seen_item_days": 30
+  },
+  "content": {
+    "schedule_day": "MON",
+    "schedule_time": "06:00",
+    "topic_dedup_days": 60,
+    "max_article_tokens": 1500,
+    "word_count_target": "800-1200",
+    "publication": "MedTech Meridian"
+  },
+  "coaching": {
+    "programs": {
+      "career_prep": {
+        "name": "Career Preparation",
+        "price": "$699",
+        "duration": "1 month"
+      },
+      "early_career": {
+        "name": "Early Career QA/RA",
+        "price": "$1,499",
+        "duration": "3 months"
+      },
+      "mid_career": {
+        "name": "Mid-Career Acceleration",
+        "price": "$1,899",
+        "duration": "3 months"
+      },
+      "transition": {
+        "name": "Career Transition",
+        "price": "$2,299",
+        "duration": "4 months"
+      }
+    },
+    "alacarte": {
+      "resume": "$199",
+      "linkedin": "$199",
+      "interview": "$199",
+      "qms_session": "$199",
+      "inperson": "$199",
+      "resume_linkedin_bundle": "$349"
+    }
+  },
+  "documents": {
+    "company_name": "Latitude MedTech LLC",
+    "tagline": "Navigating compliance. Accelerating innovation.",
+    "location": "San Diego, CA",
+    "website": "latitudemedtech.com",
+    "email": "hello@latitudemedtech.com",
+    "font": "Calibri",
+    "font_size_body": 10.5,
+    "font_size_h1": 18,
+    "font_size_h2": 14,
+    "colors": {
+      "black": "1A1A1A",
+      "slate": "2C3E50",
+      "blue": "5B7FA6",
+      "teal": "4A7C6F",
+      "warm": "C8956C",
+      "muted": "8A8680"
+    },
+    "disclaimer": "DISCLAIMER: This document is produced by Latitude MedTech LLC for educational and planning purposes only. Nothing herein constitutes formal regulatory, legal, or compliance advice. Always defer to official regulations and guidance from the FDA, ISO, EU Commission, and applicable regulatory bodies.",
+    "footer_text": "Latitude MedTech LLC  \u00b7  San Diego, CA  \u00b7  latitudemedtech.com  \u00b7  Educational purposes only \u2014 not regulatory advice"
+  },
+  "prompts": {
+    "voice_assistant": "You are Athena, the Latitude MedTech voice assistant for the founder of Latitude MedTech LLC, a San Diego-based medical device regulatory coaching and consulting company.\n\nYou assist with:\n- Career coaching for early-career QA/RA professionals\n- Medical device regulatory knowledge (FDA, EU MDR, ISO 13485, MDSAP)\n- MedTech Meridian Substack content strategy\n- Business development and strategic planning\n\nVOICE RESPONSE RULES:\n- Natural spoken English only. No markdown or bullets.\n- Under 80 words unless asked for detail.\n- Complete sentences. No filler phrases.\n\nDISCLAIMER: Regulatory content is educational only. Not licensed regulatory advice.",
+    "content_agent": "You are writing for MedTech Meridian, a Substack publication by the founder of Latitude MedTech LLC.\n\nAudience: early-to-mid career QA/RA professionals (0-7 years experience).\n\nVoice: conversational but authoritative. Practical and actionable. First person singular. No corporate speak.\n\nStructure: hook \u2192 core insight \u2192 practical takeaway \u2192 closing thought.\n\nLength: 600-900 words.\n\nIMPORTANT: Educational content only. Not regulatory advice. Add a brief disclaimer at the end.",
+    "coaching_brief": "You are preparing a discovery call brief for the founder of Latitude MedTech LLC. Generate a concise, practical brief covering: what we know, likely profile, recommended program match, discovery call objectives, suggested opening questions, watch-outs, and pricing talking points.\n\nKeep it tight. Under 2 minutes to read. Like a smart colleague prepping you.",
+    "iso_coach": "You are a medical device QMS expert writing coaching content for Latitude MedTech LLC. Audience: early-career QA/RA professionals (0-3 years) learning ISO 13485:2016.\n\nRules: plain English, practical examples, honest about complexity, conversational but authoritative.\n\nIMPORTANT: Educational content only. Not regulatory advice.",
+    "briefing_agent": "You are preparing a daily intelligence briefing for the founder of Latitude MedTech LLC \u2014 a QA/RA professional and MedTech coach in San Diego.\n\nWrite a clean, scannable briefing with sections: Breaking, Need to Know, Industry Pulse, QA/RA Learning, SoCal Watch, Worth Reading Later.\n\nRules: every item needs a URL, skip empty sections, no filler, under 450 words."
+  }
+}

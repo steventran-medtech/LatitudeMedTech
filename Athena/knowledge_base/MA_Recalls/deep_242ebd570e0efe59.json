@@ -1,0 +1,28 @@
+{
+  "doc_id": "deep_242ebd570e0efe59",
+  "doc_name": "[PDF] In re Integra Lifesciences Holdings Corporation Securities Litigation",
+  "category": "MA_Recalls",
+  "source": "deep_scrape",
+  "ingested_at": "2026-06-03T18:13:39.356760",
+  "chunk_count": 2,
+  "chunks": [
+    {
+      "id": "deep_242ebd570e0efe59_chunk_0",
+      "doc_id": "deep_242ebd570e0efe59",
+      "doc_name": "[PDF] In re Integra Lifesciences Holdings Corporation Securities Litigation",
+      "category": "MA_Recalls",
+      "chunk_num": 0,
+      "text": "© 2025 Bernstein Litowitz Berger & Grossmann LLP All Rights Reserved. In re Integra Lifesciences Holdings Corporation Securities Litigation COURT: United States District Court for the District of New Jersey CASE NUMBER: 23-cv-20321 CLASS PERIOD: 03/11/2019 - 07/28/2024 CASE LEADERS: Hannah Ross, Avi Josefson, James A. Harrod CASE TEAM: Alexander Noble, Emily A. Tu, Sarah Schmidt This is a securities class action brought on behalf of investors who purchased or otherwise acquired the common stock of Integra LifeSciences Holdings Corporation (“Integra” or the “Company”) between March 11, 2019 and July 28, 2024, inclusive (the “Class Period”). The action asserts claims against Integra and certain of its executives for violations of Sections 10(b) and 20(a) of the Securities Exchange Act of 1934. Integra manufactures and sells collagen-based medical devices that are used for complex wound care, peripheral nerve repair, and reconstructive surgery. Integra produces several products, including one of its principal wound care products, SurgiMend, in its manufacturing plant located in Boston, Massachusetts (the “Boston Facility”). The claims against Integra arise from misrepresentations concerning the company’s progress in remediating violations of federal manufacturing regulations identified by the FDA in a 2019 warning letter. As a result of these misrepresentations, Integra stock traded at artificially inflated prices throughout the Class Period. In truth, as FDA investigators, a whistleblower complaint, and many of the Company’s own former employeesfrom multiple levels and sites across the Company all warned Defendants prior to and throughout the Class Period, the Company’s Boston Facility was rife with pervasive, systemic, and serious violations of fundamental FDA regulations in the same quality systems that Defendants specifically touted to investors. These violations exposed the Company’s products to heightened risks of deadly endotoxin contamination, endangering patients and exposing Integra to a host of dire consequences. The truth began to emerge through a series of disclosures beginning on April 26, 2023, when Integra revealed that it had paused production at the Boston Facility. The price of Integra shares continued to decline in response to disclosures revealing, among other things, that Integra had been forced to recall its products made at the Boston Facility during a five-year period between March 1, 2018 and May 22, 2023, and that the FDA had issued another warning letter in 2023 preventing the Company from obtaining approval for SurgiMend until the Company’s FDA violations had been addressed. As a result of these disclosures, the price of Integra’s stock price fell nearly 67% from its Class Period high, ultimately causing over $2 billion in investor losses. Case Status On June 17, 2024, the court appointed Pembroke Pines F&P and San Antonio F&P as co-lead plaintiffs and appointed BLB&G as co-lead counsel for the class. Lead Plaintiffs filed the consolidated class action complaint on September 6, 2024. On June 30, 2025, the court granted Defendants’ motion to dismiss with leave to amend. On August 14, 2025, Lead Plaintiffs filed an amended complaint. Defendants’ motion to dismiss is due on October 14, 2025. © 2025 Bernstein Litowitz Berger & Grossmann LLP All Rights Reserved. - 2 -Case Documents  August 15, 2025 -",
+      "word_count": 512
+    },
+    {
+      "id": "deep_242ebd570e0efe59_chunk_1",
+      "doc_id": "deep_242ebd570e0efe59",
+      "doc_name": "[PDF] In re Integra Lifesciences Holdings Corporation Securities Litigation",
+      "category": "MA_Recalls",
+      "chunk_num": 1,
+      "text": "the consolidated class action complaint on September 6, 2024. On June 30, 2025, the court granted Defendants’ motion to dismiss with leave to amend. On August 14, 2025, Lead Plaintiffs filed an amended complaint. Defendants’ motion to dismiss is due on October 14, 2025. © 2025 Bernstein Litowitz Berger & Grossmann LLP All Rights Reserved. - 2 -Case Documents  August 15, 2025 - Consolidated Amended Complaint  September 6, 2024 - Consolidated Class Action Complaint  September 12, 2023 - Initial Complaint  September 12, 2023 - PSLRA Notice",
+      "word_count": 90
+    }
+  ]
+}

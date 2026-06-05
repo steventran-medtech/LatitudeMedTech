@@ -1,0 +1,911 @@
+{
+  "documents": {
+    "21cfr820": {
+      "name": "FDA 21 CFR Part 820 Quality System Regulation",
+      "category": "FDA",
+      "url": "https://www.ecfr.gov/current/title-21/chapter-I/subchapter-H/part-820",
+      "chunks": 1,
+      "ingested_at": "2026-06-02T21:47:32.482784",
+      "hash": "a111d5d5d660b09b"
+    },
+    "eu_mdr_2017_745": {
+      "name": "EU MDR 2017/745 Full Text",
+      "category": "EU_MDR",
+      "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32017R0745",
+      "chunks": 223,
+      "ingested_at": "2026-06-02T21:47:37.118789",
+      "hash": "821f07ede2c58f06"
+    },
+    "rss_5cbbfc1922b1427b": {
+      "name": "Annexes Combined",
+      "category": "IMDRF",
+      "url": "https://www.imdrf.org/working-groups/adverse-event-terminology/combined-codes",
+      "chunks": 2,
+      "ingested_at": "2026-06-02T21:47:41.103959",
+      "hash": "419738e1b9c682d8"
+    },
+    "rss_2b2ec89c1228e977": {
+      "name": "Annex G Test 2025: Medical Device Component (Copy)",
+      "category": "IMDRF",
+      "url": "https://www.imdrf.org/node/1071",
+      "chunks": 2,
+      "ingested_at": "2026-06-02T21:47:43.893695",
+      "hash": "a05d602ef2c70c77"
+    },
+    "rss_7fb93025984ede8a": {
+      "name": "Annex F Test 2025: Health Effects - Health Impact (Copy)",
+      "category": "IMDRF",
+      "url": "https://www.imdrf.org/node/1070",
+      "chunks": 2,
+      "ingested_at": "2026-06-02T21:47:46.581438",
+      "hash": "fd58a8fb61cad663"
+    },
+    "rss_5aeda9c386dce826": {
+      "name": "Annex E Test 2025: Health Effects - Clinical Signs and Symptoms or Conditions (Copy)",
+      "category": "IMDRF",
+      "url": "https://www.imdrf.org/node/1069",
+      "chunks": 2,
+      "ingested_at": "2026-06-02T21:47:49.304425",
+      "hash": "73f2b9fe9aad22a0"
+    },
+    "rss_3feaecd6b60a6750": {
+      "name": "Annex D Test 2025: Cause Investigation \u2013 Investigation Conclusion (Copy)",
+      "category": "IMDRF",
+      "url": "https://www.imdrf.org/node/1068",
+      "chunks": 2,
+      "ingested_at": "2026-06-02T21:47:51.999632",
+      "hash": "a287acf77f890865"
+    },
+    "rss_0958edfed21fe869": {
+      "name": "Annex C Test 2025: Cause Investigation - Investigation Findings (Copy)",
+      "category": "IMDRF",
+      "url": "https://www.imdrf.org/node/1067",
+      "chunks": 2,
+      "ingested_at": "2026-06-02T21:47:54.746150",
+      "hash": "d1eef1e01ecbc2d0"
+    },
+    "rss_ac108ccab5d5ec4f": {
+      "name": "Annex B Test 2025: Cause Investigation - Type of Investigation (Copy)",
+      "category": "IMDRF",
+      "url": "https://www.imdrf.org/node/1066",
+      "chunks": 2,
+      "ingested_at": "2026-06-02T21:47:57.518741",
+      "hash": "86c273648bc88490"
+    },
+    "rss_de49aadec6d5241e": {
+      "name": "Annex G: Medical Device Component",
+      "category": "IMDRF",
+      "url": "https://www.imdrf.org/working-groups/adverse-event-terminology/annex-g-medical-device-component",
+      "chunks": 2,
+      "ingested_at": "2026-06-02T21:47:59.846457",
+      "hash": "fdbd1832ff5a5c0c"
+    },
+    "rss_908c47117143dc5e": {
+      "name": "Annex F: Health Effects - Health Impact",
+      "category": "IMDRF",
+      "url": "https://www.imdrf.org/working-groups/adverse-event-terminology/annex-f-health-effects-health-impact",
+      "chunks": 2,
+      "ingested_at": "2026-06-02T21:48:02.193740",
+      "hash": "cc0c4416f4363414"
+    },
+    "rss_2e8a1e76fb8de3db": {
+      "name": "Annex E: Test Copy to validate structure - Please ignore",
+      "category": "IMDRF",
+      "url": "https://www.imdrf.org/working-groups/adverse-event-terminology/annex-e-test-copy-validate-structure-please-ignore",
+      "chunks": 2,
+      "ingested_at": "2026-06-02T21:48:04.960805",
+      "hash": "e43e7d595b6a2c5f"
+    },
+    "tavily_84d910a9e0f48389": {
+      "name": "CDRH Proposed Guidances for Fiscal Year 2026 (FY2026) - FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/medical-devices/guidance-documents-medical-devices-and-radiation-emitting-products/cdrh-proposed-guidances-fiscal-year-2026-fy2026",
+      "chunks": 3,
+      "ingested_at": "2026-06-02T22:34:23.012192",
+      "source": "tavily:FDA CDRH guidance document 2025 2026 medical device",
+      "hash": "9e0735eedb728dd8"
+    },
+    "tavily_c2db24bf4a1db952": {
+      "name": "FDA CDRH Announces Priorities for Fiscal Year 2026",
+      "category": "General",
+      "url": "https://www.emergobyul.com/news/fda-cdrh-announces-priorities-fiscal-year-2026",
+      "chunks": 6,
+      "ingested_at": "2026-06-02T22:34:23.020251",
+      "source": "tavily:FDA CDRH guidance document 2025 2026 medical device",
+      "hash": "880b9bd17a5850e9"
+    },
+    "tavily_3613048d20e0c93d": {
+      "name": "CDRH Proposed Guidance Development | FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/medical-devices/guidance-documents-medical-devices-and-radiation-emitting-products/cdrh-proposed-guidance-development",
+      "chunks": 1,
+      "ingested_at": "2026-06-02T22:34:23.023721",
+      "source": "tavily:FDA CDRH guidance document 2025 2026 medical device",
+      "hash": "e09bf90c27cdfdf0"
+    },
+    "tavily_2f979f1a6a684837": {
+      "name": "FDA Continues to Take Steps to Strengthen the Premarket Notification [510(k)] Program - Program Updates | FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/medical-devices/510k-clearances/fda-continues-take-steps-strengthen-premarket-notification-510k-program-program-updates",
+      "chunks": 4,
+      "ingested_at": "2026-06-02T22:34:26.500032",
+      "source": "tavily:FDA 510k guidance update medical device quality",
+      "hash": "e09bf90c27cdfdf0"
+    },
+    "tavily_ef5610231ead22d9": {
+      "name": "[PDF] us fda center for devices and radiological health update",
+      "category": "IMDRF",
+      "url": "https://www.imdrf.org/sites/default/files/docs/imdrf/final/meetings/imdrf-meet-160913-brazil-jurisdictional-update-usa.pdf",
+      "chunks": 4,
+      "ingested_at": "2026-06-02T22:34:26.503035",
+      "source": "tavily:FDA 510k guidance update medical device quality",
+      "hash": "3dda32fc1213c955"
+    },
+    "tavily_1c2ac3d2a7e252c8": {
+      "name": "CDRH Statement: FDA Continues to Take Steps to Strengthen the Premarket Notification [510(k)] Program | FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/medical-devices/medical-devices-news-and-events/cdrh-statement-fda-continues-take-steps-strengthen-premarket-notification-510k-program",
+      "chunks": 4,
+      "ingested_at": "2026-06-02T22:34:26.506994",
+      "source": "tavily:FDA 510k guidance update medical device quality",
+      "hash": "e09bf90c27cdfdf0"
+    },
+    "tavily_dbc6deabbcc6f507": {
+      "name": "FDA Medical Device Recall Guidance [Process Explained]",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/fda-medical-device-recalls",
+      "chunks": 4,
+      "ingested_at": "2026-06-02T22:34:31.691537",
+      "source": "tavily:FDA recall Class I medical device",
+      "hash": "4f28bc7a7452b558"
+    },
+    "tavily_6ad069d51019e503": {
+      "name": "MedCon: FDA sees uptick in class I recalls in 2025 as it tackles resourcing issues | RAPS",
+      "category": "Regulatory",
+      "url": "https://www.raps.org/resource/medcon-fda-sees-uptick-in-class-i-recalls-in-2025-as-it-tackles-resourcing-issues.html",
+      "chunks": 3,
+      "ingested_at": "2026-06-02T22:34:31.695015",
+      "source": "tavily:FDA recall Class I medical device",
+      "hash": "083afd9aa4a8becb"
+    },
+    "tavily_5d382e4595d8a05a": {
+      "name": "Recalls, Corrections and Removals (Devices) - FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/medical-devices/postmarket-requirements-devices/recalls-corrections-and-removals-devices",
+      "chunks": 13,
+      "ingested_at": "2026-06-02T22:34:31.701438",
+      "source": "tavily:FDA recall Class I medical device",
+      "hash": "27022be1e9318de6"
+    },
+    "tavily_f33f4b97717dbd73": {
+      "name": "MDCG 2025\u201310: Guidance on post-market surveillance of medical devices and in vitro diagnostic medical devices (December 2025) - Public Health",
+      "category": "EU_MDR",
+      "url": "https://health.ec.europa.eu/latest-updates/mdcg-2025-10-guidance-post-market-surveillance-medical-devices-and-vitro-diagnostic-medical-devices-2025-12-19_en",
+      "chunks": 1,
+      "ingested_at": "2026-06-02T22:34:35.492827",
+      "source": "tavily:MDCG guidance document EU MDR 2025 2026",
+      "hash": "8fe4d3974ec8428f"
+    },
+    "tavily_14c9d8ccac2aa044": {
+      "name": "[PDF] MDCG 2025-10 Guidance on post-market surveillance of medical ...",
+      "category": "EU_MDR",
+      "url": "https://health.ec.europa.eu/document/download/a9ad86b7-1b8e-4bae-beb4-48b2b3ed2f05_en?filename=mdcg_2025-10_en.pdf",
+      "chunks": 20,
+      "ingested_at": "2026-06-02T22:34:35.501585",
+      "source": "tavily:MDCG guidance document EU MDR 2025 2026",
+      "hash": "88dcda6e00df9522"
+    },
+    "tavily_6d86d316ef3be114": {
+      "name": "EU MDR | Greenlight Guru",
+      "category": "General",
+      "url": "https://www.greenlight.guru/glossary/eu-mdr",
+      "chunks": 2,
+      "ingested_at": "2026-06-02T22:34:38.404504",
+      "source": "tavily:EU MDR notified body medical device regulatory",
+      "hash": "dc2ad5e8bdda7200"
+    },
+    "tavily_4537626be68a8f93": {
+      "name": "[PDF] European Union - International Medical Device Regulators Forum",
+      "category": "IMDRF",
+      "url": "https://www.imdrf.org/sites/default/files/2023-04/European%20Union.pdf",
+      "chunks": 3,
+      "ingested_at": "2026-06-02T22:34:38.407488",
+      "source": "tavily:EU MDR notified body medical device regulatory",
+      "hash": "21d331cefac29e46"
+    },
+    "tavily_e3513698809d495e": {
+      "name": "New Regulations - Public Health - European Commission",
+      "category": "EU_MDR",
+      "url": "https://health.ec.europa.eu/medical-devices-sector/new-regulations_en",
+      "chunks": 6,
+      "ingested_at": "2026-06-02T22:34:38.411488",
+      "source": "tavily:EU MDR notified body medical device regulatory",
+      "hash": "9456aebbccfb2048"
+    },
+    "tavily_eb894580159bb342": {
+      "name": "Euro Roundup: Team-NB updates best practices for MDR technical documentation submission  | RAPS",
+      "category": "Regulatory",
+      "url": "https://www.raps.org/resource/euro-roundup-team-nb-updates-best-practices-for-md.html",
+      "chunks": 1,
+      "ingested_at": "2026-06-02T22:34:42.689782",
+      "source": "tavily:EU MDR technical documentation guidance update",
+      "hash": "fb76150573853290"
+    },
+    "tavily_3ac5234fdb57e5f4": {
+      "name": "Understanding Technical Documentation in EU Regulations",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/technical-documentation-eu-device-regulations",
+      "chunks": 4,
+      "ingested_at": "2026-06-02T22:34:42.692806",
+      "source": "tavily:EU MDR technical documentation guidance update",
+      "hash": "4f355049696d9c82"
+    },
+    "tavily_09759776a52d698b": {
+      "name": "ISO Auditing",
+      "category": "General",
+      "url": "https://medicaldeviceacademy.com/category/iso-auditing",
+      "chunks": 36,
+      "ingested_at": "2026-06-02T22:34:46.922684",
+      "source": "tavily:ISO 13485 audit finding MDSAP medical device quality",
+      "hash": "be8ea4f92724c473"
+    },
+    "tavily_5a45d7d43f225f69": {
+      "name": "[PDF] Medical Device Single Audit Program Frequently Asked Questions",
+      "category": "FDA",
+      "url": "https://www.fda.gov/media/156556/download",
+      "chunks": 24,
+      "ingested_at": "2026-06-02T22:34:46.931877",
+      "source": "tavily:ISO 13485 audit finding MDSAP medical device quality",
+      "hash": "c3af06c6c650525e"
+    },
+    "tavily_15d3d4e745e0434e": {
+      "name": "Audit Archives - Medical Device Academy",
+      "category": "General",
+      "url": "https://medicaldeviceacademy.com/tag/audit",
+      "chunks": 24,
+      "ingested_at": "2026-06-02T22:34:46.940583",
+      "source": "tavily:ISO 13485 audit finding MDSAP medical device quality",
+      "hash": "1171e05fd356d9da"
+    },
+    "tavily_52bcaa1518e47849": {
+      "name": "Medical Device Single Audit Program (MDSAP) Global QMS Progress",
+      "category": "General",
+      "url": "https://www.emergobyul.com/news/medical-device-single-audit-program-mdsap-global-qms-progress",
+      "chunks": 3,
+      "ingested_at": "2026-06-02T22:34:50.559840",
+      "source": "tavily:MDSAP audit approach update 2025 2026",
+      "hash": "0f995d8bf1d7ecab"
+    },
+    "tavily_529ca3d2a955ea9a": {
+      "name": "2025 Q3: Market Data Transparency and Regulatory Reliance",
+      "category": "General",
+      "url": "https://www.emergobyul.com/news/2025-q3-commitments-market-data-transparency-and-regulatory-reliance",
+      "chunks": 4,
+      "ingested_at": "2026-06-02T22:34:50.564659",
+      "source": "tavily:MDSAP audit approach update 2025 2026",
+      "hash": "880b9bd17a5850e9"
+    },
+    "tavily_59637e7e59a0c707": {
+      "name": "Extension of Remote and Hybrid Auditing Pilot - MDSAP AU P0036 | FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/medical-devices/medical-device-single-audit-program-mdsap/extension-remote-and-hybrid-auditing-pilot-mdsap-au-p0036",
+      "chunks": 1,
+      "ingested_at": "2026-06-02T22:34:50.570242",
+      "source": "tavily:MDSAP audit approach update 2025 2026",
+      "hash": "e09bf90c27cdfdf0"
+    },
+    "tavily_732d5d1607c65e4f": {
+      "name": "4 CAPA Best Practices to Strengthen Quality Processes",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/capa-best-practices",
+      "chunks": 4,
+      "ingested_at": "2026-06-02T22:34:53.815986",
+      "source": "tavily:medical device CAPA corrective action best practice",
+      "hash": "99eeaf651f6abdd8"
+    },
+    "tavily_55a0876fb4a36a34": {
+      "name": "Corrective and Preventive Action Form | Greenlight Guru",
+      "category": "General",
+      "url": "https://www.greenlight.guru/glossary/corrective-preventive-action-form",
+      "chunks": 2,
+      "ingested_at": "2026-06-02T22:34:53.821495",
+      "source": "tavily:medical device CAPA corrective action best practice",
+      "hash": "dc2ad5e8bdda7200"
+    },
+    "tavily_6328a39cfad01a9e": {
+      "name": "CAPA for Medical Devices: The Ultimate Guide",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/corrective-action-and-preventive-action-capa-medical-devices",
+      "chunks": 16,
+      "ingested_at": "2026-06-02T22:34:53.831052",
+      "source": "tavily:medical device CAPA corrective action best practice",
+      "hash": "eca224406e63d209"
+    },
+    "tavily_0c0c3b2d3367a987": {
+      "name": "You do know Design Controls are required for medical devices, right?",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/design-controls-required-medical-devices",
+      "chunks": 3,
+      "ingested_at": "2026-06-02T22:34:57.521186",
+      "source": "tavily:medical device design controls DHF regulatory guidance",
+      "hash": "7331222f9354f456"
+    },
+    "tavily_eb425055f5ab4e74": {
+      "name": "Design Control",
+      "category": "General",
+      "url": "https://medicaldeviceacademy.com/category/design-control",
+      "chunks": 30,
+      "ingested_at": "2026-06-02T22:34:57.530687",
+      "source": "tavily:medical device design controls DHF regulatory guidance",
+      "hash": "cb903147690e14d6"
+    },
+    "tavily_b11e528db1d771e3": {
+      "name": "Design History File (DHF) - Training Webinar",
+      "category": "General",
+      "url": "https://medicaldeviceacademy.com/design-history-file",
+      "chunks": 3,
+      "ingested_at": "2026-06-02T22:34:57.534245",
+      "source": "tavily:medical device design controls DHF regulatory guidance",
+      "hash": "aacfb31526a9e7f5"
+    },
+    "tavily_b6bb8c3907514d67": {
+      "name": "Greenlight Guru Updates Risk Management Capabilities to Align with ISO 14971:2019, Further Enhances Change Management Capabilities",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/greenlight-guru-announces-risk-management-software-updates-iso-14971-2019",
+      "chunks": 2,
+      "ingested_at": "2026-06-02T22:35:01.819263",
+      "source": "tavily:ISO 14971 risk management medical device update",
+      "hash": "804ff0c0e0db9d99"
+    },
+    "tavily_50118346ffc4f12f": {
+      "name": "Medical Device Risk Management Software | Greenlight Guru",
+      "category": "General",
+      "url": "https://www.greenlight.guru/risk-management-software",
+      "chunks": 3,
+      "ingested_at": "2026-06-02T22:35:01.824265",
+      "source": "tavily:ISO 14971 risk management medical device update",
+      "hash": "dc2ad5e8bdda7200"
+    },
+    "tavily_b95c28690244f472": {
+      "name": "ISO 14971 Risk Management for Medical Devices | Emergo by UL",
+      "category": "General",
+      "url": "https://www.emergobyul.com/services/iso-14971-risk-management-consulting-medical-device-companies",
+      "chunks": 5,
+      "ingested_at": "2026-06-02T22:35:01.827264",
+      "source": "tavily:ISO 14971 risk management medical device update",
+      "hash": "880b9bd17a5850e9"
+    },
+    "tavily_87ccbe29e02f904a": {
+      "name": "This Week at FDA: CDRH annual report, partial shutdown update, and more  | RAPS",
+      "category": "Regulatory",
+      "url": "https://www.raps.org/resource/this-week-at-fda-cdrh-annual-report-partial-shutd.html",
+      "chunks": 1,
+      "ingested_at": "2026-06-02T22:35:06.140421",
+      "source": "tavily:San Diego medical device company FDA approval 2025 2026",
+      "hash": "fb76150573853290"
+    },
+    "tavily_850444e455102b29": {
+      "name": "Medical Device Resources & Webinars from Greenlight Guru",
+      "category": "General",
+      "url": "https://www.greenlight.guru/medical-device-resources",
+      "chunks": 60,
+      "ingested_at": "2026-06-02T22:35:06.158562",
+      "source": "tavily:San Diego medical device company FDA approval 2025 2026",
+      "hash": "dc2ad5e8bdda7200"
+    },
+    "tavily_165c74eedc51eeb1": {
+      "name": "Resmed wins FDA clearance for AI-enabled CPAP device",
+      "category": "General",
+      "url": "https://www.massdevice.com/resmed-fda-clearance-ai-enabled-cpap-device",
+      "chunks": 2,
+      "ingested_at": "2026-06-02T22:35:06.162924",
+      "source": "tavily:San Diego medical device company FDA approval 2025 2026",
+      "hash": "92b840067bc93e3f"
+    },
+    "tavily_ea77464258f06638": {
+      "name": "Latest Medical Device News on MassDevice",
+      "category": "General",
+      "url": "https://www.massdevice.com/page/4228?p=Bausch+Lomb&page=1",
+      "chunks": 2,
+      "ingested_at": "2026-06-02T22:35:10.981548",
+      "source": "tavily:Biocom California medical device regulatory news",
+      "hash": "33be9803c1acc888"
+    },
+    "tavily_25ac906a7907dea5": {
+      "name": "Industry seeks clarity on FDA\u2019s standards recognition process for regenerative medicines  | RAPS",
+      "category": "Regulatory",
+      "url": "https://www.raps.org/resource/industry-seeks-clarity-on-fdas-standards-recogniti.html",
+      "chunks": 1,
+      "ingested_at": "2026-06-02T22:35:10.982548",
+      "source": "tavily:Biocom California medical device regulatory news",
+      "hash": "fb76150573853290"
+    },
+    "tavily_6d89c6d19b39281e": {
+      "name": "[PDF] Dear Speaker Boehner, Majority Leader Cantor, Majority Whip ...",
+      "category": "General",
+      "url": "https://www.massdevice.com/wp-content/uploads/files/news/2011/2011-07-18_letter_to_house_leadership_medical_device_tax.pdf",
+      "chunks": 4,
+      "ingested_at": "2026-06-02T22:35:10.984032",
+      "source": "tavily:Biocom California medical device regulatory news",
+      "hash": "7a3aa959ec7eab39"
+    },
+    "tavily_0d8418374d28a596": {
+      "name": "CDRH New - News and Updates | FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/medical-devices/medical-devices-news-and-events/cdrh-new-news-and-updates",
+      "chunks": 9,
+      "ingested_at": "2026-06-03T09:27:42.298564",
+      "source": "tavily:FDA CDRH guidance document 2025 2026 medical device",
+      "hash": "ad26bace9371bc74"
+    },
+    "tavily_a2f13d7265fed55b": {
+      "name": "FY 2026 Q2 Real Time Report - Devices",
+      "category": "FDA",
+      "url": "https://www.fda.gov/media/190774/download",
+      "chunks": 3,
+      "ingested_at": "2026-06-03T09:27:42.302088",
+      "source": "tavily:FDA CDRH guidance document 2025 2026 medical device",
+      "hash": "aeacdd5cb0a5a64d"
+    },
+    "tavily_9070db833a27db50": {
+      "name": "FDA Warning Letters | Greenlight Guru",
+      "category": "General",
+      "url": "https://www.greenlight.guru/glossary/fda-warning-letters",
+      "chunks": 3,
+      "ingested_at": "2026-06-03T09:27:46.941307",
+      "source": "tavily:FDA warning letter medical device quality system",
+      "hash": "dc2ad5e8bdda7200"
+    },
+    "tavily_e8f23c4fb055d903": {
+      "name": "C.F.R. 820.70(i) - How To Avoid FDA Warning Letters",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/computer-systems-validation-how-to-avoid-fda-warning-letters",
+      "chunks": 5,
+      "ingested_at": "2026-06-03T09:27:46.945341",
+      "source": "tavily:FDA warning letter medical device quality system",
+      "hash": "5b1bfd04b45fa9de"
+    },
+    "tavily_a7352aed3ffdb6a8": {
+      "name": "Medical Device Recalls",
+      "category": "FDA",
+      "url": "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfRES/res.cfm?start_search=1&pnumber=P110042",
+      "chunks": 3,
+      "ingested_at": "2026-06-03T09:27:50.153977",
+      "source": "tavily:FDA recall Class I medical device",
+      "hash": "40ad3285e51c5a58"
+    },
+    "tavily_09ceca5b16ae6898": {
+      "name": "[PDF] MDCG 2025-9 Guidance on Breakthrough Devices (BtX) under ...",
+      "category": "EU_MDR",
+      "url": "https://health.ec.europa.eu/document/download/edca94c7-62ab-4dd5-8539-2b347bd14809_en?filename=mdcg_2025-9.pdf",
+      "chunks": 32,
+      "ingested_at": "2026-06-03T09:27:54.538305",
+      "source": "tavily:MDCG guidance document EU MDR 2025 2026",
+      "hash": "170f882537540b94"
+    },
+    "tavily_f9b05d0b3799e12e": {
+      "name": "Medical Devices - Sector - Public Health - European Commission",
+      "category": "EU_MDR",
+      "url": "https://health.ec.europa.eu/medical-devices-sector_en",
+      "chunks": 2,
+      "ingested_at": "2026-06-03T09:27:54.541523",
+      "source": "tavily:MDCG guidance document EU MDR 2025 2026",
+      "hash": "a89ed493319d71fb"
+    },
+    "tavily_f802d21a701228cd": {
+      "name": "Medical Devices - New regulations - Public Health",
+      "category": "EU_MDR",
+      "url": "https://health.ec.europa.eu/medical-devices-new-regulations_en",
+      "chunks": 2,
+      "ingested_at": "2026-06-03T09:27:58.449510",
+      "source": "tavily:EU MDR notified body medical device regulatory",
+      "hash": "e8b4fe17bef181d9"
+    },
+    "tavily_4031d7dfdc3a955a": {
+      "name": "Top MDCG Guidance Documents for Medical Device Companies",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/top-mdcg-guidance",
+      "chunks": 7,
+      "ingested_at": "2026-06-03T09:28:03.828403",
+      "source": "tavily:EU MDR technical documentation guidance update",
+      "hash": "fd5f237baeb3f8c6"
+    },
+    "tavily_0ec7e328704d2a26": {
+      "name": "Ultimate Guide to Device Class Requirements under EU MDR",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/device-class-requirements-eu-mdr",
+      "chunks": 31,
+      "ingested_at": "2026-06-03T09:28:03.837510",
+      "source": "tavily:EU MDR technical documentation guidance update",
+      "hash": "81e37aec51a434e9"
+    },
+    "tavily_12f23ef2ec79f733": {
+      "name": "Ultimate FDA QSR & ISO 13485 Audit Checklist - Greenlight Guru",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/internal-audit-checklist-medical-device",
+      "chunks": 20,
+      "ingested_at": "2026-06-03T09:28:08.190227",
+      "source": "tavily:ISO 13485 audit finding MDSAP medical device quality",
+      "hash": "abf7883e2cabdfab"
+    },
+    "tavily_722d1bc47595441b": {
+      "name": "Medical device single audit program (MDSAP)",
+      "category": "IMDRF",
+      "url": "https://www.imdrf.org/working-groups/medical-device-single-audit-program-mdsap",
+      "chunks": 2,
+      "ingested_at": "2026-06-03T09:28:11.669317",
+      "source": "tavily:MDSAP audit approach update 2025 2026",
+      "hash": "39e3174af4ec8669"
+    },
+    "tavily_fd1a8147c6ef3b02": {
+      "name": "Medical Device Design | Greenlight Guru",
+      "category": "General",
+      "url": "https://www.greenlight.guru/glossary/medical-device-design",
+      "chunks": 4,
+      "ingested_at": "2026-06-03T09:28:16.772685",
+      "source": "tavily:medical device design controls DHF regulatory guidance",
+      "hash": "197afdd3128ab087"
+    },
+    "tavily_66774ed9436208e5": {
+      "name": "What is DHF (Design History File)? What You Need To Know",
+      "category": "General",
+      "url": "https://www.greenlight.guru/glossary/design-history-file",
+      "chunks": 2,
+      "ingested_at": "2026-06-03T09:28:16.776677",
+      "source": "tavily:medical device design controls DHF regulatory guidance",
+      "hash": "dc2ad5e8bdda7200"
+    },
+    "tavily_72a6ff44d0c6c86e": {
+      "name": "Medical Device Design Controls - Free Webinar Series",
+      "category": "General",
+      "url": "https://www.greenlight.guru/webinar/medical-device-design-controls",
+      "chunks": 2,
+      "ingested_at": "2026-06-03T09:28:16.782815",
+      "source": "tavily:medical device design controls DHF regulatory guidance",
+      "hash": "cdd8450f46744673"
+    },
+    "tavily_8cb234aea22ebca5": {
+      "name": "ISO - Reducing the risks of medical devices: international guidance just updated",
+      "category": "General",
+      "url": "https://www.iso.org/news/ref2465.html",
+      "chunks": 2,
+      "ingested_at": "2026-06-03T09:28:22.287685",
+      "source": "tavily:ISO 14971 risk management medical device update",
+      "hash": "c1e69e2bf96d09e4"
+    },
+    "tavily_470d0585130079b9": {
+      "name": "ISO 14971:2019 - Medical devices \u2014 Application of risk ...",
+      "category": "General",
+      "url": "https://www.iso.org/standard/72704.html",
+      "chunks": 2,
+      "ingested_at": "2026-06-03T09:28:22.290557",
+      "source": "tavily:ISO 14971 risk management medical device update",
+      "hash": "a367a7aa438b6e44"
+    },
+    "tavily_2e9807bf3257f1e0": {
+      "name": "[PDF] Dexcom G7 Continuous Glucose Monitoring (CGM) System",
+      "category": "FDA",
+      "url": "https://www.accessdata.fda.gov/cdrh_docs/pdf25/K253737.pdf",
+      "chunks": 6,
+      "ingested_at": "2026-06-03T09:28:25.173753",
+      "source": "tavily:San Diego medical device company FDA approval 2025 2026",
+      "hash": "56282706bbf3cad4"
+    },
+    "tavily_e2564aa308d49ec1": {
+      "name": "Dexcom beats Street in Q4 on 13% sales growth",
+      "category": "General",
+      "url": "https://www.massdevice.com/dexcom-beats-street-q4-2025-growth",
+      "chunks": 1,
+      "ingested_at": "2026-06-03T09:28:25.179233",
+      "source": "tavily:San Diego medical device company FDA approval 2025 2026",
+      "hash": "5e0c56c1d17329dc"
+    },
+    "tavily_ce304e28c678b6b5": {
+      "name": "Recon: FDA Places Hold on LogicBio Study; Pfizer Exits Glycomimetics Sickle Cell Disease Pact | RAPS",
+      "category": "Regulatory",
+      "url": "https://www.raps.org/resource/recon-fda-places-hold-on-logicbio-study-pfizer-e.html",
+      "chunks": 3,
+      "ingested_at": "2026-06-03T09:28:27.210260",
+      "source": "tavily:Biocom California medical device regulatory news",
+      "hash": "083afd9aa4a8becb"
+    },
+    "tavily_5066b0a28452dd88": {
+      "name": "FDA CDRH 2025 Annual Report - Emergo by UL",
+      "category": "General",
+      "url": "https://www.emergobyul.com/news/us-fda-issues-2025-annual-report-medical-device-regulatory-activities",
+      "chunks": 5,
+      "ingested_at": "2026-06-03T10:04:13.450895",
+      "source": "tavily:FDA CDRH guidance document 2025 2026 medical device",
+      "hash": "880b9bd17a5850e9"
+    },
+    "tavily_4564e9df34b310ad": {
+      "name": "[PDF] Deciding When to Submit a 510(k) for a Change to an Existing Device",
+      "category": "FDA",
+      "url": "https://www.fda.gov/media/99812/download",
+      "chunks": 71,
+      "ingested_at": "2026-06-03T10:04:15.691034",
+      "source": "tavily:FDA 510k guidance update medical device quality",
+      "hash": "6417fb4ef16838f4"
+    },
+    "tavily_48cb6183af41b7cf": {
+      "name": "FDA 510(k) Submission: A Step-By-Step Guide - Greenlight Guru",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/fda-510-k-submission",
+      "chunks": 11,
+      "ingested_at": "2026-06-03T10:04:15.697536",
+      "source": "tavily:FDA 510k guidance update medical device quality",
+      "hash": "bdc4ba8b15d5fef2"
+    },
+    "tavily_6e9228b0a7a0d127": {
+      "name": "[PDF] FY2017 Annual FDA Medical Device Quality System Data",
+      "category": "FDA",
+      "url": "https://www.fda.gov/media/111345/download",
+      "chunks": 6,
+      "ingested_at": "2026-06-03T10:04:17.949037",
+      "source": "tavily:FDA warning letter medical device quality system",
+      "hash": "e15c086a45b379ff"
+    },
+    "tavily_e3cc4390c19b34af": {
+      "name": "Quality Management System Regulation (QMSR) - FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/medical-devices/postmarket-requirements-devices/quality-management-system-regulation-qmsr",
+      "chunks": 3,
+      "ingested_at": "2026-06-03T10:04:17.951532",
+      "source": "tavily:FDA warning letter medical device quality system",
+      "hash": "82b4d2d31ced7b0c"
+    },
+    "tavily_ad2b3055feabec79": {
+      "name": "[PDF] Introduction to Medical Device Recalls - FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/files/medical%20devices/published/Introduction-to-Medical-Device-Recalls--Industry-Responsibilities-%28PDF%29.pdf",
+      "chunks": 12,
+      "ingested_at": "2026-06-03T10:04:20.745735",
+      "source": "tavily:FDA recall Class I medical device",
+      "hash": "22b0c5a7f9fe60b6"
+    },
+    "tavily_8011492e02c3b50f": {
+      "name": "Recalls Background and Definitions | FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/safety/industry-guidance-recalls/recalls-background-and-definitions",
+      "chunks": 1,
+      "ingested_at": "2026-06-03T10:04:20.748737",
+      "source": "tavily:FDA recall Class I medical device",
+      "hash": "e09bf90c27cdfdf0"
+    },
+    "tavily_deb55475a88b28e1": {
+      "name": "How the MDSAP Grading System Works [Quick Guide]",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/mdsap-grading-system",
+      "chunks": 3,
+      "ingested_at": "2026-06-03T10:04:35.232758",
+      "source": "tavily:ISO 13485 audit finding MDSAP medical device quality",
+      "hash": "b8c026af5ab0c8c5"
+    },
+    "tavily_1afc5501a7682aae": {
+      "name": "How to Prepare for the Medical Device Single Audit Program (MDSAP)",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/how-to-prepare-for-the-medical-device-single-audit-program",
+      "chunks": 4,
+      "ingested_at": "2026-06-03T10:04:35.236028",
+      "source": "tavily:ISO 13485 audit finding MDSAP medical device quality",
+      "hash": "c70bc86a521cf36d"
+    },
+    "tavily_bfddc9f04e4ffdd0": {
+      "name": "[PDF] 9 March 2026 Day 1 IMDRF Industry Joint Workshop",
+      "category": "IMDRF",
+      "url": "https://www.imdrf.org/sites/default/files/2026-03/Day%201%20Session%204_compiled.pdf",
+      "chunks": 8,
+      "ingested_at": "2026-06-03T10:04:38.521813",
+      "source": "tavily:MDSAP audit approach update 2025 2026",
+      "hash": "674a3bb2e9ee13e5"
+    },
+    "tavily_0db4dbac817edd3b": {
+      "name": "How to Retroactively Create Design Controls and DHF (Even Though You Should Never Let This Happen)",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/how-to-retroactively-create-design-controls-and-dhf",
+      "chunks": 5,
+      "ingested_at": "2026-06-03T10:04:43.807218",
+      "source": "tavily:medical device design controls DHF regulatory guidance",
+      "hash": "1cf52f32b02906af"
+    },
+    "tavily_f39571e2cefed643": {
+      "name": "ISO 14971: Risk Management for Medical Devices [Guide]",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/iso-14971-risk-management",
+      "chunks": 17,
+      "ingested_at": "2026-06-03T10:04:46.146397",
+      "source": "tavily:ISO 14971 risk management medical device update",
+      "hash": "5817a3bb7bcc045a"
+    },
+    "tavily_4da8fd0e7462b11f": {
+      "name": "Latest Medical Device News on MassDevice",
+      "category": "General",
+      "url": "https://www.massdevice.com/massdevice-article-archive",
+      "chunks": 3,
+      "ingested_at": "2026-06-03T10:04:48.764673",
+      "source": "tavily:San Diego medical device company FDA approval 2025 2026",
+      "hash": "41e150690ca9240f"
+    },
+    "tavily_ec17c59ee1e03e59": {
+      "name": "[PDF] April 8, 2026 Resmed Corp Rose Malonzo Senior Specialist ...",
+      "category": "FDA",
+      "url": "https://www.accessdata.fda.gov/cdrh_docs/pdf25/K251889.pdf",
+      "chunks": 7,
+      "ingested_at": "2026-06-03T10:04:48.768175",
+      "source": "tavily:San Diego medical device company FDA approval 2025 2026",
+      "hash": "d7df21258a8832c7"
+    },
+    "tavily_fc524031d14a8b30": {
+      "name": "FDA falls short of business, public's expectations - MassDevice",
+      "category": "General",
+      "url": "https://www.massdevice.com/fda-falls-short-business-publics-expectations",
+      "chunks": 2,
+      "ingested_at": "2026-06-03T10:04:51.085003",
+      "source": "tavily:Biocom California medical device regulatory news",
+      "hash": "72c2783c5c3ed21d"
+    },
+    "tavily_9606a9e7881c0e7d": {
+      "name": "EU Recap: March 2024 was a Month of Many Medical Device ...",
+      "category": "General",
+      "url": "https://www.emergobyul.com/news/eu-recap-march-2024-was-month-many-medical-device-regulatory-updates",
+      "chunks": 3,
+      "ingested_at": "2026-06-03T10:11:34.991528",
+      "source": "tavily:EU MDR technical documentation guidance update",
+      "hash": "880b9bd17a5850e9"
+    },
+    "tavily_73e9f0d502dbc75f": {
+      "name": "CAPA - Corrective/Preventative Action - Medical Device Academy",
+      "category": "General",
+      "url": "https://medicaldeviceacademy.com/capa",
+      "chunks": 7,
+      "ingested_at": "2026-06-03T10:11:38.942056",
+      "source": "tavily:medical device CAPA corrective action best practice",
+      "hash": "467fea1480365f8b"
+    },
+    "tavily_5526d01efc372e58": {
+      "name": "Letters to Industry | FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/medical-devices/industry-medical-devices/letters-industry",
+      "chunks": 6,
+      "ingested_at": "2026-06-03T18:04:52.635613",
+      "source": "tavily:FDA warning letter medical device quality system",
+      "hash": "e09bf90c27cdfdf0"
+    },
+    "tavily_93631071dfe2ea8e": {
+      "name": "Notified bodies for medical devices - Public Health - European Union",
+      "category": "EU_MDR",
+      "url": "https://health.ec.europa.eu/medical-devices-topics-interest/notified-bodies-medical-devices_en",
+      "chunks": 1,
+      "ingested_at": "2026-06-03T18:05:41.720014",
+      "source": "tavily:EU MDR notified body medical device regulatory",
+      "hash": "8a77c4b9f1ac046a"
+    },
+    "tavily_b341f4de959f008f": {
+      "name": "European Commission publishes implementing regulation on conformity assessments by notified bodies | RAPS",
+      "category": "Regulatory",
+      "url": "https://www.raps.org/resource/european-commission-publishes-implementing-regulation-on-conformity-assessments-by-notified-bodies.html",
+      "chunks": 2,
+      "ingested_at": "2026-06-03T18:05:41.723521",
+      "source": "tavily:EU MDR notified body medical device regulatory",
+      "hash": "083afd9aa4a8becb"
+    },
+    "tavily_9e53ad9d681c93c5": {
+      "name": "[PDF] Pathway to MDSAP Certification - Emergo by UL",
+      "category": "General",
+      "url": "https://www.emergobyul.com/sites/default/files/2024-03/Pathway-to-MDSAP-Whitepaper.pdf",
+      "chunks": 6,
+      "ingested_at": "2026-06-03T18:05:49.893743",
+      "source": "tavily:ISO 13485 audit finding MDSAP medical device quality",
+      "hash": "6d64bb55059128e2"
+    },
+    "tavily_bcaa158d917a7d16": {
+      "name": "[PDF] MDSAP: Design and Development Process - FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/media/147443/download",
+      "chunks": 8,
+      "ingested_at": "2026-06-03T18:05:49.894912",
+      "source": "tavily:ISO 13485 audit finding MDSAP medical device quality",
+      "hash": "66b6067b40343bca"
+    },
+    "tavily_2426244630a92dcb": {
+      "name": "risk analysis Archives - Medical Device Academy",
+      "category": "General",
+      "url": "https://medicaldeviceacademy.com/tag/risk-analysis-2",
+      "chunks": 10,
+      "ingested_at": "2026-06-03T18:05:56.665324",
+      "source": "tavily:medical device CAPA corrective action best practice",
+      "hash": "a2c2343b1c612c2a"
+    },
+    "tavily_ba26de1261a9bb64": {
+      "name": "Design Controls Implementation",
+      "category": "General",
+      "url": "https://medicaldeviceacademy.com/design-controls-implementation",
+      "chunks": 8,
+      "ingested_at": "2026-06-03T18:06:00.133627",
+      "source": "tavily:medical device design controls DHF regulatory guidance",
+      "hash": "f2f51f2aaf6f4a17"
+    },
+    "tavily_369e3f485dfdc02c": {
+      "name": "[PDF] December 5, 2025 ResMed Corp Rose Malonzo Senior Specialist ...",
+      "category": "FDA",
+      "url": "https://www.accessdata.fda.gov/cdrh_docs/pdf25/K251657.pdf",
+      "chunks": 9,
+      "ingested_at": "2026-06-03T18:06:06.650821",
+      "source": "tavily:San Diego medical device company FDA approval 2025 2026",
+      "hash": "bc5ef93458a2949c"
+    },
+    "tavily_e790225675eb0156": {
+      "name": "FDA 510(k) Consulting for Medical Device Compliance | Emergo by UL",
+      "category": "General",
+      "url": "https://www.emergobyul.com/services/us-fda-510k-consulting-medical-devices-and-ivds",
+      "chunks": 5,
+      "ingested_at": "2026-06-03T20:12:50.875139",
+      "source": "tavily:FDA 510k guidance update medical device quality",
+      "hash": "880b9bd17a5850e9"
+    },
+    "tavily_94398f82f40be95d": {
+      "name": "FDA Issues Warning Letters to Two Chinese Firms Regarding Data Quality and Integrity Concerns, Violative Lab Practices | FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/news-events/press-announcements/fda-issues-warning-letters-two-chinese-firms-regarding-data-quality-and-integrity-concerns-violative",
+      "chunks": 2,
+      "ingested_at": "2026-06-03T20:12:53.671751",
+      "source": "tavily:FDA warning letter medical device quality system",
+      "hash": "e09bf90c27cdfdf0"
+    },
+    "tavily_cb39082fb6405a0c": {
+      "name": "EU MDCG Issues Guidance on Post-Market Surveillance Under MDR, IVDR | Emergo by UL",
+      "category": "General",
+      "url": "https://www.emergobyul.com/news/eu-mdcg-issues-guidance-post-market-surveillance-under-mdr-ivdr",
+      "chunks": 3,
+      "ingested_at": "2026-06-03T20:13:02.214882",
+      "source": "tavily:MDCG guidance document EU MDR 2025 2026",
+      "hash": "0f995d8bf1d7ecab"
+    },
+    "tavily_fcb041d5a0501b3a": {
+      "name": "[PDF] AIB 2025-1 MDCG 2025-6 Interplay between the Medical Devices ...",
+      "category": "EU_MDR",
+      "url": "https://health.ec.europa.eu/document/download/b78a17d7-e3cd-4943-851d-e02a2f22bbb4_en",
+      "chunks": 24,
+      "ingested_at": "2026-06-03T20:13:02.236509",
+      "source": "tavily:MDCG guidance document EU MDR 2025 2026",
+      "hash": "ece5ebe02c389db1"
+    },
+    "tavily_9c59940b4582ad02": {
+      "name": "[PDF] MDSAP AUDIT APPROACH Document No - FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/media/166672/download",
+      "chunks": 137,
+      "ingested_at": "2026-06-03T20:13:21.530625",
+      "source": "tavily:MDSAP audit approach update 2025 2026",
+      "hash": "7dafe6785c08b16b"
+    },
+    "tavily_f719ed4e0174a125": {
+      "name": "CAPA Archives - Medical Device Academy",
+      "category": "General",
+      "url": "https://medicaldeviceacademy.com/tag/capa",
+      "chunks": 18,
+      "ingested_at": "2026-06-03T20:47:25.913025",
+      "source": "tavily:medical device CAPA corrective action best practice",
+      "hash": "5df0ada262b67db8"
+    },
+    "tavily_2bebb455090c5907": {
+      "name": "What is a Medical Device Recall? - FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/medical-devices/medical-device-recalls-and-early-alerts/what-medical-device-recall",
+      "chunks": 2,
+      "ingested_at": "2026-06-03T20:47:30.230835",
+      "source": "tavily:FDA recall Class I medical device",
+      "hash": "e09bf90c27cdfdf0"
+    },
+    "tavily_7c86593d8f1610a0": {
+      "name": "FDA Form 483 Response and Recovery Consulting | Emergo by UL",
+      "category": "General",
+      "url": "https://www.emergobyul.com/services/us-fda-form-483-and-warning-letter-analysis-response-and-recovery",
+      "chunks": 4,
+      "ingested_at": "2026-06-03T20:47:45.106417",
+      "source": "tavily:FDA warning letter medical device quality system",
+      "hash": "880b9bd17a5850e9"
+    }
+  },
+  "last_run": "2026-06-03T20:47:54.276662"
+}

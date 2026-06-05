@@ -1,0 +1,136 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<title>Athena</title>
+<HTA:APPLICATION
+  ID="AthenaSplash"
+  APPLICATIONNAME="Athena - Latitude MedTech"
+  BORDER="none"
+  BORDERSTYLE="none"
+  CAPTION="no"
+  MAXIMIZEBUTTON="no"
+  MINIMIZEBUTTON="no"
+  SCROLL="no"
+  SHOWINTASKBAR="yes"
+  SINGLEINSTANCE="yes"
+  WINDOWSTATE="normal"
+/>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: #0A2540;
+    font-family: 'Segoe UI', sans-serif;
+    color: #fff;
+    width: 420px; height: 260px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 14px;
+    user-select: none;
+    overflow: hidden;
+  }
+  .brand { font-size: 10px; letter-spacing: .22em; color: rgba(255,255,255,.35); text-transform: uppercase; }
+  .name  { font-size: 38px; font-weight: 300; letter-spacing: .04em; color: #fff; }
+  .tag   { font-size: 10px; letter-spacing: .1em; color: rgba(255,255,255,.3); }
+  .bar-wrap { width: 200px; height: 2px; background: rgba(255,255,255,.1); border-radius: 1px; overflow: hidden; }
+  .bar-fill { height: 100%; background: #C4922A; border-radius: 1px; width: 0%; transition: width .4s ease; }
+  .status { font-size: 11px; color: rgba(255,255,255,.4); min-height: 16px; }
+</style>
+</head>
+<body>
+  <div class="brand">Latitude MedTech</div>
+  <div class="name">Athena</div>
+  <div class="tag">AI OPERATING SYSTEM &nbsp;&middot;&nbsp; SAN DIEGO</div>
+  <div class="bar-wrap"><div class="bar-fill" id="bar"></div></div>
+  <div class="status" id="status">Starting...</div>
+
+<script language="VBScript">
+' Module-level variables (Static is not valid VBScript -- use Dim here)
+Dim bar, statusEl, stepVal, timer_id, poll_id, waited
+Dim BACKEND, FRONTEND, MAX_WAIT
+BACKEND  = "http://127.0.0.1:8000/"
+FRONTEND = "http://localhost:3000"
+MAX_WAIT = 60
+waited   = 0
+
+Sub Window_OnLoad
+  Dim sw, sh
+  sw = Screen.Width : sh = Screen.Height
+  window.moveTo (sw - 420) \ 2, (sh - 260) \ 2
+  window.resizeTo 420, 260
+
+  Set bar      = document.getElementById("bar")
+  Set statusEl = document.getElementById("status")
+  stepVal      = 0
+
+  timer_id = window.setInterval("Tick", 400)
+  poll_id  = window.setInterval("PollBackend", 800)
+End Sub
+
+Sub Tick
+  If stepVal < 85 Then
+    stepVal = stepVal + 2
+    bar.style.width = stepVal & "%"
+  End If
+End Sub
+
+Sub PollBackend
+  waited = waited + 1
+  If waited > MAX_WAIT Then
+    statusEl.innerText = "Timeout - please try again"
+    window.clearInterval poll_id
+    window.clearInterval timer_id
+    window.setTimeout "window.close()", 3000
+    Exit Sub
+  End If
+
+  Dim xhr
+  Set xhr = CreateObject("MSXML2.ServerXMLHTTP")
+  On Error Resume Next
+  xhr.open "GET", BACKEND, False
+  xhr.setTimeouts 500, 500, 500, 500
+  xhr.send
+  If Err.Number = 0 And xhr.status = 200 Then
+    statusEl.innerText = "Backend ready. Starting UI..."
+    bar.style.width = "92%"
+    window.clearInterval poll_id
+    poll_id = window.setInterval("PollFrontend", 800)
+  Else
+    statusEl.innerText = "Starting Athena backend..."
+  End If
+  On Error Resume Next
+  Err.Clear
+End Sub
+
+Sub PollFrontend
+  Dim xhr
+  Set xhr = CreateObject("MSXML2.ServerXMLHTTP")
+  On Error Resume Next
+  xhr.open "GET", FRONTEND, False
+  xhr.setTimeouts 500, 500, 500, 500
+  xhr.send
+  If Err.Number = 0 And xhr.status = 200 Then
+    bar.style.width = "92%"
+    statusEl.innerText = "Opening Chrome..."
+    window.clearInterval poll_id
+    poll_id = window.setInterval("PollChromeReady", 500)
+  Else
+    statusEl.innerText = "Starting UI..."
+  End If
+  On Error Resume Next
+  Err.Clear
+End Sub
+
+Sub PollChromeReady
+  Dim fso
+  Set fso = CreateObject("Scripting.FileSystemObject")
+  If fso.FileExists("C:\Users\huann\LatitudeMedTech\Athena\ui\.athena_ready") Then
+    bar.style.width = "100%"
+    statusEl.innerText = "Athena is ready."
+    window.clearInterval poll_id
+    window.clearInterval timer_id
+    window.setTimeout "window.close()", 500
+  End If
+End Sub
+</script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{
+  "doc_id": "fda_device_recalls_db",
+  "doc_name": "FDA Device Recalls Database",
+  "category": "FDA_Recalls",
+  "source": "deep_scrape",
+  "ingested_at": "2026-06-03T18:11:59.316324",
+  "chunk_count": 2,
+  "chunks": [
+    {
+      "id": "fda_device_recalls_db_chunk_0",
+      "doc_id": "fda_device_recalls_db",
+      "doc_name": "FDA Device Recalls Database",
+      "category": "FDA_Recalls",
+      "chunk_num": 0,
+      "text": "Medical Device Recalls Quick Links: Skip to main page content Skip to Search Skip to Topics Menu Skip to Common Links U.S. Food & Drug Administration Follow FDA En Español Search FDA Home Food Drugs Medical Devices Radiation-Emitting Products Vaccines, Blood & Biologics Animal & Veterinary Cosmetics Tobacco Products Medical Device Recalls FDA Home Medical Devices Databases - This database contains Medical Device Recalls classified since November 2002. Since January 2017, it may also include correction or removal actions initiated by a firm prior to review by the FDA. The status is updated if the FDA identifies a violation and classifies the action as a recall and again when the recall is terminated. FDA recall classification may occur after the firm recalling the medical device product conducts and communicates with its customers about the recall. Therefore, the recall information posting date (\"create date\") indicates the date FDA classified the recall, it does not necessarily mean that the recall is new. CBER recall information is available here . More about Medical Device Recalls Search Database Help Product Name Product Code In Vitro Devices Recall Class All 1 2 3 not yet classified PMA/510(K) Number Recall Date to Recall Number Reason for Recall Recalling Firm Root Cause Component change control Component design/selection Counterfeit Device Design Employee error Environmental control Equipment maintenance Error in labeling Finished device change control Incorrect or no expiration date Labeling Change Control Labeling False and Misleading Labeling design Labeling mix-ups Manufacturing material removal Material/Component Contamination Mixed-up of materials/components No Marketing Application Nonconforming Material/Component Other PMA Package design/selection Packaging Packaging change control Packaging process control Pending Process change control Process control Process design Radiation Control for Health and Safety Act Release of Material/Component prior to receiving test results Reprocessing Controls Software Design Change Software Manufacturing/Software Deployment Software change control Software design Software design (manufacturing process) Software in the Use Environment Storage Under Investigation by firm Unknown/Undetermined by firm Use error Vendor change control Sort by Date Record Classified (Descending) Date Record Classified (Ascending) Date Action Initiated (Descending) Date Action Initiated (Ascending) Recall Class (1-3) Recall Class (3-1) Recalling Manufacturer (A-Z) Recalling Manufacturer (Z-A) Product Description (A-Z) Product Description (Z-A) Quick Search Clear Form Other Databases 510(k)s De Novo Medical Device Reports (MAUDE) CDRH Export Certificate Validation (CECV) CDRH FOIA Electronic Reading Room CFR Title 21 CLIA Device Classification FDA Guidance Documents Humanitarian Device Exemption Medsun Reports Premarket Approvals (PMAs) Post-Approval Studies Postmarket Surveillance Studies Radiation-Emitting Products Radiation-Emitting Electronic Products Corrective Actions Registration & Listing Standards Total Product Life Cycle X-Ray Assembler - - Links on this page: Page Last Updated: 06/03/2026 Note: If you need help accessing information in different file formats, see Instructions for Downloading Viewers and Players . Language Assistance Available: Español | 繁體中文 | Tiếng Việt | 한국어 | Tagalog | Русский | العربية | Kreyòl Ayisyen | Français | Polski | Português | Italiano | Deutsch | 日本語 | فارسی | English Accessibility Contact FDA Careers FDA Basics FOIA No FEAR Act Nondiscrimination Website Policies / Privacy U.S. Food and Drug Administration 10903 New Hampshire Avenue Silver",
+      "word_count": 512
+    },
+    {
+      "id": "fda_device_recalls_db_chunk_1",
+      "doc_id": "fda_device_recalls_db",
+      "doc_name": "FDA Device Recalls Database",
+      "category": "FDA_Recalls",
+      "chunk_num": 1,
+      "text": "and Players . Language Assistance Available: Español | 繁體中文 | Tiếng Việt | 한국어 | Tagalog | Русский | العربية | Kreyòl Ayisyen | Français | Polski | Português | Italiano | Deutsch | 日本語 | فارسی | English Accessibility Contact FDA Careers FDA Basics FOIA No FEAR Act Nondiscrimination Website Policies / Privacy U.S. Food and Drug Administration 10903 New Hampshire Avenue Silver Spring, MD 20993 Ph. 1-888-INFO-FDA (1-888-463-6332) Contact FDA For Government For Press Combination Products Advisory Committees Science & Research Regulatory Information Safety Emergency Preparedness International Programs News & Events Training and Continuing Education Inspections/Compliance State & Local Officials Consumers Industry Health Professionals FDA Archive Vulnerability Disclosure Policy Links on this page:",
+      "word_count": 115
+    }
+  ]
+}

@@ -1,0 +1,254 @@
+import { useEffect, useState } from "react";
+
+const API = "http://localhost:8000";
+
+const FLAG = {
+  green:  { color: "#1F7A6D", bg: "#EAF7EE", label: "Healthy",  dot: "#1F7A6D" },
+  yellow: { color: "#C4922A", bg: "#FDF6E3", label: "Attention", dot: "#C4922A" },
+  red:    { color: "#C0392B", bg: "#FDECEA", label: "Action",    dot: "#C0392B" },
+};
+
+const LABELS = {
+  content:"Content", briefing:"Briefing", iso:"ISO Coach",
+  coaching:"Coaching", fda:"FDA Agent", rag:"RAG", voice_bridge:"Voice",
+};
+
+function daysAgo(ts) {
+  if (!ts) return null;
+  return Math.floor((Date.now() - new Date(ts)) / 86400000);
+}
+
+function DaysPill({ ts, warnAt = 7, redAt = 14 }) {
+  if (!ts) return <span style={{ color: "#7B90A0", fontSize: 11 }}>Never</span>;
+  const d = daysAgo(ts);
+  const c = d >= redAt ? "#C0392B" : d >= warnAt ? "#C4922A" : "#1F7A6D";
+  return <span style={{ color: c, fontWeight: 600, fontSize: 11 }}>{d === 0 ? "Today" : `${d}d ago`}</span>;
+}
+
+function AgentRow({ agent, onLearn, running }) {
+  const meta = FLAG[agent.flag_status] || FLAG.green;
+  const label = LABELS[agent.agent] || agent.agent;
+  return (
+    <tr style={{ borderBottom: "1px solid #EDF1F5" }}>
+      {/* Status dot + name */}
+      <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{
+            width: 8, height: 8, borderRadius: "50%",
+            background: meta.dot, flexShrink: 0,
+            boxShadow: `0 0 0 2px ${meta.dot}22`,
+          }}/>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 12, color: "#0A2540" }}>{label}</div>
+            <div style={{ fontSize: 10, color: "#7B90A0", marginTop: 1 }}>{agent.tier || ""}</div>
+          </div>
+        </div>
+      </td>
+      {/* Flag */}
+      <td style={{ padding: "10px 8px" }}>
+        <span style={{
+          display: "inline-block", padding: "2px 8px", borderRadius: 4,
+          background: meta.bg, color: meta.color,
+          fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+          textTransform: "uppercase",
+        }}>{meta.label}</span>
+      </td>
+      {/* Last learning */}
+      <td style={{ padding: "10px 8px" }}>
+        <DaysPill ts={agent.last_learning} />
+      </td>
+      {/* Last run */}
+      <td style={{ padding: "10px 8px" }}>
+        <DaysPill ts={agent.last_run} warnAt={3} redAt={7} />
+      </td>
+      {/* Errors */}
+      <td style={{ padding: "10px 8px", textAlign: "center" }}>
+        <span style={{
+          color: (agent.error_count_7d || 0) >= 5 ? "#C0392B"
+               : (agent.error_count_7d || 0) >= 3 ? "#C4922A" : "#1F7A6D",
+          fontWeight: 600, fontSize: 12,
+        }}>{agent.error_count_7d || 0}</span>
+      </td>
+      {/* Items */}
+      <td style={{ padding: "10px 8px", textAlign: "center" }}>
+        <span style={{
+          color: (agent.learning_7d || 0) === 0 ? "#C0392B" : "#0A2540",
+          fontWeight: 600, fontSize: 12,
+        }}>{agent.learning_7d || 0}</span>
+      </td>
+      {/* Flag reason — sanitise legacy "9999 days" entries */}
+      <td style={{ padding: "10px 8px", maxWidth: 200 }}>
+        {agent.flag_status !== "green" && agent.flag_reason
+          ? <span style={{ fontSize: 10, color: meta.color, lineHeight: 1.4 }}>
+              {agent.flag_reason
+                .split(";")[0]
+                .replace(/\b9999\b/g, "never")
+                .replace(/in never days/g, "— no activity on record")}
+            </span>
+          : <span style={{ fontSize: 10, color: "#7B90A0" }}>—</span>
+        }
+      </td>
+      {/* Action */}
+      <td style={{ padding: "10px 8px" }}>
+        <button
+          onClick={() => onLearn(agent.agent)}
+          disabled={running}
+          style={{
+            padding: "4px 10px", borderRadius: 5,
+            background: running ? "#E8EDF2" : "#0A2540",
+            color: running ? "#7B90A0" : "#fff",
+            border: "none", cursor: running ? "not-allowed" : "pointer",
+            fontSize: 10, fontWeight: 600, whiteSpace: "nowrap",
+          }}>
+          {running ? "…" : "Learn"}
+        </button>
+      </td>
+    </tr>
+  );
+}
+
+export default function HRView() {
+  const [health,   setHealth]   = useState([]);
+  const [learning, setLearning] = useState([]);
+  const [running,  setRunning]  = useState({});
+  const [last,     setLast]     = useState(null);
+
+  const load = () => {
+    fetch(`${API}/api/hr/health`).then(r => r.json()).then(d => setHealth(d.agents || [])).catch(() => {});
+    fetch(`${API}/api/hr/learning?days=7`).then(r => r.json()).then(d => setLearning(d.stats || [])).catch(() => {});
+    setLast(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const trigger = (endpoint, key, body = {}) => {
+    setRunning(p => ({ ...p, [key]: true }));
+    fetch(`${API}${endpoint}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(() => setTimeout(() => { load(); setRunning(p => ({ ...p, [key]: false })); }, 8000))
+      .catch(() => setRunning(p => ({ ...p, [key]: false })));
+  };
+
+  const learnOne = (agent) => trigger("/api/agents/learn", `learn_${agent}`, { agent });
+
+  // When bulk learning is running, all agent rows show loading state
+  const allLearning = !!running.learn_all;
+  const isLearning  = (agent) => allLearning || !!running[`learn_${agent}`];
+
+  const reds    = health.filter(a => a.flag_status === "red").length;
+  const yellows = health.filter(a => a.flag_status === "yellow").length;
+  const greens  = health.filter(a => a.flag_status === "green").length;
+  const byAgent = Object.fromEntries(learning.map(l => [l.agent, l]));
+
+  // Sort: red first, then yellow, then green
+  const sorted = [...health].sort((a, b) => {
+    const order = { red: 0, yellow: 1, green: 2 };
+    return (order[a.flag_status] ?? 3) - (order[b.flag_status] ?? 3);
+  });
+
+  return (
+    <div style={{ maxWidth: 1100 }}>
+      {/* Header row */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div>
+          <h2 style={{ fontSize: "1.15rem", fontWeight: 700, color: "#0A2540", margin: 0 }}>HR Agent</h2>
+          <div style={{ fontSize: 11, color: "#7B90A0", marginTop: 2 }}>
+            Agent health · {last ? `Updated ${last}` : ""}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={load} style={gBtn}>Refresh</button>
+          <button onClick={() => trigger("/api/agents/learn", "learn_all")}
+            disabled={running.learn_all}
+            style={{ ...gBtn, background: "#1A6FA3", color: "#fff", border: "none" }}>
+            {running.learn_all ? "Running…" : "Run Learning"}
+          </button>
+          <button onClick={() => trigger("/api/agents/hr", "hr")}
+            disabled={running.hr}
+            style={{ ...gBtn, background: "#0A2540", color: "#fff", border: "none" }}>
+            {running.hr ? "Running…" : "HR Review"}
+          </button>
+        </div>
+      </div>
+
+      {/* Summary strip */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+        {[
+          { label: "Action Required", count: reds,    ...FLAG.red    },
+          { label: "Attention",       count: yellows, ...FLAG.yellow },
+          { label: "Healthy",         count: greens,  ...FLAG.green  },
+          { label: "Total Agents",    count: health.length, color: "#3C5470", bg: "#F2EDE6", dot: "#7B90A0" },
+        ].map(s => (
+          <div key={s.label} style={{
+            flex: 1, background: s.bg, border: `1px solid ${s.color}22`,
+            borderRadius: 8, padding: "10px 14px",
+            display: "flex", alignItems: "center", gap: 10,
+          }}>
+            <div style={{ fontSize: "1.6rem", fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.count}</div>
+            <div style={{ fontSize: 10, color: s.color, fontWeight: 600, letterSpacing: "0.06em",
+              textTransform: "uppercase", lineHeight: 1.3 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Agent table */}
+      {health.length === 0 ? (
+        <div style={{ padding: "40px 0", textAlign: "center", color: "#7B90A0", fontSize: 13,
+          border: "1px dashed #DDE4EB", borderRadius: 8 }}>
+          No data yet — click <strong>HR Review</strong> to evaluate all agents.
+        </div>
+      ) : (
+        <div style={{ background: "#fff", border: "1px solid #DDE4EB", borderRadius: 10, overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+            <thead>
+              <tr style={{ background: "#F8FAFC", borderBottom: "1px solid #DDE4EB" }}>
+                {["Agent", "Status", "Last Learned", "Last Run", "Errors 7d", "Items 7d", "Flag Reason", ""].map(h => (
+                  <th key={h} style={{
+                    padding: "9px 8px", textAlign: "left",
+                    fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
+                    textTransform: "uppercase", color: "#7B90A0",
+                  }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map(a => (
+                <AgentRow
+                  key={a.agent}
+                  agent={{ ...a, learning_7d: byAgent[a.agent]?.items || 0 }}
+                  onLearn={learnOne}
+                  running={!!running[`learn_${a.agent}`]}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Learning sparkline — compact */}
+      {learning.length > 0 && (
+        <div style={{ marginTop: 14, display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {learning.map(l => (
+            <div key={l.agent} style={{
+              background: "#fff", border: "1px solid #DDE4EB",
+              borderRadius: 7, padding: "8px 12px", display: "flex", gap: 8, alignItems: "center",
+            }}>
+              <span style={{ fontSize: 11, color: "#0A2540", fontWeight: 600 }}>
+                {LABELS[l.agent] || l.agent}
+              </span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: "#1A6FA3" }}>{l.items}</span>
+              <span style={{ fontSize: 10, color: "#7B90A0" }}>items</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const gBtn = {
+  padding: "6px 12px", background: "transparent",
+  border: "1px solid #DDE4EB", borderRadius: 6,
+  cursor: "pointer", fontSize: 11, fontWeight: 500, color: "#3C5470",
+};

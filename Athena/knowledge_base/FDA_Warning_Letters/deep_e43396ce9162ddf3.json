@@ -1,0 +1,28 @@
+{
+  "doc_id": "deep_e43396ce9162ddf3",
+  "doc_name": "FDA sends stern warning to Boston Scientific",
+  "category": "FDA_Warning_Letters",
+  "source": "deep_scrape",
+  "ingested_at": "2026-06-03T18:13:13.169448",
+  "chunk_count": 2,
+  "chunks": [
+    {
+      "id": "deep_e43396ce9162ddf3_chunk_0",
+      "doc_id": "deep_e43396ce9162ddf3",
+      "doc_name": "FDA sends stern warning to Boston Scientific",
+      "category": "FDA_Warning_Letters",
+      "chunk_num": 0,
+      "text": "![](https://www.medscape.com/mspx/tr.gif?e=nsps) No Results No Results Medscape Editions ![](https://img.medscapestatic.com/pi/logos/mscp-logo.png \"Medscape Logo\") Medscape Editions No Results No Results # Boston Scientific receives yet another stern warning from FDA following plant inspections Shelley Wood January 27, 2006 **Rockville, MD** - At the end of a roller-coaster week for **Boston Scientific**, the Massachusetts-based company has responded to an FDA warning letter [[1](javascript:void(0);)], saying it is \"on track\" to resolving the agency's concerns over manufacturing practices. But, in a press release issued yesterday, Boston Scientific executives acknowledged the company has \"clearly not done enough to resolve the issues raised by the FDA last year,\" following three warning letters received in May and August of 2005. Boston Scientific received this latest warning letter one day after it successfully beat rival company Johnson & Johnson in a bidding war to buy **Guidant** **Corp**. The FDA's severely worded letter describes \"serious deficiencies\" found at three US manufacturing facilities (in Natick, MA; Maple Grove, IN; and Spencer, IN)—deficiencies already identified in the previous warning letters following inspections of other US sites. The problems stem from failure to meet Current Good Manufacturing Practice requirements for manufacturing, storage, packing, or installation of products, as well as a defective quality-management system. In particular, the letter details patchy review, analysis, and reporting of product complaints, including products that have subsequently been recalled. In the letter, the FDA acknowledges that Boston Scientific had responded to the previous FDA warnings, assuring the agency that it was taking a \"global approach\" to fixing the problems. \"However,\" the latest FDA letter notes, \"your responses continue to be specific spot fixes and have failed to achieve the necessary systemic approach to comprehensively address the violations. This is evidenced by the continuing problems identified . . . after you stated in a letter that your firm is moving promptly to correct all the noted deficiencies. The violations included in this Warning Letter and discussed above concern significant deficiencies that warrant your immediate attention to ensure that an effective quality system is in place.\" The response issued by Boston Scientific says that senior management will be meeting with federal regulators next week. While the warning letter does not prevent distribution or sale of products—the Taxus stent among them—made at the facilities that were investigated, a failure to adequately address the problems could hinder approval of new products. Boston Scientific is hoping for FDA approval of its next-generation Taxus stent, the Taxus Liberté, in 2006. Heartwire from Medscape © 2006 Cite this: Boston Scientific receives yet another stern warning from FDA following plant inspections - *Medscape* - Jan 27, 2006. ###### References ###### Authors and Disclosures ## Authors and Disclosures ### Comments You have already selected for My Alerts Click the topic below to receive emails when new articles are available. You've successfully added to your alerts. You will receive email when new content is published. processing.... ![Apr 24, 2026 This Week in Cardiology Podcast](https://img.medscapestatic.com/pi/global/1x1.png) ![Estrogen Therapy](https://img.medscapestatic.com/pi/global/1x1.png) ![Type 2 Diabetes Mellitus](https://img.medscapestatic.com/pi/global/1x1.png) ###### Email This ###### Feedback ![Medscape Logo](https://img.medscapestatic.com/pi/logos/logo-medscape.svg) #### Policies #### Medscape #### About #### For Advertisers",
+      "word_count": 506
+    },
+    {
+      "id": "deep_e43396ce9162ddf3_chunk_1",
+      "doc_id": "deep_e43396ce9162ddf3",
+      "doc_name": "FDA sends stern warning to Boston Scientific",
+      "category": "FDA_Warning_Letters",
+      "chunk_num": 1,
+      "text": "Click the topic below to receive emails when new articles are available. You've successfully added to your alerts. You will receive email when new content is published. processing.... ![Apr 24, 2026 This Week in Cardiology Podcast](https://img.medscapestatic.com/pi/global/1x1.png) ![Estrogen Therapy](https://img.medscapestatic.com/pi/global/1x1.png) ![Type 2 Diabetes Mellitus](https://img.medscapestatic.com/pi/global/1x1.png) ###### Email This ###### Feedback ![Medscape Logo](https://img.medscapestatic.com/pi/logos/logo-medscape.svg) #### Policies #### Medscape #### About #### For Advertisers",
+      "word_count": 58
+    }
+  ]
+}

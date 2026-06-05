@@ -1,0 +1,28 @@
+{
+  "doc_id": "deep_a57bdfe5e7a72467",
+  "doc_name": "A History of Medical Device Regulation & Oversight in the United States | FDA",
+  "category": "FDA",
+  "source": "deep_scrape",
+  "ingested_at": "2026-06-03T18:12:08.876495",
+  "chunk_count": 2,
+  "chunks": [
+    {
+      "id": "deep_a57bdfe5e7a72467_chunk_0",
+      "doc_id": "deep_a57bdfe5e7a72467",
+      "doc_name": "A History of Medical Device Regulation & Oversight in the United States | FDA",
+      "category": "FDA",
+      "chunk_num": 0,
+      "text": "![U.S. flag](/themes/custom/preview/assets/images/US_Flag.png) ![Dot gov](/themes/custom/preview/assets/images/icon-dot-gov.svg) **The .gov means it’s official.** Federal government websites often end in .gov or .mil. Before sharing sensitive information, make sure you're on a federal government site. ![SSL](/themes/custom/preview/assets/images/icon-https.svg) **The site is secure.** The **https://** ensures that you are connecting to the official website and that any information you provide is encrypted and transmitted securely. ![U.S. Food and Drug Administration logo](/themes/custom/preview/assets/images/FDA_Logo_Icon_White.svg) ## Featured ## Products ## Topics ## Information For # A History of Medical Device Regulation & Oversight in the United States The Food and Drug Administration (FDA) is the oldest comprehensive consumer protection agency in the United States. The FDA’s oversight of food and drugs began in 1906 when President Theodore Roosevelt signed the Pure Food and Drugs Act. Since then, Congress has expanded the FDA’s role in protecting and promoting the development of human and veterinary drugs, biological products, medical devices and radiation-emitting products, human and animal food, and cosmetics. In the 1960s and 1970s, Congress responded to the public’s desire for more oversight over medical devices by passing the Medical Device Amendments to the Federal Food, Drug, and Cosmetic Act. In 1982, the organizational units at the FDA that regulated medical devices and radiation-emitting products merged to form the Center for Devices and Radiological Health (CDRH). The chronology below highlights milestones in the history of medical device legislation in the United States. For additional details, please see the text of the individual Acts. ##### [1906: Pure Food and Drugs Act (sometimes also called the Federal Food and Drugs Act)](/about-fda/fdas-evolving-regulatory-powers/part-i-1906-food-and-drugs-act-and-its-enforcement) ##### [1938: Federal Food, Drug, and Cosmetic Act (FD&C Act)](https://catalog.archives.gov/id/299847) ##### [1944: Public Health Service Act](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1403520/) ##### [1968: Radiation Control for Health and Safety Act](https://www.gpo.gov/fdsys/pkg/STATUTE-82/pdf/STATUTE-82-Pg1173.pdf) ##### 1970: President Nixon established the Cooper Committee ##### [1976: Medical Device Amendments to the FD&C Act](https://www.gpo.gov/fdsys/pkg/STATUTE-90/pdf/STATUTE-90-Pg539.pdf) ##### 1977: The Bureau of Medical Devices and Diagnostic Products was renamed the Bureau of Medical Devices ##### [1990: Safe Medical Devices Act (SMDA)](https://www.gpo.gov/fdsys/pkg/STATUTE-104/pdf/STATUTE-104-Pg4511.pdf) ##### [1992: Mammography Quality Standards Act (MQSA)](/mammography-quality-standards-act-and-program) ##### [1997: Food and Drug Administration Modernization Act (FDAMA)](https://www.gpo.gov/fdsys/pkg/PLAW-105publ115/pdf/PLAW-105publ115.pdf) ##### [2002: Medical Device User Fee and Modernization Act (MDUFMA)](/industry/medical-device-user-fee-amendments-mdufa-fees/summary-medical-device-user-fee-and-modernization-act-2002 \"Summary of the Medical Device User Fee and Modernization Act of 2002\") ##### [2007: Food and Drug Administration Amendments Act (FDAAA)](https://www.gpo.gov/fdsys/pkg/PLAW-110publ85/html/PLAW-110publ85.htm) ##### [2012: Food and Drug Administration Safety and Innovation Act (FDASIA)](https://www.gpo.gov/fdsys/pkg/BILLS-112s3187enr/pdf/BILLS-112s3187enr.pdf) ##### [2016: 21st Century Cures Act](https://www.congress.gov/bill/114th-congress/house-bill/34/text) ##### [2017: Food and Drug Administration Reauthorization Act (FDARA)](https://www.congress.gov/bill/115th-congress/house-bill/2430/text) ##### [2020: Coronavirus Aid, Relief, and Economic Security Act (CARES Act)](http://www.congress.gov/116/bills/hr748/BILLS-116hr748enr.pdf) ##### [2022: FDA User Fee Reauthorization Act of 2022 (FDAUFRA)](http://www.congress.gov/bill/117th-congress/house-bill/6833/text) ##### [2022: Food and Drug Omnibus Reform Act of 2022 (FDORA)](http://www.congress.gov/bill/117th-congress/house-bill/2617/text) ##### [2022: Preparing for and Responding to Existing Viruses, Emerging New Threats, and Pandemics Act (PREVENT Pandemics Act)](http://www.congress.gov/bill/117th-congress/house-bill/2617/text) #### Additional Resources: ## Content current as of: 08/21/2023 ## Regulated Product(s) ![Food and Drug Administration Logo](/themes/custom/preview/assets/images/FDA_Logo_Icon_White.svg)",
+      "word_count": 461
+    },
+    {
+      "id": "deep_a57bdfe5e7a72467_chunk_1",
+      "doc_id": "deep_a57bdfe5e7a72467",
+      "doc_name": "A History of Medical Device Regulation & Oversight in the United States | FDA",
+      "category": "FDA",
+      "chunk_num": 1,
+      "text": "Content current as of: 08/21/2023 ## Regulated Product(s) ![Food and Drug Administration Logo](/themes/custom/preview/assets/images/FDA_Logo_Icon_White.svg)",
+      "word_count": 13
+    }
+  ]
+}

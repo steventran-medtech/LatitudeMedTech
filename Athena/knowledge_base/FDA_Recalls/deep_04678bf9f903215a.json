@@ -1,0 +1,28 @@
+{
+  "doc_id": "deep_04678bf9f903215a",
+  "doc_name": "Intuitive Surgical Removes 8mm SureForm 30 Gray Reloads - FDA",
+  "category": "FDA_Recalls",
+  "source": "deep_scrape",
+  "ingested_at": "2026-06-03T18:12:30.155421",
+  "chunk_count": 2,
+  "chunks": [
+    {
+      "id": "deep_04678bf9f903215a_chunk_0",
+      "doc_id": "deep_04678bf9f903215a",
+      "doc_name": "Intuitive Surgical Removes 8mm SureForm 30 Gray Reloads - FDA",
+      "category": "FDA_Recalls",
+      "chunk_num": 0,
+      "text": "![U.S. flag](/themes/custom/preview/assets/images/US_Flag.png) ![Dot gov](/themes/custom/preview/assets/images/icon-dot-gov.svg) **The .gov means it’s official.** Federal government websites often end in .gov or .mil. Before sharing sensitive information, make sure you're on a federal government site. ![SSL](/themes/custom/preview/assets/images/icon-https.svg) **The site is secure.** The **https://** ensures that you are connecting to the official website and that any information you provide is encrypted and transmitted securely. ![U.S. Food and Drug Administration logo](/themes/custom/preview/assets/images/FDA_Logo_Icon_White.svg) ## Featured ## Products ## Topics ## Information For # Surgical Stapler Reload Recall: Intuitive Surgical Removes 8mm SureForm 30 Gray Reloads ***This*** [***recall***](/medical-devices/medical-device-recalls-and-early-alerts/what-medical-device-recall \"What is a Medical Device Recall?\") ***involves removing certain devices from where they are used or sold.** The FDA has identified this recall as the most serious type. This device may cause serious injury or death if you continue to use it. This is an updated Early Alert. The affected products and recommendations for what to do with the devices below have not changed.* ## Affected Product ![Stapler from Intuitive Surgical](/files/Stapler-Intuitive-Surgical.png \"Stapler from Intuitive Surgical\") The FDA is aware that Intuitive Surgical has issued a letter to affected customers recommending all 8mm SureForm 30 gray reloads for curved-tip staplers be removed from where they are used or sold. Affected devices: Affected devices: ## What to Do Immediately identify and stop use of affected product. On March 11, 2026, Intuitive Surgical sent all affected customers a letter asking them to take the following actions: ## Reason for Recall Intuitive Surgical has reported instances of incomplete staple lines after the da Vinci Surgical System returns a completed stapler fire with Gray reloads on blood vessels. Incomplete staple line formation on blood vessels will result in tissue being surgically cut and the contents of the cut vessel becoming fully exposed, causing bleeding that may require conversion to an open surgical technique. As of February 23, 2026, Intuitive Surgical has reported four serious injuries and one death associated with this issue. ## Device Use The Intuitive Surgical 8 mm SureForm 30 Curved-Tip Stapler and 8 mm SureForm 30 Gray Reloads are intended to be used with a compatible da Vinci Surgical System for resection, transection of vasculature and tissue, and/or creation of anastomoses in General, Thoracic, Gynecologic, Urologic, and Pediatric Surgery. ## Contact Information Customers in the U.S. with adverse reactions, quality problems, or questions about this recall should contact Intuitive Surgical at [customerservice@intusurg.com](mailto:customerservice@intusurg.com) or (800) 876-1310. ## Additional FDA Resources ## Unique Device Identifier (UDI) The unique device identifier (UDI) helps identify individual medical devices sold in the United States from manufacturing through distribution to patient use. The UDI allows for more accurate reporting, reviewing, and analyzing of adverse event reports so that devices can be identified, and problems potentially corrected more quickly. ## How do I report a problem? Health care professionals and consumers may [report adverse reactions or quality problems](https://www.accessdata.fda.gov/scripts/medwatch/index.cfm?action=reporting.home) they experienced using these devices to MedWatch: The FDA Safety Information and Adverse Event Reporting Program. ## Timeline of Communication Updates | Date | Actions | | --- | --- | | 05/05/2026 | The FDA updated this communication to inform the public that this issue",
+      "word_count": 512
+    },
+    {
+      "id": "deep_04678bf9f903215a_chunk_1",
+      "doc_id": "deep_04678bf9f903215a",
+      "doc_name": "Intuitive Surgical Removes 8mm SureForm 30 Gray Reloads - FDA",
+      "category": "FDA_Recalls",
+      "chunk_num": 1,
+      "text": "How do I report a problem? Health care professionals and consumers may [report adverse reactions or quality problems](https://www.accessdata.fda.gov/scripts/medwatch/index.cfm?action=reporting.home) they experienced using these devices to MedWatch: The FDA Safety Information and Adverse Event Reporting Program. ## Timeline of Communication Updates | Date | Actions | | --- | --- | | 05/05/2026 | The FDA updated this communication to inform the public that this issue has been classified as a Class I Recall. | | 03/18/2026 | The FDA issued an Early Alert communication to notify the public of a potentially high-risk device issue. | ## Content current as of: 05/05/2026 ## Regulated Product(s) Subscribe to Medical Device Safety and Recalls ![Food and Drug Administration Logo](/themes/custom/preview/assets/images/FDA_Logo_Icon_White.svg)",
+      "word_count": 115
+    }
+  ]
+}

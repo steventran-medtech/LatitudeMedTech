@@ -1,0 +1,28 @@
+{
+  "doc_id": "deep_a26eb190bde3ddc3",
+  "doc_name": "FDA updates on Boston Scientific defibrillation lead recall",
+  "category": "MA_Recalls",
+  "source": "deep_scrape",
+  "ingested_at": "2026-06-03T18:13:13.190871",
+  "chunk_count": 2,
+  "chunks": [
+    {
+      "id": "deep_a26eb190bde3ddc3_chunk_0",
+      "doc_id": "deep_a26eb190bde3ddc3",
+      "doc_name": "FDA updates on Boston Scientific defibrillation lead recall",
+      "category": "MA_Recalls",
+      "chunk_num": 0,
+      "text": "[MassDevice](https://www.massdevice.com/) The Medical Device Business Journal — Medical Device News & Articles | MassDevice # FDA updates on Boston Scientific defibrillation recall related to 16 deaths September 15, 2025 By [Sean Whooley](https://www.massdevice.com/author/sean-whooley/) ![Boston Scientific Endotak Reliance defibrillation lead recall](https://www.massdevice.com/wp-content/uploads/2025/09/Boston-Scientific-Endotak-Reliance-defibrillation-lead-recall-300x195.jpg) The FDA issued a correction related to a recall of [Boston Scientific](https://www.massdevice.com/tag/boston_scientific/) (NYSE: BSX) + defibrillation leads, labeling it the most serious kind. This recall involves correcting certain devices. It does not require the removal of the devices from where they are used or sold. However, the device may cause serious injury or death if used without correction. Boston Scientific reports 386 serious injuries and 16 patient deaths associated with this issue. According to the FDA, Boston Scientific issued a letter in July notifying affected customers that certain Endotak Reliance defibrillation leads with expanded polytetrafluoroethylene (ePTFE) coated coils may impact shock efficacy and/or require early replacement. Calcified defibrillation lead coils with a pattern of gradually rising low voltage shock impedance (LVSI) measurements can lead to the encapsulation and electrical insulation of the lead coils. This can cause the failure to deliver the full, intended shock energy, which may fail to restore normal rhythm during cardiac arrest. Boston Scientific reports the most common harm as early lead replacement, while death or need for cardiac resuscitation represents the most serious harm. Boston Scientific instructed healthcare providers to continue routine follow-up of affected systems. In-person or remote monitoring can facilitate early detection of these patterns. Customers should determine the most recent approximate 28-day average LVSI that has not been influenced by the delivery of a shock and review high voltage shock impedance (HVSI) for all shocks from the most recent episode since the last system check. If users plan lead replacement, they should carefully consider the risk/benefit of lead extraction versus abandonment, the FDA said. A full list of Boston Scientific’s affected Endotak Reliance devices and instructions for customers can be found in the [FDA notice](https://www.fda.gov/medical-devices/medical-device-recalls/update-alert-defibrillation-lead-issue-boston-scientific). Filed Under: [Cardiac Implants](https://www.massdevice.com/category/cardiovascular/structuralheart/cardiac_implants/), [Cardiovascular](https://www.massdevice.com/category/cardiovascular/), [Featured](https://www.massdevice.com/category/featured/), [Food & Drug Administration (FDA)](https://www.massdevice.com/category/regulatory_compliance/food_drug_administration_fda/), [Recalls](https://www.massdevice.com/category/regulatory_compliance/recalls/), [Regulatory/Compliance](https://www.massdevice.com/category/regulatory_compliance/), [Structural Heart](https://www.massdevice.com/category/cardiovascular/structuralheart/) Tagged With: [Boston Scientific](https://www.massdevice.com/tag/boston_scientific/), [FDA](https://www.massdevice.com/tag/fda/) ### More recent news ![](https://secure.gravatar.com/avatar/bdd595661a8745ce044cf2fa279ab3d25f8c630ad663d21505374081518941cd?s=70&d=retro&r=g) #### About Sean Whooley Sean Whooley is a senior editor who mainly produces work for MassDevice, Medical Design & Outsourcing and Drug Delivery Business News. He received a bachelor's degree in multiplatform journalism from the University of Maryland, College Park. You can connect with him on [LinkedIn](https://www.linkedin.com/in/sean-whooley-3374a6120/) or email him at [[email protected]](/cdn-cgi/l/email-protection). ## Primary Sidebar ### Cart ![“md](https://www.massdevice.com/wp-content/uploads/2023/12/MassDevice-300x100-1.jpg) ### DeviceTalks Weekly ![MDO ad](/wp-content/uploads/2025/09/medical-sourcing.jpg) ![MDO ad](/wp-content/uploads/2019/05/MDO_webAD_5-19_Vs1.jpg) ## Footer ![](/wp-content/uploads/2017/01/massdevice-logo-inv.png) ### MASSDEVICE MEDICAL NETWORK ### DeviceTalks Webinars, Podcasts, & Discussions ### MASSDEVICE Copyright © 2026 · WTWH Media LLC and its licensors. All rights reserved. The material on this site may not be reproduced, distributed, transmitted, cached or otherwise used, except with the prior written permission of WTWH Media. [Privacy Policy](http://www.wtwhmedia.com/privacy)",
+      "word_count": 467
+    },
+    {
+      "id": "deep_a26eb190bde3ddc3_chunk_1",
+      "doc_id": "deep_a26eb190bde3ddc3",
+      "doc_name": "FDA updates on Boston Scientific defibrillation lead recall",
+      "category": "MA_Recalls",
+      "chunk_num": 1,
+      "text": "be reproduced, distributed, transmitted, cached or otherwise used, except with the prior written permission of WTWH Media. [Privacy Policy](http://www.wtwhmedia.com/privacy)",
+      "word_count": 19
+    }
+  ]
+}

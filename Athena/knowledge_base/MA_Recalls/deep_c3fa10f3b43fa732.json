@@ -1,0 +1,19 @@
+{
+  "doc_id": "deep_c3fa10f3b43fa732",
+  "doc_name": "FDA issues most serious recall for Edwards Lifesciences cannulas | AHA News",
+  "category": "MA_Recalls",
+  "source": "deep_scrape",
+  "ingested_at": "2026-06-03T18:13:36.594337",
+  "chunk_count": 1,
+  "chunks": [
+    {
+      "id": "deep_c3fa10f3b43fa732_chunk_0",
+      "doc_id": "deep_c3fa10f3b43fa732",
+      "doc_name": "FDA issues most serious recall for Edwards Lifesciences cannulas | AHA News",
+      "category": "MA_Recalls",
+      "chunk_num": 0,
+      "text": "[![American Hospital Association. Advancing Health in America](/themes/custom/aha/images/aha-brand-full.png) ![American Hospital Association. Advancing Health in America](/themes/custom/aha/images/aha-brand.svg)](/) # FDA issues most serious recall for Edwards Lifesciences cannulas Jul 24, 2025 - 04:30 PM ![](/sites/default/files/styles/900x400/public/2018-06/FDA-naxolene-recall.jpg?itok=r66-nFhD) The Food and Drug Administration has identified a [Class I recall](https://www.fda.gov/medical-devices/medical-device-recalls/arterial-cannula-recall-edwards-lifesciences-removes-arterial-cannula-due-risk-wire-exposure) of Edwards Lifesciences OptiSite Arterial Perfusion Cannula devices due to the potential for serious injury or death. Edwards identified incidents in which a 3mm to 4mm section of wire from the wire-reinforcement coil at the cannula tip was found to be exposed. The FDA said that some Femoral Arterial Cannula models are made of the same components as the OptiSite Arterial Perfusion Cannula models. Edwards has called for both products to be removed from wherever they are used or sold. [Recall Management](/topics/recall-management) ## Related News Articles Headline [FDA issues alert for Abiomed heart pump controllers](/news/headline/2026-05-22-fda-issues-alert-abiomed-heart-pump-controllers) The Food and Drug Administration has issued an early alert for all heart pump controllers by Abiomed, which sent a correction notice to all customers with… Headline [FDA issues most serious recall for certain pacemaker devices by Boston Scientific](/news/headline/2026-05-08-fda-issues-most-serious-recall-certain-pacemaker-devices-boston-scientific) The Food and Drug Administration has issued a Class I recall correction for certain Boston Scientific ACCOLADE pacemakers and cardiac resynchronization therapy… Headline [FDA identifies recall of catheter kits, Early Alert for sterile labels](/news/headline/2026-04-27-fda-identifies-recall-catheter-kits-early-alert-sterile-labels) The Food and Drug Administration has identified a nationwide recall. Arrow International is recommending dialysis catheter kits containing Merit Medical 16F… Headline [FDA issues early alert for certain dialysis devices from B. Braun Medical](/news/headline/2026-03-25-fda-issues-early-alert-certain-dialysis-devices-b-braun-medical) The Food and Drug Administration has issued an early alert for certain Streamline Airless System Hemodialysis Bloodlines and B3 Low Volume Bloodlines by B.… Headline [Olympus expands recall of endoscope needles](/news/headline/2026-01-22-olympus-expands-recall-endoscope-needles) Olympus has expanded a voluntary recall of its ViziShot 2 FLEX Needles due to complaints of device components ejecting or attaching during… Headline [Permanent recall issued for Baxter ventilation system](/news/headline/2025-12-01-permanent-recall-issued-baxter-ventilation-system) The Food and Drug Administration has identified a Class I recall of Baxter Life2000 Ventilation Systems due to a cybersecurity issue discovered through…",
+      "word_count": 328
+    }
+  ]
+}

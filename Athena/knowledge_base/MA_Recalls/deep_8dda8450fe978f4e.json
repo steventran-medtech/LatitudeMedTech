@@ -1,0 +1,19 @@
+{
+  "doc_id": "deep_8dda8450fe978f4e",
+  "doc_name": "FDA issues most serious recall for certain pacemaker devices by Boston Scientific | AHA News",
+  "category": "MA_Recalls",
+  "source": "deep_scrape",
+  "ingested_at": "2026-06-03T18:13:13.221649",
+  "chunk_count": 1,
+  "chunks": [
+    {
+      "id": "deep_8dda8450fe978f4e_chunk_0",
+      "doc_id": "deep_8dda8450fe978f4e",
+      "doc_name": "FDA issues most serious recall for certain pacemaker devices by Boston Scientific | AHA News",
+      "category": "MA_Recalls",
+      "chunk_num": 0,
+      "text": "![American Hospital Association. Advancing Health in America](/themes/custom/aha/images/aha-brand-full.png) ![American Hospital Association. Advancing Health in America](/themes/custom/aha/images/aha-brand.svg) ## Secondary Menu ## Breadcrumb # FDA issues most serious recall for certain pacemaker devices by Boston Scientific ![fda-alert-recall-compounded-drugs](/sites/default/files/styles/900x400/public/2018-04/fda-alert-recall-compounded-drugs.jpg?itok=IUogqjUy) The Food and Drug Administration has issued a Class I recall [correction](https://www.fda.gov/medical-devices/medical-device-recalls-and-early-alerts/pacemaker-correction-boston-scientific-issues-correction-accolade-pacemakers-and-crt-ps) for certain Boston Scientific ACCOLADE pacemakers and cardiac resynchronization therapy pacemakers after identifying a software-related battery issue that could cause affected devices to enter Safety Mode and limit pacing functionality. The correction does not involve removing devices but requires clinicians to upgrade the pacemakers’ software to reduce the risk of premature battery depletion and early device replacement. According to the FDA, continued use of affected devices without the update could result in serious injury or death. Hospitals and clinicians are advised to review affected model and serial numbers, apply the software update during in office visits, monitor patients per manufacturer guidance and report adverse events through the FDA’s MedWatch program. ## Related News Articles ![American Hospital Association. Advancing Health in America](/themes/custom/aha/images/logo-ahia-horz-invert.svg) ## AHA Footer Noncommercial use of original content on www.aha.org is granted to AHA Institutional Members, their employees and State, Regional and Metro Hospital Associations unless otherwise indicated. AHA does not claim ownership of any content, including content incorporated by permission into AHA produced materials, created by any third party and cannot grant permission to use, distribute or otherwise reproduce such third party content. [Request permission to reproduce AHA content.](https://askrc.libraryresearch.info/reft100.aspx?key=ExtPerm)",
+      "word_count": 236
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+# Latitude MedTech Voice Assistant — Windows dependencies
+# Install with: pip install -r requirements.txt
+
+# Wake word detection
+openwakeword>=0.6.0
+
+# Speech-to-text (local Whisper)
+faster-whisper>=1.0.0
+
+# Audio capture and playback
+pyaudio>=0.2.14
+sounddevice>=0.4.6
+soundfile>=0.12.1
+numpy>=1.24.0
+
+# Claude API
+anthropic>=0.25.0
+
+# TTS — piper via subprocess (installed separately, see README)
+# Download piper from: https://github.com/rhasspy/piper/releases
+
+# Utilities
+scipy>=1.11.0
+requests>=2.31.0
+python-dotenv>=1.0.0

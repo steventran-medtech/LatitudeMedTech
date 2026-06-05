@@ -1,0 +1,19 @@
+{
+  "doc_id": "fda_warning_letters_index",
+  "doc_name": "FDA Warning Letters Medical Devices",
+  "category": "FDA_Warning_Letters",
+  "source": "deep_scrape",
+  "ingested_at": "2026-06-03T18:11:57.703905",
+  "chunk_count": 1,
+  "chunks": [
+    {
+      "id": "fda_warning_letters_index_chunk_0",
+      "doc_id": "fda_warning_letters_index",
+      "doc_name": "FDA Warning Letters Medical Devices",
+      "category": "FDA_Warning_Letters",
+      "chunk_num": 0,
+      "text": "Warning Letters | FDA Skip to main content Skip to FDA Search Skip to in this section menu Skip to footer links Home Inspections, Compliance, Enforcement, and Criminal Investigations Compliance Actions and Activities Warning Letters Compliance Actions and Activities In this section Learn about the types of warning letters on FDA's website. Matters described in FDA warning letters may have been subject to subsequent interaction between FDA and the letter recipient that may have changed the regulatory status of issues discussed in the letter. To obtain additional available information, contact FDA. Requests to FDA for agency records should be sent to: Food and Drug Administration Division of Freedom of Information (HFI-35), 5630 Fishers Lane, Rockville, MD 20857. Instructions for how to submit an FOI request can be found at How to Make a FOIA Request. Frequently requested records may be accessed on the Reading Room page. Search Filter by Issuing Office Letter Issue Date - Any - Last 7 Days Last 30 Days Last 60 Days Last 90 Days Letters with Response or Closeout - Any - Response Letters Closeout Letters Response and Closeout Letters Posted Date - Any - Last 7 Days Last 30 Days Last 60 Days Last 90 Days Year - Any - Posted Date Letter Issue Date Company Name Issuing Office Subject Response Letter Closeout Letter Excerpt 06/02/2026 05/22/2026 Laboratorios Jaloma S.A. de C.V. Center for Drug Evaluation and Research (CDER) CGMP/OTC/Finished Pharmaceuticals/Adulterated 06/02/2026 05/22/2026 Aeroflex Industria de Aerosol Ltda. Center for Drug Evaluation and Research (CDER) Refusal to Provide Access to and Copying of Records 06/02/2026 05/15/2026 Meta Labs Pharmaceuticals, LLC Human Foods Program Dietary Supplement/New Drug/Misbranded 06/02/2026 05/19/2026 HealthPartners Neuroscience Center Research and Innovation Center for Drug Evaluation and Research (CDER) Good Laboratory Practice (GLP) for Nonclinical Laboratory Studies 06/02/2026 05/15/2026 City Market, Inc. Human Foods Program Seafood HACCP/CGMP for Foods/Adulterated/Insanitary Conditions 06/02/2026 04/22/2026 Boba Factory Inc Office of Inspections and Investigations Foreign Supplier Verification Program (FSVP) 06/02/2026 04/15/2026 Stavis Seafoods, LLC Office of Inspections and Investigations Seafood HACCP/CGMP for Foods/Adulterated/Insanitary Conditions 06/02/2026 05/12/2026 Dough-To-Go, Inc. Human Foods Program CGMP/Hazard Analysis/Risk-Based Preventive Controls for Food/Adulterated 06/02/2026 05/20/2026 Aversa's Italian Bakery Human Foods Program CGMP/Hazard Analysis/Risk-Based Preventive Controls for Food/Adulterated 06/02/2026 05/28/2026 Medline Inc Center for Drug Evaluation and Research (CDER) CGMP/Finished Pharmaceuticals/Adulterated Download XLSX Download XLSX Feedback SUBSCRIBE Get regular FDA email updates delivered on this topic to your inbox. Enter your email address to subscribe: Back to Top",
+      "word_count": 405
+    }
+  ]
+}

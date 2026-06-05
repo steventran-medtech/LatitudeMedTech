@@ -1,0 +1,28 @@
+{
+  "doc_id": "deep_0e5b93493aa47806",
+  "doc_name": "Detachable Coil System Recall: J&J MedTech/CERENOVUS ... - FDA",
+  "category": "FDA_Recalls",
+  "source": "deep_scrape",
+  "ingested_at": "2026-06-03T18:13:17.726150",
+  "chunk_count": 2,
+  "chunks": [
+    {
+      "id": "deep_0e5b93493aa47806_chunk_0",
+      "doc_id": "deep_0e5b93493aa47806",
+      "doc_name": "Detachable Coil System Recall: J&J MedTech/CERENOVUS ... - FDA",
+      "category": "FDA_Recalls",
+      "chunk_num": 0,
+      "text": "![U.S. flag](/themes/custom/preview/assets/images/US_Flag.png) ![Dot gov](/themes/custom/preview/assets/images/icon-dot-gov.svg) **The .gov means it’s official.** Federal government websites often end in .gov or .mil. Before sharing sensitive information, make sure you're on a federal government site. ![SSL](/themes/custom/preview/assets/images/icon-https.svg) **The site is secure.** The **https://** ensures that you are connecting to the official website and that any information you provide is encrypted and transmitted securely. ![U.S. Food and Drug Administration logo](/themes/custom/preview/assets/images/FDA_Logo_Icon_White.svg) ## Featured ## Products ## Topics ## Information For # Detachable Coil System Recall: J&J MedTech/CERENOVUS Inc. Remove CEREPAK Detachable Coil System ***This*** [***recall***](/medical-devices/medical-device-recalls-and-early-alerts/what-medical-device-recall \"What is a Medical Device Recall?\") ***involves removing certain devices from where they are used or sold.** The FDA has identified this recall as the most serious type. This device may cause serious injury or death if you continue to use it.* ## Affected Product ![CEREPAK Detachable Coil System](/files/CEREPAK%20Detachable%20Coil%20System.png \"CEREPAK Detachable Coil System\") The FDA is aware that J&J MedTech and their subsidiary, CERENOVUS Inc., have issued a letter to affected customers recommending certain CEREPAK products be removed from where they are used or sold. Affected devices: [**Full List of Affected Product**](/media/190991/download?attachment \"Affected Product List Cerenovus-CEREPAK\") ## What to Do Do not use affected product. Identify and segregate all affected devices that are in inventory or consignment at your facility. On October 2, 2025, J&J MedTech sent all affected customers a letter recommending the following actions: ## Reason for Recall J&J MedTech is removing CEREPAK Detachable Coil Systems due to a higher-than-expected failure to detach rate. The failure to detach could result in hemorrhagic and ischemic stroke, procedural delays, or the need for additional surgical intervention. As of October 14, 2025, J&J MedTech has reported four serious injuries and one death associated with this issue. ## Device Use The CEREPAK Uniform, Uniform XL, Uniform 3D, Heliform Soft, Heliform XtraSoft, Heliform XL, Heliform XtraSoft XL, Freeform, and Freeform Mini Detachable Coil Systems are indicated for embolization of intracranial aneurysms, neurovascular abnormalities such as arteriovenous malformations and arteriovenous fistulae, and arterial and venous embolizations in the peripheral vasculature. The CEREPAK Freeform XtraSoft Detachable Coil System is indicated for embolization of intracranial aneurysms. ## Contact Information Customers in the U.S. with adverse reactions, quality problems, or questions about this recall should contact J&J Medtech (CERENOVUS Inc.) at [OneMD-Field-Actions@its.jnj.com](mailto:OneMD-Field-Actions@its.jnj.com). ## Additional FDA Resources ## Unique Device Identifier (UDI) The unique device identifier (UDI) helps identify individual medical devices sold in the United States from manufacturing through distribution to patient use. The UDI allows for more accurate reporting, reviewing, and analyzing of adverse event reports so that devices can be identified, and problems potentially corrected more quickly. ## How do I report a problem? Health care professionals and consumers may [report adverse reactions or quality problems](https://www.accessdata.fda.gov/scripts/medwatch/index.cfm?action=reporting.home) they experienced using these devices to MedWatch: The FDA Safety Information and Adverse Event Reporting Program. ## Content current as of: 02/05/2026 ## Regulated Product(s) Subscribe to Medical Device Safety and Recalls ![Food and Drug Administration Logo](/themes/custom/preview/assets/images/FDA_Logo_Icon_White.svg)",
+      "word_count": 485
+    },
+    {
+      "id": "deep_0e5b93493aa47806_chunk_1",
+      "doc_id": "deep_0e5b93493aa47806",
+      "doc_name": "Detachable Coil System Recall: J&J MedTech/CERENOVUS ... - FDA",
+      "category": "FDA_Recalls",
+      "chunk_num": 1,
+      "text": "they experienced using these devices to MedWatch: The FDA Safety Information and Adverse Event Reporting Program. ## Content current as of: 02/05/2026 ## Regulated Product(s) Subscribe to Medical Device Safety and Recalls ![Food and Drug Administration Logo](/themes/custom/preview/assets/images/FDA_Logo_Icon_White.svg)",
+      "word_count": 37
+    }
+  ]
+}
