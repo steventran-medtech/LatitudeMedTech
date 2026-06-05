@@ -1103,14 +1103,30 @@ def generate_docx(title: str, content: str, doc_type: str) -> Path:
 
 @app.get("/api/documents")
 def list_documents():
-    docs_dir = ATHENA / 'documents'
-    if not docs_dir.exists():
-        return {"documents": []}
-    files = sorted(docs_dir.glob('*.docx'), key=lambda f: f.stat().st_mtime, reverse=True)
-    return {"documents": [
-        {"filename": f.name, "path": str(f), "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat()}
-        for f in files[:20]
-    ]}
+    # The document queue aggregates exported Word docs plus the markdown reports
+    # that agents (M&A, Consulting) write to their ops folders, so completed
+    # agent runs surface here instead of being stranded on disk.
+    sources = [
+        ("documents",       ATHENA / 'documents',               '*.docx'),
+        ("ma_intelligence", ATHENA / 'ops' / 'ma_intelligence', '*.md'),
+        ("consulting",      ATHENA / 'ops' / 'consulting',      '*.md'),
+    ]
+    items = []
+    for folder, base, pattern in sources:
+        if not base.exists():
+            continue
+        for f in base.glob(pattern):
+            items.append({
+                "filename": f.name,
+                "folder": folder,
+                "path": str(f),
+                "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
+                "mtime": f.stat().st_mtime,
+            })
+    items.sort(key=lambda d: d["mtime"], reverse=True)
+    for d in items:
+        d.pop("mtime", None)
+    return {"documents": items[:30]}
 
 
 @app.get("/api/documents/open/{filename}")

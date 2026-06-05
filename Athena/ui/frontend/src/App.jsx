@@ -1048,14 +1048,15 @@ function DocumentsView(){
   const load=()=>{fetch(`${API}/api/documents`).then(r=>r.json()).then(d=>setDocs(d.documents||[])).catch(()=>{});};
   useEffect(()=>{load();},[]);
   const openDoc=(filename)=>{fetch(`${API}/api/documents/open/${filename}`).catch(()=>{});};
-  const deleteDoc=async(filename)=>{
-    await fetch(`${API}/api/files/delete`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({filename,folder:"documents"})});
+  const deleteDoc=async(filename,folder)=>{
+    await fetch(`${API}/api/files/delete`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({filename,folder:folder||"documents"})});
     ms.clear(); load();
   };
   const deleteSelected=async()=>{
     if(!ms.checked.size) return;
     if(!window.confirm(`Delete ${ms.checked.size} document(s)?`)) return;
-    await bulkDelete([...ms.checked].map(f=>({folder:"documents",filename:f})));
+    const folderOf=f=>(docs.find(d=>d.filename===f)?.folder)||"documents";
+    await bulkDelete([...ms.checked].map(f=>({folder:folderOf(f),filename:f})));
     ms.clear(); setTimeout(()=>load(), 200);
   };
   const allIds=docs.map(d=>d.filename);
@@ -1080,14 +1081,16 @@ function DocumentsView(){
               <div><div style={{fontFamily:"Helvetica,sans-serif",fontSize:13,color:C.black,fontWeight:500}}>{d.filename}</div><div style={{fontFamily:"Helvetica,sans-serif",fontSize:11,color:C.muted,marginTop:3}}>{d.modified?.slice(0,10)}</div></div>
             </div>
             <div style={{display:"flex",gap:8}}>
-              <button style={S.btn("teal")} onClick={()=>setViewing(d.filename)}>View</button>
-              <button style={{...S.btn(),background:C.slate}} onClick={()=>openDoc(d.filename)}>Open in Word</button>
-              <button style={{...S.btn("ghost"),color:C.red}} onClick={()=>deleteDoc(d.filename)}>&#x2715;</button>
+              <button style={S.btn("teal")} onClick={()=>setViewing(d)}>View</button>
+              {d.filename.toLowerCase().endsWith(".docx")&&(
+                <button style={{...S.btn(),background:C.slate}} onClick={()=>openDoc(d.filename)}>Open in Word</button>
+              )}
+              <button style={{...S.btn("ghost"),color:C.red}} onClick={()=>deleteDoc(d.filename,d.folder)}>&#x2715;</button>
             </div>
           </div>
         ))
       }
-      {viewing&&<FileViewer folder="documents" filename={viewing} onClose={()=>setViewing(null)}/>}
+      {viewing&&<FileViewer folder={viewing.folder||"documents"} filename={viewing.filename} onClose={()=>setViewing(null)}/>}
     </div>
   );
 }
@@ -1519,10 +1522,13 @@ export default function App(){
   },[]);
 
   useEffect(()=>{
+    let closed=false;        // set on cleanup so onclose doesn't reconnect a dead effect
+    let reconnectTimer=null; // tracked so cleanup can cancel a pending reconnect
     const connect=()=>{
+      if(closed) return;
       const ws=new WebSocket(WS);
       ws.onopen=()=>setWsReady(true);
-      ws.onclose=()=>{setWsReady(false);setTimeout(connect,3000);};
+      ws.onclose=()=>{setWsReady(false);if(!closed)reconnectTimer=setTimeout(connect,3000);};
       ws.onmessage=(e)=>{
         try{
           const msg=JSON.parse(e.data);
@@ -1534,7 +1540,7 @@ export default function App(){
             addToast(`${label} is running…`,"running");
             setRunningAgents(prev=>new Set([...prev,msg.agent]));
             const now=Date.now();
-            setTaskQueue(prev=>[...prev,{
+            setTaskQueue(prev=>prev.some(t=>t.agentId===msg.agent&&t.status==="running")?prev:[...prev,{
               id:`${msg.agent}-${now}`,
               agentId:msg.agent,
               label,
@@ -1579,7 +1585,7 @@ export default function App(){
       wsRef.current=ws;
     };
     connect();
-    return()=>wsRef.current?.close();
+    return()=>{closed=true;if(reconnectTimer)clearTimeout(reconnectTimer);wsRef.current?.close();};
   },[addToast]);
 
   const loadData=useCallback(()=>{
