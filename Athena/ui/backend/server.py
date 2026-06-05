@@ -1417,11 +1417,30 @@ async def greet():
 
 @app.post("/api/shutdown")
 async def shutdown_app():
-    """Play a goodbye, then exit the process (Electron watches for this)."""
+    """Play a goodbye, hand off to the verified stop script, then exit.
+
+    The stop script runs detached so it survives this process dying — it kills
+    both the backend (port 8000) and the frontend (port 3000) and confirms they
+    are gone, matching what stop_athena.bat does from the command line.
+    """
     phrase = _random.choice(_GOODBYES)
+    stop_script = ATHENA / "ui" / "stop_athena.ps1"
     def _bye():
         _speak_phrase(phrase)
         import time; time.sleep(0.5)
+        # Spawn the stop script so it outlives our os._exit and can still clean
+        # up the frontend. On Windows a child survives the parent exiting; we use
+        # CREATE_NO_WINDOW (not DETACHED_PROCESS — that strips the console/handles
+        # PowerShell needs and the script silently no-ops) to avoid a flashing window.
+        try:
+            flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+            subprocess.Popen(
+                ["powershell.exe", "-ExecutionPolicy", "Bypass", "-NoProfile",
+                 "-File", str(stop_script)],
+                creationflags=flags, close_fds=True,
+            )
+        except Exception:
+            pass
         import os; os._exit(0)
     asyncio.get_event_loop().run_in_executor(None, _bye)
     return {"phrase": phrase, "status": "shutting_down"}

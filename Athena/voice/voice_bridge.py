@@ -515,7 +515,7 @@ def _transcribe(whisper_model, audio):
     try:
         sf.write(tmp, audio, TARGET_RATE)
         segs_iter, _ = whisper_model.transcribe(
-            tmp, language="en", beam_size=3, vad_filter=True)
+            tmp, language="en", beam_size=5, vad_filter=True)
         segs = list(segs_iter)
         text = " ".join(s.text.strip() for s in segs).strip()
         # Confidence: average log-prob across segments (higher = better)
@@ -528,6 +528,36 @@ def _transcribe(whisper_model, audio):
     finally:
         try: os.unlink(tmp)
         except: pass
+
+
+def _correct_transcript(raw: str) -> str:
+    """
+    Silent LLM correction for low-confidence transcripts.
+    Sends the raw Whisper output to Claude Haiku with a MedTech-aware
+    correction prompt. Returns the corrected text, or raw if the call fails.
+    Fast: ~200 ms on typical broadband.
+    """
+    if not ANTHROPIC_API_KEY or not raw:
+        return raw
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        resp = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=80,
+            system=(
+                "You are a speech-to-text correction assistant for a MedTech executive. "
+                "Fix transcription errors — wrong homophones, missing words, garbled STT — "
+                "while preserving meaning. MedTech terms: FDA, ISO 13485, MDR, QMS, CAPA, "
+                "510(k), PMA, MDSAP, RAPS, RA/QA. "
+                "Return ONLY the corrected text with no explanation."
+            ),
+            messages=[{"role": "user", "content": f"Correct: {raw}"}],
+        )
+        corrected = resp.content[0].text.strip()
+        return corrected if corrected else raw
+    except Exception:
+        return raw
 
 # ── LLM ───────────────────────────────────────────────────────────────────────
 
@@ -746,7 +776,16 @@ def _voice_loop():
         _emit("awake", message="Recording…")
         _play_chime(True)          # clear 2-tone chime — user hears "I'm listening"
 
-        audio = _record_query()
+        try:
+            audio = _record_query()
+        except Exception as e:
+            # Audio device hiccup during recording — log and keep listening.
+            _emit("info", message=f"Recording error (retrying): {e}")
+            _state = VS.LISTENING
+            _emit("listening", message="Say 'Alexa' to activate")
+            time.sleep(0.5)
+            continue
+
         text, confident = _transcribe(whisper, audio)
         empty = not bool(text)
         _track_query(0, empty=empty)
@@ -756,11 +795,17 @@ def _voice_loop():
             _emit("listening", message="No speech detected — listening again")
             continue
 
-        # Confidence check: emit a warning in the UI log but always proceed.
-        # The correction loop was blocking responses — removed per CAPA.
-        # avg_logprob < -0.7 is normal for short queries; don't gate on it.
+        # Confidence check: silently correct via LLM if Whisper was uncertain.
+        # This fixes homophone swaps and garbled words without blocking the
+        # response or asking the user to repeat. Falls back to raw text if
+        # the correction call fails.
         if not confident:
-            _emit("transcript", text=f"{text}  [low conf]")
+            corrected = _correct_transcript(text)
+            if corrected != text:
+                _emit("transcript", text=f"{corrected}  [corrected]")
+            else:
+                _emit("transcript", text=f"{text}  [low conf]")
+            text = corrected
         else:
             _emit("transcript", text=text)
 

@@ -1248,6 +1248,9 @@ export default function App(){
   },[]);
 
   const pendingRef = useRef(new Set());
+  const activeRef  = useRef(active);
+  useEffect(() => { activeRef.current = active; }, [active]);
+
   const runAgent=useCallback((id, override="")=>{
     const endpoints={
       rag:"/api/agents/rag", briefing:"/api/agents/briefing",
@@ -1259,7 +1262,8 @@ export default function App(){
       fetch(`${API}${endpoints[id]}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({override})})
         .finally(()=>{ setTimeout(()=>pendingRef.current.delete(id), 2000); })
         .catch(()=>{ pendingRef.current.delete(id); });
-      setActive("agents");
+      // Don't navigate away if voice is active — user is mid-conversation.
+      if(activeRef.current !== "voice") setActive("agents");
     }
   },[]);
 
