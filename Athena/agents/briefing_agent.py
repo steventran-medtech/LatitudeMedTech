@@ -14,6 +14,7 @@ Usage:
 """
 
 import os
+import re
 import sys
 import json
 import logging
@@ -188,7 +189,7 @@ def fetch_rss_items(seen: set) -> list:
 
 # ── Brave Search integration ──────────────────────────────────────────────────
 
-def brave_search(query: str, count: int = 5) -> list:
+def brave_search(query: str, count: int = 5, freshness: str = "pd") -> list:
     """Search using Brave Search API."""
     if not BRAVE_API_KEY:
         return []
@@ -203,7 +204,7 @@ def brave_search(query: str, count: int = 5) -> list:
             params={
                 "q":           query,
                 "count":       count,
-                "freshness":   "pd",  # past day
+                "freshness":   freshness,  # "pd" past day, "pw" past week, etc.
                 "text_decorations": False,
             },
             timeout=10,
@@ -228,42 +229,62 @@ def brave_search(query: str, count: int = 5) -> list:
         return []
 
 
-def fetch_brave_items(seen: set) -> list:
+def fetch_brave_items(seen: set, focus: str = "") -> list:
     if not BRAVE_API_KEY:
         log.info("  Brave Search: skipped (BRAVE_API_KEY not set)")
         return []
 
     queries = get_brave_queries()
-    log.info(f"  Running {len(queries)} Brave searches (date-aware)...")
+    # Focused (override) run: search the requested topic directly. These queries
+    # use a wider freshness window and bypass the seen/keyword filters so the
+    # user actually gets results on the topic they asked for, even mid-day.
+    focus_queries = build_focus_queries(focus) if focus.strip() else []
+    log.info(f"  Running {len(queries)} date-aware + {len(focus_queries)} focused Brave searches...")
     all_items = []
     seen_urls = set()
 
-    for query in queries:
-        results = brave_search(query, count=3)
+    for query in queries + focus_queries:
+        is_focus = query in focus_queries
+        results  = brave_search(query, count=4 if is_focus else 3,
+                                freshness="pw" if is_focus else "pd")
         for r in results:
             iid = item_id(r["link"])
-            if iid in seen or r["link"] in seen_urls:
+            if r["link"] in seen_urls:
                 continue
+            if iid in seen and not is_focus:
+                continue  # focused queries are allowed to resurface seen items
             text  = f"{r['title']} {r['summary']}".lower()
             score = sum(1 for kw in QA_RA_KEYWORDS if kw.lower() in text)
-            if score == 0:
-                continue  # Skip irrelevant results
+            if score == 0 and not is_focus:
+                continue  # general feed must match firm keywords; focus is trusted
             all_items.append({
                 'title':    r['title'],
                 'link':     r['link'],
                 'summary':  r['summary'],
                 'source':   f"Brave: {query[:40]}",
-                'category': "Breaking",
+                'category': "Focus" if is_focus else "Breaking",
                 'priority': "high",
-                'score':    score,
+                'score':    score + (5 if is_focus else 0),   # focus items float to top
                 'id':       iid,
                 'via':      'brave',
             })
             seen_urls.add(r["link"])
         import time; time.sleep(0.3)
 
-    log.info(f"  Brave found {len(all_items)} new relevant items")
+    log.info(f"  Brave found {len(all_items)} relevant items")
     return all_items
+
+
+def build_focus_queries(focus: str) -> list:
+    """Topic-specific Brave queries for a focused briefing run."""
+    topic = focus.strip()
+    today = datetime.now().strftime("%B %Y")
+    year  = datetime.now().strftime("%Y")
+    return [
+        f"{topic} medical device {today}",
+        f"{topic} MedTech regulatory FDA OR EU MDR {year}",
+        f"{topic} medtech news {today}",
+    ]
 
 
 # ── Briefing generation ───────────────────────────────────────────────────────
@@ -373,10 +394,21 @@ def format_simple_briefing(items: list, date_str: str) -> str:
     return '\n'.join(lines)
 
 
-def save_briefing(content: str, date_str: str, item_count: int, brave_count: int) -> Path:
-    out_path = BRIEFINGS_DIR / f"{date_str}_briefing.md"
+def save_briefing(content: str, date_str: str, item_count: int, brave_count: int,
+                  focus: str = "") -> Path:
+    # A focused (override) run is an *additional* briefing for the day — give it
+    # its own filename so it never clobbers the morning daily briefing.
+    if focus.strip():
+        slug    = re.sub(r'[^a-z0-9]+', '_', focus.lower()).strip('_')[:30] or 'focus'
+        stamp   = datetime.now().strftime('%H%M')
+        out_path = BRIEFINGS_DIR / f"{date_str}_briefing_{slug}_{stamp}.md"
+        title    = f"MedTech Intelligence Briefing — {focus.strip()}"
+    else:
+        out_path = BRIEFINGS_DIR / f"{date_str}_briefing.md"
+        title    = f"MedTech Intelligence Briefing - {datetime.now().strftime('%B %d, %Y')}"
     header   = f"""---
 date: {date_str}
+focus: {focus.strip() or 'general daily'}
 items_reviewed: {item_count}
 brave_items: {brave_count}
 rss_sources: {len(RSS_SOURCES)}
@@ -384,7 +416,7 @@ brave_queries: {len(get_brave_queries())}
 generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}
 ---
 
-# MedTech Intelligence Briefing - {datetime.now().strftime('%B %d, %Y')}
+# {title}
 
 """
     out_path.write_text(header + content, encoding='utf-8')
@@ -396,22 +428,23 @@ generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--week', action='store_true')
-    args = parser.parse_args()
-
-    import argparse as _ap
-    _parser = _ap.ArgumentParser()
-    _parser.add_argument("--override", type=str, default="")
-    _parser.add_argument("--week", action="store_true")
-    _args, _ = _parser.parse_known_args()
-    _override = _args.override
+    parser.add_argument("--override", type=str, default="",
+                        help="Focus the briefing on a specific topic. Also enables "
+                             "same-day re-runs (saved as a separate focused briefing).")
+    parser.add_argument("--week", action="store_true")
+    # parse_known_args so a multi-word --override value (passed unquoted by the UI)
+    # never trips the parser the way a second strict parser used to.
+    args, _ = parser.parse_known_args()
+    override = args.override.strip()
 
     date_str = datetime.now().strftime('%Y-%m-%d')
     log.info(f"Latitude MedTech Briefing Agent v2 - {date_str}")
     log.info(f"Brave Search: {'enabled' if BRAVE_API_KEY else 'disabled (no key)'}")
 
+    # Only the plain daily run is guarded against accidental same-day overwrite.
+    # A focused (--override) run is always allowed and saved to its own file.
     existing = BRIEFINGS_DIR / f"{date_str}_briefing.md"
-    if existing.exists() and not _args.week and not _override.strip():
+    if existing.exists() and not args.week and not override:
         print(f"\nToday's briefing already exists: {existing}")
         print("Use --override 'topic' to generate a focused briefing on a specific topic.")
         return
@@ -422,7 +455,7 @@ def main():
         seen = seen | {hashlib.md5(url.encode()).hexdigest()[:12]
                        for url in []}  # memory checked per-item below
     rss_items  = fetch_rss_items(seen)
-    brave_items = fetch_brave_items(seen)
+    brave_items = fetch_brave_items(seen, focus=override)
     all_items  = rss_items + brave_items
 
     log.info(f"Total new items: {len(all_items)} ({len(rss_items)} RSS, {len(brave_items)} Brave)")
@@ -434,9 +467,9 @@ def main():
         content = f"No new items found today across {len(RSS_SOURCES)} RSS sources and {len(get_brave_queries())} Brave searches."
     else:
         log.info("Generating briefing...")
-        content = generate_briefing(all_items, date_str, override=_override)
+        content = generate_briefing(all_items, date_str, override=override)
 
-    out_path = save_briefing(content, date_str, len(all_items), len(brave_items))
+    out_path = save_briefing(content, date_str, len(all_items), len(brave_items), focus=override)
     new_seen = {i['id'] for i in all_items}
     save_seen(seen | new_seen)
     if mem:

@@ -457,6 +457,88 @@ async def trigger_marketing(request: Request, background_tasks: BackgroundTasks)
     return {"status": "started", "agent": "marketing_agent", "mode": mode}
 
 
+@app.get("/api/marketing/pipeline")
+def get_marketing_pipeline():
+    """Return pipeline summary counts and high-priority next actions."""
+    import sqlite3 as _sq
+    db = ATHENA / "ops" / "marketing" / "pipeline.db"
+    if not db.exists():
+        return {"summary": [], "actions": [], "kpis": {}}
+    with _sq.connect(db) as conn:
+        conn.row_factory = _sq.Row
+        summary = [dict(r) for r in conn.execute(
+            "SELECT type, status, COUNT(*) as count FROM targets GROUP BY type, status ORDER BY type, status"
+        ).fetchall()]
+        actions = [dict(r) for r in conn.execute(
+            "SELECT name, type, org, status, next_action, next_date FROM targets "
+            "WHERE priority = 1 AND status NOT IN ('converted','closed') "
+            "ORDER BY CASE WHEN next_date IS NULL THEN '9999' ELSE next_date END LIMIT 10"
+        ).fetchall()]
+        row = conn.execute(
+            "SELECT COUNT(*) as total, "
+            "SUM(CASE WHEN status!='identified' THEN 1 ELSE 0 END) as contacted, "
+            "SUM(CASE WHEN status='in_discussion' THEN 1 ELSE 0 END) as meetings, "
+            "SUM(CASE WHEN status='converted' THEN 1 ELSE 0 END) as converted "
+            "FROM targets"
+        ).fetchone()
+        kpis = dict(row) if row else {}
+    return {"summary": summary, "actions": actions, "kpis": kpis}
+
+
+@app.post("/api/marketing/pipeline/update")
+async def update_pipeline_target(request: Request):
+    """Update a target's status from the UI."""
+    import sqlite3 as _sq
+    body   = await request.json()
+    name   = _safe_arg(body.get("name", ""))
+    status = _safe_arg(body.get("status", ""))
+    note   = _safe_arg(body.get("note", ""))
+    VALID  = {"identified", "contacted", "in_discussion", "converted", "closed"}
+    if not name or status not in VALID:
+        raise HTTPException(status_code=400, detail="Invalid name or status")
+    db = ATHENA / "ops" / "marketing" / "pipeline.db"
+    if not db.exists():
+        raise HTTPException(status_code=404)
+    with _sq.connect(db) as conn:
+        conn.execute(
+            "UPDATE targets SET status=?, notes=COALESCE(notes,'')||'\n'||?, updated_at=date('now') WHERE name LIKE ?",
+            (status, f"[{datetime.now().strftime('%Y-%m-%d')}] {note}", f"%{name}%")
+        )
+        conn.commit()
+    return {"status": "updated", "target": name}
+
+
+@app.get("/api/marketing/outputs")
+def list_marketing_outputs():
+    """List all generated marketing output files."""
+    mdir = ATHENA / "ops" / "marketing"
+    if not mdir.exists():
+        return {"files": []}
+    files = []
+    for f in sorted(mdir.glob("*.md"), key=lambda x: x.stat().st_mtime, reverse=True):
+        files.append({"filename": f.name, "label": f.stem.replace("_", " ").title(),
+                      "modified": datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d")})
+    out_dir = mdir / "outreach"
+    if out_dir.exists():
+        for f in sorted(out_dir.glob("*.md"), key=lambda x: x.stat().st_mtime, reverse=True):
+            files.append({"filename": f"outreach/{f.name}",
+                          "label": f.stem.replace("_outreach_", " → ").replace("_", " ").title(),
+                          "modified": datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d")})
+    return {"files": files}
+
+
+@app.get("/api/marketing/outputs/{filename:path}")
+def get_marketing_output(filename: str):
+    """Read a specific marketing output file."""
+    parts = Path(filename).parts
+    if ".." in parts or len(parts) > 2:
+        raise HTTPException(status_code=400, detail="Invalid path")
+    path = ATHENA / "ops" / "marketing" / filename
+    if not path.exists() or path.suffix != ".md":
+        raise HTTPException(status_code=404)
+    return {"content": path.read_text(encoding="utf-8"), "filename": filename}
+
+
 @app.post("/api/agents/ma")
 async def trigger_ma(request: Request, background_tasks: BackgroundTasks):
     body  = await request.json()

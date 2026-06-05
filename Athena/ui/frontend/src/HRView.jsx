@@ -213,8 +213,8 @@ export default function HRView() {
 
   const learnOne = (agent) => trigger("/api/agents/learn", `learn_${agent}`, { agent });
 
-  // When bulk learning is running, all agent rows show loading state
-  const allLearning = !!running.learn_all;
+  // When bulk learning OR bulk run is active, all agent rows show loading state
+  const allLearning = !!running.learn_all || !!running.run_all;
   const isLearning  = (agent) => allLearning || !!running[`learn_${agent}`];
 
   const reds    = health.filter(a => a.flag_status === "red").length;
@@ -241,9 +241,14 @@ export default function HRView() {
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={load} style={gBtn}>Refresh</button>
           <button onClick={() => trigger("/api/agents/learn", "learn_all")}
-            disabled={running.learn_all}
+            disabled={running.learn_all || running.run_all}
             style={{ ...gBtn, background: "#1A6FA3", color: "#fff", border: "none" }}>
-            {running.learn_all ? "Running…" : "Run Learning"}
+            {running.learn_all ? "Running…" : "Bulk Learn"}
+          </button>
+          <button onClick={() => trigger("/api/agents/run-all", "run_all")}
+            disabled={running.run_all || running.learn_all}
+            style={{ ...gBtn, background: "#1F7A6D", color: "#fff", border: "none" }}>
+            {running.run_all ? "Running…" : "Bulk Run"}
           </button>
           <button onClick={() => trigger("/api/agents/hr", "hr")}
             disabled={running.hr}
@@ -312,7 +317,7 @@ export default function HRView() {
                   agent={{ ...a, learning_7d: byAgent[a.agent]?.items || 0 }}
                   skills={skills}
                   onLearn={learnOne}
-                  running={!!running[`learn_${a.agent}`]}
+                  running={isLearning(a.agent)}
                 />
               ))}
             </tbody>
