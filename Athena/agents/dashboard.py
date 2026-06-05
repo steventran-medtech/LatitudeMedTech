@@ -42,6 +42,36 @@ def kb_report(mem):
     print("+--------------------------------------------------+")
 
 
+def skills_report(mem):
+    """Per-agent skill/KB accumulation (all-time), the firm's learning capital."""
+    try:
+        from skills_profile import ORDER, CATALOG
+        roster = [(a, CATALOG[a]["label"]) for a in ORDER]
+    except Exception:
+        roster = [(a, a) for a in (
+            "consulting", "ma_intelligence", "fda", "eu_mdr", "iso", "coaching",
+            "content", "briefing", "rag", "hr", "voice_bridge")]
+
+    print(f"""
++----------------------------------------------------------+
+|  Skill & KB Accumulation (all-time, by agent)            |
++----------------------------------------------------------+
+|  {'Agent':<22}{'Items':>8}{'Chunks':>9}{'Domains':>9}   |
++----------------------------------------------------------+""")
+    t_items = t_chunks = 0
+    for key, label in roster:
+        acc = mem.get_skill_accumulation(key)
+        t_items += acc["total_items"]
+        t_chunks += acc["total_chunks"]
+        print(f"|  {label[:22]:<22}{acc['total_items']:>8}"
+              f"{acc['total_chunks']:>9}{len(acc['domains']):>9}   |")
+    print("+----------------------------------------------------------+")
+    print(f"|  {'FIRM TOTAL':<22}{t_items:>8}{t_chunks:>9}{'':>9}   |")
+    print("+----------------------------------------------------------+")
+    print("|  Detail: knowledge_base/skills/<agent>.md · SKILLS.md     |")
+    print("+----------------------------------------------------------+")
+
+
 def content_report(mem):
     topics = mem.get_recent_topics(days=90)
     print(f"""
@@ -82,6 +112,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--days',    type=int, default=30)
     parser.add_argument('--kb',      action='store_true')
+    parser.add_argument('--skills',  action='store_true')
     parser.add_argument('--content', action='store_true')
     parser.add_argument('--events',  action='store_true')
     parser.add_argument('--all',     action='store_true')
@@ -91,13 +122,16 @@ def main():
 
     print(f"\nLatitude MedTech Dashboard — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
 
-    show_all = args.all or not any([args.kb, args.content, args.events])
+    show_all = args.all or not any([args.kb, args.skills, args.content, args.events])
 
-    if show_all or not (args.kb or args.content or args.events):
+    if show_all or not (args.kb or args.skills or args.content or args.events):
         mem.print_token_report(days=args.days)
 
     if args.kb or args.all:
         kb_report(mem)
+
+    if args.skills or args.all:
+        skills_report(mem)
 
     if args.content or args.all:
         content_report(mem)

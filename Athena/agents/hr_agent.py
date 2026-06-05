@@ -96,6 +96,7 @@ def score_agent(agent_name: str, profile: dict) -> dict:
     learn_7d  = mem.get_learning_stats(agent=agent_name, days=7)
     items_7d  = learn_7d[0]["items"] if learn_7d else 0
     required  = profile["required_weekly_learning"]
+    acc       = mem.get_skill_accumulation(agent_name)   # all-time skill/KB capital
 
     # ── Determine flag status ─────────────────────────────────────────────────
     flag   = "green"
@@ -141,10 +142,10 @@ def score_agent(agent_name: str, profile: dict) -> dict:
         recs.append("PRIORITY: Immediate review and optimization required.")
         if errors_7d >= RED_ERROR_COUNT:
             recs.append("Run RCA — high error rate indicates systemic prompt or data issue.")
-        if ll_days >= RED_LEARNING_DAYS:
+        if ll_days is None or ll_days >= RED_LEARNING_DAYS:
             recs.append("Force a learning run: python agent_learning.py --agent " + agent_name)
     elif flag == "yellow":
-        if ll_days >= YELLOW_LEARNING_DAYS:
+        if ll_days is not None and ll_days >= YELLOW_LEARNING_DAYS:
             recs.append("Schedule a learning run within 48 hours.")
         if errors_7d >= YELLOW_ERROR_COUNT:
             recs.append("Review recent error events and update agent system prompt if pattern found.")
@@ -169,6 +170,9 @@ def score_agent(agent_name: str, profile: dict) -> dict:
             "errors_7d":              errors_7d,
             "learning_items_7d":      items_7d,
             "learning_target_weekly": required,
+            "accumulated_items":      acc["total_items"],
+            "accumulated_chunks":     acc["total_chunks"],
+            "accumulated_domains":    len(acc["domains"]),
         },
         "evaluated_at": now.isoformat(),
     }
@@ -220,6 +224,8 @@ def write_report(scorecards: list) -> Path:
             lines.append("**Metrics:**")
             lines.append(f"- Last learning: {m['last_learning_item'] or 'Never'} ({m['days_since_learning'] or '—'}d ago)")
             lines.append(f"- Learning this week: {m['learning_items_7d']} / {m['learning_target_weekly']} target")
+            lines.append(f"- Accumulated skill/KB: {m['accumulated_items']} items, "
+                         f"{m['accumulated_chunks']} chunks, {m['accumulated_domains']} domains (all-time)")
             lines.append(f"- Errors last 7 days: {m['errors_7d']}")
             lines.append(f"- Last active run: {m['days_since_run'] or '—'}d ago")
             lines.append("")
@@ -238,6 +244,9 @@ def write_report(scorecards: list) -> Path:
         "## Summary for Steven",
         "",
         f"Total agents reviewed: **{len(scorecards)}**",
+        f"Firm skill/KB capital: **{sum(s['metrics']['accumulated_items'] for s in scorecards)} items**, "
+        f"**{sum(s['metrics']['accumulated_chunks'] for s in scorecards)} chunks** accumulated all-time "
+        f"(detail in `SKILLS.md`).",
         "",
     ]
     if reds:
@@ -282,6 +291,14 @@ def run_review(targets=None) -> list:
 
     report_path = write_report(scorecards)
     log.info(f"\nReport saved: {report_path}")
+
+    # Refresh the living skill/KB profiles so accumulation stays current.
+    try:
+        from skills_profile import generate as _gen_skills
+        _gen_skills()
+        log.info("Skill/KB profiles refreshed (knowledge_base/skills/ + SKILLS.md)")
+    except Exception as e:
+        log.warning(f"Skill profile refresh skipped: {e}")
 
     reds = [s for s in scorecards if s["flag"] == "red"]
     if reds:

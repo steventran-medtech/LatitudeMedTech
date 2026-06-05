@@ -38,7 +38,9 @@ Any output violating these is flagged and withheld pending Steven's review.
 - Business functions: HR/L&D Manager · Legal · Finance · Sales · Marketing
 
 **Central KB:** `Athena/knowledge_base/` searched by all agents via `KBQuery.search()` and `AgentBase.central_kb_context()`.
-Subdirs: `learning/` · `consulting/` (frameworks, methodologies) · `ma/` (deal intelligence) · root (RAG docs).
+Subdirs: `learning/` · `consulting/` (frameworks, methodologies) · `ma/` (deal intelligence) · `skills/` (per-agent skill/KB profiles) · root (RAG docs).
+
+**Skill/KB Profiles:** `skills_profile.py` generates a *living* profile per agent (`knowledge_base/skills/<agent>.md`) + a master `SKILLS.md` (firm root). Each profile = curated skill catalog + auto-generated accumulation block (all-time items/chunks/domains, between `<!-- ACC -->` markers) pulled from the memory DB via `Memory.get_skill_accumulation()`. Learning feeds live in dependency-free `learning_sources.py` (shared by `agent_learning.py`). Accumulation is now visible: `dashboard.py --skills` (per-agent table + firm total) and every HR scorecard/report. HR review auto-refreshes the profiles. Run manually: `run_skills.bat` or `python skills_profile.py`.
 
 ---
 
