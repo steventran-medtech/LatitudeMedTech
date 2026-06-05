@@ -6,6 +6,7 @@ import ISOView from "./ISOView.jsx";
 import FileViewer from "./FileViewer.jsx";
 import ReviewView from "./ReviewView.jsx";
 import MarketingView from "./MarketingView.jsx";
+import DeckView from "./DeckView.jsx";
 import { useVoiceSession } from "./useVoiceSession.js";
 
 const API = "http://localhost:8000";
@@ -73,6 +74,7 @@ const NAV = [
   {id:"content",   label:"Content",        group:"work"},
   {id:"coaching",  label:"Coaching",       group:"work"},
   {id:"marketing", label:"Marketing",      group:"work"},
+  {id:"decks",     label:"Decks",          group:"work"},
   {id:"iso",       label:"ISO 13485",      group:"work"},
   {id:"documents", label:"Documents",      group:"work"},
   // System
@@ -697,6 +699,7 @@ function Dashboard({data}){
   const [kbTotal,setKbTotal]=useState(0);
   const [companyKb,setCompanyKb]=useState(null);
   const [sessions,setSessions]=useState([]);
+  const [recentDecks,setRecentDecks]=useState([]);
   useEffect(()=>{
     fetch(`${API}/api/dashboard/history?days=30`).then(r=>r.json()).then(d=>setHistory(d.daily||[])).catch(()=>{});
     fetch(`${API}/api/dashboard/knowledge-growth?days=90`).then(r=>r.json()).then(d=>{setKbGrowth(d.daily||[]);setKbTotal(d.total||0);}).catch(()=>{});
@@ -707,6 +710,7 @@ function Dashboard({data}){
       setCompanyKb({totalChunks,domains:domains.size});
     }).catch(()=>{});
     fetch(`${API}/api/sessions?limit=15`).then(r=>r.json()).then(d=>setSessions(d.sessions||[])).catch(()=>{});
+    fetch(`${API}/api/decks`).then(r=>r.json()).then(d=>setRecentDecks((d.decks||[]).slice(0,5))).catch(()=>{});
   },[]);
   // Refetch when the hourly day toggle changes (today/yesterday totals come back unchanged).
   useEffect(()=>{
@@ -825,6 +829,27 @@ function Dashboard({data}){
         <div style={S.card}>
           <span style={S.label}>Recent content topics</span>
           {data.recent_topics.slice(0,8).map((t,i)=>(<div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:i<7?`1px solid ${C.ltgray}`:"none"}}><span style={{fontFamily:"Helvetica,sans-serif",fontSize:12,color:C.slate}}>{t.title}</span><span style={{fontFamily:"Helvetica,sans-serif",fontSize:11,color:C.muted}}>{t.timestamp?.slice(0,10)}</span></div>))}
+        </div>
+      )}
+      {recentDecks.length>0&&(
+        <div style={{...S.card,marginBottom:16}}>
+          <span style={S.label}>Recent Decks</span>
+          {recentDecks.map((d,i)=>{
+            const base=d.filename.replace(/\.pptx$/i,"");
+            const parts=base.split("_");
+            const label=parts.length>=3?parts.slice(2).join(" ").replace(/_/g," "):base;
+            const date=parts.length>=1&&/^\d{8}$/.test(parts[0])?`${parts[0].slice(0,4)}-${parts[0].slice(4,6)}-${parts[0].slice(6,8)}`:"";
+            return(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:i<recentDecks.length-1?`1px solid ${C.ltgray}`:"none"}}>
+                <div>
+                  <span style={{fontFamily:"Helvetica,sans-serif",fontSize:12,color:C.slate,fontWeight:500,textTransform:"capitalize"}}>{label||d.filename}</span>
+                  {date&&<span style={{fontFamily:"Helvetica,sans-serif",fontSize:11,color:C.muted,marginLeft:8}}>{date}</span>}
+                </div>
+                <a href={`${API}/api/decks/download/${encodeURIComponent(d.filename)}`} download={d.filename}
+                   style={{fontFamily:"Helvetica,sans-serif",fontSize:11,color:C.ocean,fontWeight:600,textDecoration:"none"}}>↓ pptx</a>
+              </div>
+            );
+          })}
         </div>
       )}
       {sessions.length>0&&(
@@ -1029,7 +1054,7 @@ function CoachingView({onGenerate}){
   const allIds=briefs.map(b=>b.filename);
   return(
     <div>
-      <h2 style={{...S.h2,marginBottom:20}}>Coaching Briefs</h2>
+      <h2 style={{...S.h2,marginBottom:20}}>Client Analysis</h2>
       <div style={{...S.card,display:"flex",gap:12,alignItems:"center",marginBottom:20}}>
         <input value={client} onChange={e=>setClient(e.target.value)} onKeyDown={e=>e.key==="Enter"&&runBrief()} placeholder="Client name, LinkedIn URL, or topic" style={{...S.input,flex:1}}/>
         <button style={S.btn()} onClick={runBrief}>Generate Brief</button>
@@ -1258,6 +1283,7 @@ const AGENT_DISPLAY = {
   hr_agent:"HR Review", skills_profile:"Skills Profile",
   consulting_agent:"Consulting Agent", ma_intelligence_agent:"M&A Intelligence",
   marketing_agent:"Marketing Agent",
+  deck_agent:     "Deck Builder",
 };
 
 // Estimated completion times in seconds (mirrors _AGENT_ETA_SECONDS in voice_bridge.py)
@@ -1273,6 +1299,7 @@ const AGENT_ETA_SECONDS = {
   agent_learning:        180,
   hr_agent:               90,
   skills_profile:         60,
+  deck_agent:            300,
 };
 
 // Maps agent IDs to the tab to navigate to when the task completes
@@ -1284,6 +1311,7 @@ const AGENT_TAB = {
   coaching_brief:        "review",
   consulting_agent:      "documents",
   ma_intelligence_agent: "documents",
+  deck_agent:            "decks",
 };
 
 // ── Toast notification system ──────────────────────────────────────────────
@@ -1533,6 +1561,7 @@ export default function App(){
   const [toasts,setToasts]=useState([]);
   const [version,setVersion]=useState(null);
   const [aboutOpen,setAboutOpen]=useState(false);
+  const [shuttingDown,setShuttingDown]=useState(false);
   const wsRef=useRef(null);
   const voice=useVoiceSession();
   const [taskQueue,setTaskQueue]=useState([]);
@@ -1564,22 +1593,38 @@ export default function App(){
             addToast(`${label} is running…`,"running");
             setRunningAgents(prev=>new Set([...prev,msg.agent]));
             const now=Date.now();
-            setTaskQueue(prev=>prev.some(t=>t.agentId===msg.agent&&t.status==="running")?prev:[...prev,{
-              id:`${msg.agent}-${now}`,
-              agentId:msg.agent,
-              label,
-              context:msg.context||"",
-              status:"running",
-              startedAt:now,
-              estSeconds:AGENT_ETA_SECONDS[msg.agent]||120,
-              doneAt:null,
-            }]);
+            setTaskQueue(prev=>{
+              // Remove stale completed entries for this agent so they don't
+              // show alongside the new running entry in the Working On panel.
+              const pruned=prev.filter(t=>!(t.agentId===msg.agent&&t.status!=="running"));
+              if(pruned.some(t=>t.agentId===msg.agent&&t.status==="running")) return prev;
+              return [...pruned,{
+                id:`${msg.agent}-${now}`,
+                agentId:msg.agent,
+                label,
+                context:msg.context||"",
+                status:"running",
+                startedAt:now,
+                estSeconds:AGENT_ETA_SECONDS[msg.agent]||120,
+                doneAt:null,
+              }];
+            });
           }
           if(msg.type==="agent_done"){
             const label=AGENT_DISPLAY[msg.agent]||msg.agent;
             const finalStatus=msg.status==="awaiting_review"?"awaiting_review":msg.status==="success"?"done":"failed";
             const ok=msg.status==="success"||msg.status==="awaiting_review";
-            const toastMsg=msg.status==="awaiting_review"?`${label} awaiting your review`:ok?`${label} ready for review`:`${label} failed`;
+            // Enhanced toast for deck_agent: include title and slide count if available
+            let toastMsg;
+            if(msg.status==="awaiting_review"){
+              toastMsg=`${label} awaiting your review`;
+            } else if(ok && msg.agent==="deck_agent" && msg.title){
+              toastMsg=`Deck ready: ${msg.title}${msg.slide_count?` (${msg.slide_count} slides)`:""}`;
+            } else if(ok){
+              toastMsg=`${label} ready for review`;
+            } else {
+              toastMsg=`${label} failed`;
+            }
             addToast(toastMsg,ok?"success":"error");
             setRunningAgents(prev=>{const s=new Set(prev);s.delete(msg.agent);return s;});
             const doneAt=Date.now();
@@ -1673,7 +1718,9 @@ export default function App(){
   }, []);
 
   const handleExit = async () => {
+    if (shuttingDown) return;   // guard: double-press of the off button
     shuttingDownRef.current = true;
+    setShuttingDown(true);
     setExitDialog(false);
     try {
       // Await the response — the backend blocks until TTS finishes before replying.
@@ -1692,6 +1739,7 @@ export default function App(){
     content:  <ContentView onGenerate={runAgent}/>,
     coaching: <CoachingView onGenerate={runAgent}/>,
     marketing:<MarketingView runningAgents={runningAgents}/>,
+    decks:    <DeckView runningAgents={runningAgents}/>,
     documents:<DocumentsView/>,
     iso:      <ISOView runningAgents={runningAgents}/>,
     review:   <ReviewView/>,
@@ -1745,15 +1793,17 @@ export default function App(){
             <button style={{...S.btn("ghost"),padding:"5px 12px",fontSize:10}}
               onClick={loadData}>Refresh</button>
             <button
-              onClick={()=>setExitDialog(true)}
-              title="Exit Athena"
+              onClick={()=>!shuttingDown&&setExitDialog(true)}
+              title={shuttingDown?"Shutting down…":"Exit Athena"}
+              disabled={shuttingDown}
               style={{
                 width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",
                 background:"transparent",border:`1px solid ${C.mist}`,borderRadius:6,
-                cursor:"pointer",color:C.fog,fontSize:13,padding:0,
-                transition:"color 0.12s,border-color 0.12s",
+                cursor:shuttingDown?"not-allowed":"pointer",color:shuttingDown?C.fog:C.fog,fontSize:13,padding:0,
+                opacity:shuttingDown?0.4:1,
+                transition:"color 0.12s,border-color 0.12s,opacity 0.12s",
               }}
-              onMouseEnter={e=>{e.currentTarget.style.color=C.red;e.currentTarget.style.borderColor=C.red;}}
+              onMouseEnter={e=>{if(!shuttingDown){e.currentTarget.style.color=C.red;e.currentTarget.style.borderColor=C.red;}}}
               onMouseLeave={e=>{e.currentTarget.style.color=C.fog;e.currentTarget.style.borderColor=C.mist;}}>
               ⏻
             </button>

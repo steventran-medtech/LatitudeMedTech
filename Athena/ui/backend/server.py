@@ -233,7 +233,23 @@ async def run_agent(agent_name: str, script: str, args: list = None, context: st
     await proc.wait()
     running_agents.discard(agent_name)
     status = "success" if proc.returncode == 0 else "error"
-    await manager.broadcast({"type": "agent_done", "agent": agent_name, "status": status, "ts": datetime.now().isoformat()})
+
+    # Parse the last few stdout lines for a structured JSON result (deck_agent outputs a
+    # JSON summary as its final line: {status, path, filename, title, slide_count, deck_type})
+    result_extras = {}
+    for line in reversed(lines[-8:]):
+        try:
+            parsed = json.loads(line.strip())
+            if isinstance(parsed, dict) and "status" in parsed:
+                result_extras = {k: parsed[k] for k in
+                                 ("path", "filename", "title", "slide_count", "deck_type")
+                                 if k in parsed}
+                break
+        except (json.JSONDecodeError, ValueError):
+            continue
+
+    await manager.broadcast({"type": "agent_done", "agent": agent_name, "status": status,
+                              "ts": datetime.now().isoformat(), **result_extras})
     return {"status": status, "lines": lines}
 
 
@@ -1420,15 +1436,31 @@ def get_brief(filename: str):
 
 @app.get("/api/iso/lessons")
 def list_iso_lessons():
-    iso_dir = _HOME_ATHENA / "coaching" / "iso13485"
-    if not iso_dir.exists():
+    all_files = []
+    for sub in ("iso13485", "iso14971"):
+        d = _HOME_ATHENA / "coaching" / sub
+        if d.exists():
+            all_files.extend(d.glob("*.md"))
+    if not all_files:
         return {"lessons": []}
-    files = sorted(iso_dir.glob("*.md"), key=lambda f: f.stat().st_mtime, reverse=True)
+    files = sorted(all_files, key=lambda f: f.stat().st_mtime, reverse=True)
+
     def _parse_iso_stem(stem: str):
-        # stem like: clause_4_1_general_qms_requirements
-        # → clause "4.1", title "General QMS Requirements"
+        # ISO 14971 filenames start with "14971_": e.g. "14971_5_2_risk_analysis"
+        if stem.startswith("14971_"):
+            rest  = stem[len("14971_"):]
+            parts = rest.split("_")
+            num_parts, word_parts = [], []
+            for p in parts:
+                if p.replace(".", "").isdigit():
+                    num_parts.append(p)
+                else:
+                    word_parts.append(p)
+            clause = "14971." + ".".join(num_parts) if num_parts else "14971." + rest
+            title  = " ".join(w.capitalize() for w in word_parts) if word_parts else clause
+            return clause, title
+        # ISO 13485: "clause_4_1_general_qms_requirements"
         parts = stem.split("_")
-        # skip leading "clause" word
         start = 1 if parts and parts[0].lower() == "clause" else 0
         parts = parts[start:]
         num_parts, word_parts = [], []
@@ -1446,19 +1478,20 @@ def list_iso_lessons():
             "filename": f.name,
             "clause":   _parse_iso_stem(f.stem)[0],
             "title":    _parse_iso_stem(f.stem)[1],
+            "standard": "ISO 14971" if f.name.startswith("14971_") else "ISO 13485",
             "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
         }
-        for f in files[:50]
+        for f in files[:100]
     ]}
 
 
 @app.get("/api/iso/lessons/{filename}")
 def get_iso_lesson(filename: str):
-    iso_dir = _HOME_ATHENA / "coaching" / "iso13485"
-    f = iso_dir / filename
-    if not f.exists():
-        return JSONResponse(status_code=404, content={"error": "Not found"})
-    return {"filename": filename, "content": f.read_text(encoding="utf-8", errors="replace")}
+    for sub in ("iso14971", "iso13485"):
+        f = _HOME_ATHENA / "coaching" / sub / filename
+        if f.exists():
+            return {"filename": filename, "content": f.read_text(encoding="utf-8", errors="replace")}
+    return JSONResponse(status_code=404, content={"error": "Not found"})
 
 
 # ── File serve (for in-browser viewer) ───────────────────────────────────────
@@ -1856,6 +1889,8 @@ async def shutdown_app(background_tasks: BackgroundTasks):
     so they fire after the response has been fully sent to the client.
     """
     global _shutting_down
+    if _shutting_down:             # guard: double-click of the off button sends two POSTs
+        return {"status": "already_shutting_down"}
     _shutting_down = True          # prevent WebSocket-disconnect goodbye from double-firing
     phrase = _random.choice(_GOODBYES)
     stop_script = ATHENA / "ui" / "stop_athena.ps1"

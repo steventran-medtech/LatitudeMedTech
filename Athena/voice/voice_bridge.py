@@ -601,21 +601,34 @@ class _SklearnWakeDetector:
     Mirrors Model.predict() / reset() so the voice loop needs no changes.
     Loaded when voice/wake/hi_athena.pkl exists (preferred over ONNX fallback).
     predict(chunk) -> {"hi_athena": float}
+
+    Uses a 1-second rolling audio window so embeddings are always computed on a
+    full-length clip — the model was trained on 1-second samples, so embedding
+    each 80 ms chunk padded with zeros gave near-zero scores every call.
     """
+
+    _WIN = 16000   # 1-second window at 16 kHz (must match training clip length)
 
     def __init__(self, clf, n_history: int = 5):
         from openwakeword.utils import AudioFeatures
-        self._clf = clf
-        self._af  = AudioFeatures()
-        self._buf = []
-        self._n   = n_history
+        self._clf  = clf
+        self._af   = AudioFeatures()
+        self._buf  = []
+        self._n    = n_history
+        self._ring = np.zeros(self._WIN, dtype=np.int16)   # rolling 1-s audio window
 
     def predict(self, audio_chunk: np.ndarray) -> dict:
-        CLIP = 16000
         try:
             i16 = audio_chunk.astype(np.int16)
-            i16 = np.pad(i16, (0, max(0, CLIP - len(i16))))[:CLIP]
-            emb = np.array(self._af.embed_clips(i16.reshape(1, -1)))  # (1,3,96)
+            n   = len(i16)
+            # Slide the 1-second buffer forward and append the new chunk
+            if n >= self._WIN:
+                self._ring[:] = i16[-self._WIN:]
+            else:
+                self._ring[:-n] = self._ring[n:]
+                self._ring[-n:] = i16
+            # Compute embedding on the full 1-second window each call
+            emb = np.array(self._af.embed_clips(self._ring.reshape(1, -1)))  # (1,3,96)
             self._buf.append(emb.reshape(1, -1))
             if len(self._buf) > self._n:
                 self._buf.pop(0)
@@ -627,6 +640,7 @@ class _SklearnWakeDetector:
 
     def reset(self):
         self._buf.clear()
+        self._ring[:] = 0
 
 
 def _load_wake_model():
@@ -1171,7 +1185,7 @@ def _voice_loop():
         _emit("stopped", reason="Wake word model failed"); return
 
     _state = VS.LISTENING
-    _emit("listening", message="Say 'Alexa' to activate")
+    _emit("listening", message=f"Say '{WAKE_PHRASE.title()}' to activate")
 
     while _active:
         # Deliver queued agent-completion notifications before the next listen cycle.
@@ -1187,7 +1201,7 @@ def _voice_loop():
             if not _active:
                 break
             _state = VS.LISTENING
-            _emit("listening", message="Say 'Alexa' to activate")
+            _emit("listening", message=f"Say '{WAKE_PHRASE.title()}' to activate")
 
         wake_detected, wake_score = _listen_for_wake(oww)
         if not wake_detected or not _active:
@@ -1203,7 +1217,7 @@ def _voice_loop():
             # Audio device hiccup during recording — log and keep listening.
             _emit("info", message=f"Recording error (retrying): {e}")
             _state = VS.LISTENING
-            _emit("listening", message="Say 'Alexa' to activate")
+            _emit("listening", message=f"Say '{WAKE_PHRASE.title()}' to activate")
             time.sleep(0.5)
             continue
 
@@ -1213,7 +1227,7 @@ def _voice_loop():
         except Exception as e:
             _emit("info", message=f"Transcription error (retrying): {e}")
             _state = VS.LISTENING
-            _emit("listening", message="Say 'Alexa' to activate")
+            _emit("listening", message=f"Say '{WAKE_PHRASE.title()}' to activate")
             continue
         stt_ms = (time.time() - stt_t0) * 1000
 
@@ -1271,7 +1285,7 @@ def _voice_loop():
                 _save_history(history)
                 _post_response_cooldown(oww)
                 _state = VS.LISTENING
-                _emit("listening", message="Say 'Alexa' to activate")
+                _emit("listening", message=f"Say '{WAKE_PHRASE.title()}' to activate")
                 continue
 
             # ── Conversational query: KB grounding + streaming Claude → TTS ───
@@ -1285,7 +1299,7 @@ def _voice_loop():
         except Exception as e:
             print(f"[voice] Request handling error (retrying): {e}")
             _state = VS.LISTENING
-            _emit("listening", message="Say 'Alexa' to activate")
+            _emit("listening", message=f"Say '{WAKE_PHRASE.title()}' to activate")
             continue
 
         # Streaming: Claude text streams → sentence TTS plays progressively
@@ -1307,7 +1321,7 @@ def _voice_loop():
         _post_response_cooldown(oww)
 
         _state = VS.LISTENING
-        _emit("listening", message="Say 'Alexa' to activate")
+        _emit("listening", message=f"Say '{WAKE_PHRASE.title()}' to activate")
 
     _state = VS.STOPPED
     _emit("level", level=0.0)
