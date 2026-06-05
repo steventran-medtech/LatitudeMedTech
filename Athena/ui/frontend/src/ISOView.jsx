@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 
 const API = "http://localhost:8000";
 
-// Full ISO 13485:2016 clause list — matches iso_coach_agent.py CLAUSES dict
-const CLAUSES = [
+// Full ISO 13485:2016 clause list
+const CLAUSES_13485 = [
   ["4.1","General QMS Requirements"],["4.2","Documentation Requirements"],
   ["4.2.3","Medical Device File"],["4.2.4","Document Control"],["4.2.5","Records Control"],
   ["5.1","Management Commitment"],["5.2","Customer Focus"],["5.3","Quality Policy"],
@@ -18,6 +18,29 @@ const CLAUSES = [
   ["8.3","Control of Nonconforming Product"],["8.4","Analysis of Data"],
   ["8.5","Improvement — CAPA"],["8.5.2","Corrective Action"],["8.5.3","Preventive Action"],
 ];
+
+// ISO 14971:2019 Risk Management clause list
+const CLAUSES_14971 = [
+  ["14971.4",   "General Requirements for a Risk Management System"],
+  ["14971.5",   "Risk Analysis"],
+  ["14971.5.2", "Intended Use and Reasonably Foreseeable Misuse"],
+  ["14971.5.3", "Hazard Identification"],
+  ["14971.5.4", "Estimation of Risk"],
+  ["14971.6",   "Risk Evaluation"],
+  ["14971.7",   "Risk Control"],
+  ["14971.7.1", "Risk Control Option Analysis"],
+  ["14971.7.2", "Implementation of Risk Control Measures"],
+  ["14971.7.3", "Residual Risk Evaluation After Risk Control"],
+  ["14971.7.4", "Benefit-Risk Analysis"],
+  ["14971.7.5", "Risks Arising from Risk Control Measures"],
+  ["14971.7.6", "Completeness of Risk Control"],
+  ["14971.8",   "Evaluation of Overall Residual Risk"],
+  ["14971.9",   "Risk Management Review"],
+  ["14971.10",  "Production and Post-Production Activities"],
+];
+
+// Combined for datalist autocomplete
+const CLAUSES = [...CLAUSES_13485, ...CLAUSES_14971];
 
 const C = {
   navy:   "#0A2540", ocean:  "#1A6FA3", gold:   "#C4922A",
@@ -270,9 +293,12 @@ export default function ISOView({ runningAgents }) {
 
   return (
     <div>
-      <h2 style={{ fontSize: "1.15rem", fontWeight: 700, color: C.ink, margin: "0 0 20px" }}>
-        ISO 13485 Coach
+      <h2 style={{ fontSize: "1.15rem", fontWeight: 700, color: C.ink, margin: "0 0 4px" }}>
+        ISO Case Studies
       </h2>
+      <div style={{ fontFamily: "Inter,sans-serif", fontSize: 11, color: C.fog, marginBottom: 20 }}>
+        ISO 13485:2016 Quality Management · ISO 14971:2019 Risk Management
+      </div>
 
       {/* Generate — with full clause dropdown */}
       <div style={{ background: C.pearl, border: `1px solid ${C.mist}`, borderRadius: 8,
@@ -297,28 +323,42 @@ export default function ISOView({ runningAgents }) {
             style={{ padding: "8px 18px", background: running ? C.fog : C.navy, flexShrink: 0,
               color: "#fff", border: "none", borderRadius: 6, fontWeight: 700,
               fontSize: 12, cursor: running ? "not-allowed" : "pointer", whiteSpace: "nowrap" }}>
-            {running ? "Running…" : clause.trim() ? `Generate §${clause}` : "Generate Next"}
+            {running ? "Running…" : clause.trim()
+              ? `Generate §${clause.startsWith("14971.") ? clause.replace("14971.","") : clause}`
+              : "Generate Next"}
           </button>
         </div>
-        {/* Quick-pick grid of all clause numbers */}
-        <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 5 }}>
-          {CLAUSES.map(([num]) => {
-            const done = lessons.some(l => l.clause === num);
-            return (
-              <button key={num} onClick={() => setClause(num)}
-                title={CLAUSES.find(([n]) => n === num)?.[1]}
-                style={{
-                  padding: "3px 8px", borderRadius: 4, cursor: "pointer",
-                  fontFamily: "Inter,sans-serif", fontSize: 10, fontWeight: 600,
-                  background: clause === num ? C.navy : done ? "#EEF6F5" : C.sand,
-                  color: clause === num ? "#fff" : done ? C.teal : C.fog,
-                  border: `1px solid ${clause === num ? C.navy : done ? C.teal + "44" : C.mist}`,
-                }}>
-                §{num}{done ? " ✓" : ""}
-              </button>
-            );
-          })}
-        </div>
+        {/* Quick-pick grid — ISO 13485 and ISO 14971 sections */}
+        {[
+          { label: "ISO 13485:2016 — QMS", clauses: CLAUSES_13485 },
+          { label: "ISO 14971:2019 — Risk", clauses: CLAUSES_14971 },
+        ].map(({ label, clauses }) => (
+          <div key={label} style={{ marginTop: 10 }}>
+            <div style={{
+              fontFamily: "Inter,sans-serif", fontSize: 8, fontWeight: 700,
+              letterSpacing: "0.14em", textTransform: "uppercase",
+              color: C.fog, marginBottom: 5,
+            }}>{label}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+              {clauses.map(([num, title]) => {
+                const done = lessons.some(l => l.clause === num);
+                const isActive = clause === num;
+                return (
+                  <button key={num} onClick={() => setClause(num)} title={title}
+                    style={{
+                      padding: "3px 8px", borderRadius: 4, cursor: "pointer",
+                      fontFamily: "Inter,sans-serif", fontSize: 10, fontWeight: 600,
+                      background: isActive ? C.navy : done ? "#EEF6F5" : C.sand,
+                      color: isActive ? "#fff" : done ? C.teal : C.fog,
+                      border: `1px solid ${isActive ? C.navy : done ? C.teal + "44" : C.mist}`,
+                    }}>
+                    §{num.startsWith("14971.") ? num.replace("14971.", "") : num}{done ? " ✓" : ""}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
         {status && <div style={{ marginTop: 8, fontFamily: "Inter,sans-serif", fontSize: 11, color: C.teal }}>{status}</div>}
       </div>
 
@@ -337,20 +377,24 @@ export default function ISOView({ runningAgents }) {
             </div>
           )}
 
-          {lessons.map(l => (
-            <LessonItem
-              key={l.filename}
-              clause={l.clause}
-              title={l.title}
-              date={l.modified?.slice(0, 10)}
-              active={selected === l.filename}
-              checked={ms.has(l.filename)}
-              onCheck={() => ms.toggle(l.filename)}
-              onSelect={() => selectLesson(l.filename)}
-              onEdit={() => { setSelected(l.filename); setEditing(true); }}
-              onDelete={() => deleteOne(l.filename)}
-            />
-          ))}
+          {lessons.map(l => {
+            const std = l.standard || (l.clause?.startsWith("14971.") ? "ISO 14971" : "ISO 13485");
+            const dispClause = l.clause?.startsWith("14971.") ? l.clause.replace("14971.", "") : l.clause;
+            return (
+              <LessonItem
+                key={l.filename}
+                clause={dispClause}
+                title={l.standard ? `[${std.replace("ISO ","")}] ${l.title}` : l.title}
+                date={l.modified?.slice(0, 10)}
+                active={selected === l.filename}
+                checked={ms.has(l.filename)}
+                onCheck={() => ms.toggle(l.filename)}
+                onSelect={() => selectLesson(l.filename)}
+                onEdit={() => { setSelected(l.filename); setEditing(true); }}
+                onDelete={() => deleteOne(l.filename)}
+              />
+            );
+          })}
         </div>
 
         {/* Content / Editor */}

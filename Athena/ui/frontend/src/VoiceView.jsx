@@ -24,7 +24,7 @@ const FOG    = "#7B90A0";
 const ORB = {
   idle:      { ring1: "#1C3352", ring2: "#1C3352", glow: "transparent", spin: false, label: "Idle",       sub: "Start Athena to begin" },
   loading:   { ring1: GOLD,      ring2: "#2A4A6A",  glow: `${GOLD}22`,   spin: true,  label: "Loading",   sub: "Initialising models…" },
-  listening: { ring1: OCEAN,     ring2: "#1C3352",  glow: `${OCEAN}33`,  spin: false, label: "Listening", sub: "Say 'Alexa' to activate" },
+  listening: { ring1: OCEAN,     ring2: "#1C3352",  glow: `${OCEAN}33`,  spin: false, label: "Listening", sub: "Say 'Hi Athena' to activate" },
   awake:     { ring1: GOLD,      ring2: OCEAN,      glow: `${GOLD}44`,   spin: false, label: "Recording", sub: "Speak your query…" },
   thinking:  { ring1: PURPLE,    ring2: OCEAN,      glow: `${PURPLE}44`, spin: true,  label: "Thinking",  sub: "Athena is processing…" },
   speaking:  { ring1: TEAL,      ring2: OCEAN,      glow: `${TEAL}44`,   spin: false, label: "Speaking",  sub: "Athena is responding" },

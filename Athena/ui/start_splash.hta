@@ -169,19 +169,39 @@ MAX_WAIT = 60
 waited   = 0
 
 Sub Window_OnLoad
+  ' On Error Resume Next: a resize/image failure must never stop the timers and
+  ' drag handlers from registering — those are what close the splash correctly.
+  On Error Resume Next
+
+  ' ── Critical section: these MUST register regardless of what follows ──────
+  Set bar      = document.getElementById("bar")
+  Set statusEl = document.getElementById("status")
+  Set dotsEl   = document.getElementById("dots")
+  stepVal = 0
+  timer_id = window.setInterval("Tick",       400)
+  poll_id  = window.setInterval("PollBackend", 800)
+
+  ' Click-drag to move the borderless window.
+  dragging = False
+  Set document.onmousedown = GetRef("Drag_Begin")
+  Set document.onmousemove = GetRef("Drag_Move")
+  Set document.onmouseup   = GetRef("Drag_End")
+  Set document.ondragstart   = GetRef("CancelEvent")
+  Set document.onselectstart = GetRef("CancelEvent")
+
+  ' ── Window sizing — best effort ───────────────────────────────────────────
   Dim aw, ah, al, at, pw, ph
-  ' availWidth/Height = desktop work area (full screen minus the taskbar)
   aw = Screen.availWidth : ah = Screen.availHeight
   al = 0 : at = 0
-  ' Centered panel at 70% of the work area
   pw = Int(aw * 0.7) : ph = Int(ah * 0.7)
+  If pw < 640  Then pw = 640
+  If ph < 360  Then ph = 360
+  Err.Clear
   window.resizeTo pw, ph
   window.moveTo al + (aw - pw) \ 2, at + (ah - ph) \ 2
 
-  ' Cover-fill: scale source (1400x350) so it covers the panel,
-  ' then position using the same 28% horizontal bias as the original CSS.
-  ' This replicates background-size:cover + background-position:28% center
-  ' without needing IE=edge (which breaks CAPTION=no and window.close).
+  ' ── Background image cover-fill (source 1400×350) — best effort ──────────
+  Err.Clear
   Dim img, sW, sH, scaleW, scaleH, scale, newW, newH
   sW = 1400.0 : sH = 350.0
   scaleW = pw / sW : scaleH = ph / sH
@@ -193,24 +213,6 @@ Sub Window_OnLoad
   img.style.left   = Int((pw - newW) * 0.28) & "px"
   img.style.top    = Int((ph - newH) / 2) & "px"
   img.style.display = "block"
-
-  Set bar      = document.getElementById("bar")
-  Set statusEl = document.getElementById("status")
-  Set dotsEl   = document.getElementById("dots")
-  stepVal = 0
-
-  timer_id = window.setInterval("Tick",       400)
-  poll_id  = window.setInterval("PollBackend", 800)
-
-  ' Cancel drag/select on the img to suppress IE security dialogs
-  Set document.ondragstart   = GetRef("CancelEvent")
-  Set document.onselectstart = GetRef("CancelEvent")
-
-  ' Click-drag anywhere to move the borderless window.
-  dragging = False
-  Set document.onmousedown = GetRef("Drag_Begin")
-  Set document.onmousemove = GetRef("Drag_Move")
-  Set document.onmouseup   = GetRef("Drag_End")
 End Sub
 
 Sub CancelEvent
