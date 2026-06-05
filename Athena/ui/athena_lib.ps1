@@ -13,7 +13,34 @@ $FRONT_LOG= "$LOG_DIR\frontend.log"
 $CHROME_PROFILE  = "$ATHENA\ui\.chrome-profile"
 $CHROME_PID_FILE = "$ATHENA\ui\.athena_chrome.pid"
 
+# Overall-session bookkeeping (the whole Athena run, not just a voice exchange).
+# start_athena.ps1 stamps $SESSION_STATE at launch; stop_athena.ps1 reads it,
+# computes the wall-clock duration, and appends one record to $SESSION_LOG for QA/debug.
+$SESSION_STATE = "$ATHENA\ui\.athena_session.json"
+$SESSION_LOG   = "$LOG_DIR\athena_sessions.jsonl"
+
 if (-not (Test-Path $LOG_DIR)) { New-Item -ItemType Directory -Path $LOG_DIR -Force | Out-Null }
+
+# Mark the isolated Chrome profile as having exited cleanly. We force-kill Chrome on
+# stop (taskkill /T /F), which leaves exit_type="Crashed" in the profile Preferences
+# and triggers the "Restore pages? Chrome didn't shut down correctly" bubble on the
+# next launch. Rewriting these two keys to a clean state suppresses that prompt without
+# touching the user's main Chrome (this only edits the isolated .chrome-profile).
+function Set-ChromeProfileClean {
+    $prefs = Join-Path $CHROME_PROFILE "Default\Preferences"
+    if (-not (Test-Path $prefs)) { return }
+    try {
+        $json = Get-Content $prefs -Raw -Encoding utf8 | ConvertFrom-Json
+        if (-not $json.profile) {
+            $json | Add-Member -NotePropertyName profile -NotePropertyValue ([pscustomobject]@{}) -Force
+        }
+        $json.profile | Add-Member -NotePropertyName exit_type      -NotePropertyValue "Normal" -Force
+        $json.profile | Add-Member -NotePropertyName exited_cleanly  -NotePropertyValue $true    -Force
+        ($json | ConvertTo-Json -Depth 100 -Compress) | Out-File $prefs -Encoding utf8 -NoNewline
+    } catch {
+        Write-Host "[athena] could not mark Chrome profile clean: $_"
+    }
+}
 
 # Return the PIDs (if any) listening on a TCP port.
 function Get-PortPids($port) {

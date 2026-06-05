@@ -62,6 +62,7 @@ Thumbs.db
 Athena/ui/.athena_ready
 Athena/ui/.athena_error
 Athena/ui/.athena_chrome.pid
+Athena/ui/.athena_session.json
 
 # Isolated Chrome profile — contains cookies/login data, never commit
 Athena/ui/.chrome-profile/

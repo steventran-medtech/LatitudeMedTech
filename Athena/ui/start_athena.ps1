@@ -14,6 +14,39 @@ $errFile  = "$ATHENA\ui\.athena_error"
 # Remove stale flag/error from any previous run
 foreach ($f in @($flagFile, $errFile)) { if (Test-Path $f) { Remove-Item $f -Force } }
 
+# ── Recover an orphaned session ────────────────────────────────────────────
+# A leftover stamp means the previous run never reached stop_athena.ps1 (backend
+# crash, hard taskkill, power loss). Flush it to the log as crash-terminated before
+# starting fresh, using the stamp's last-write time as the best end estimate.
+if (Test-Path $SESSION_STATE) {
+    try {
+        $prev = Get-Content $SESSION_STATE -Raw -Encoding utf8 | ConvertFrom-Json
+        $lastAlive = (Get-Item $SESSION_STATE).LastWriteTime
+        $rec = [ordered]@{ ended_at = $lastAlive.ToString("o"); end_reason = "crash_or_no_clean_stop" }
+        foreach ($p in $prev.PSObject.Properties) { $rec[$p.Name] = $p.Value }
+        if ($prev.started_at) {
+            $rec["duration_secs"] = [math]::Round(($lastAlive - [datetime]$prev.started_at).TotalSeconds)
+        }
+        ($rec | ConvertTo-Json -Compress) | Out-File $SESSION_LOG -Append -Encoding utf8
+    } catch { }
+    Remove-Item $SESSION_STATE -Force -ErrorAction SilentlyContinue
+}
+
+# ── Stamp the start of this overall Athena session (for QA/debug duration log) ──
+$sessionStart = Get-Date
+$session = [ordered]@{
+    started_at    = $sessionStart.ToString("o")
+    host          = $env:COMPUTERNAME
+    user          = $env:USERNAME
+    backend_up    = $false
+    frontend_up   = $false
+    models_ready  = $false
+    model_load_s  = $null
+    chrome_pid    = $null
+    launch_ok     = $false
+}
+$session | ConvertTo-Json -Compress | Out-File $SESSION_STATE -Encoding utf8
+
 # Free the ports we need. Targeted (by listening PID) instead of a blanket
 # python/node kill, and confirmed free before we try to bind — this is what
 # prevents a stale backend from squatting on 8000 while the new one silently
@@ -65,6 +98,10 @@ while ($modelElapsed -lt $modelTimeout) {
     Start-Sleep -Milliseconds 500
     $modelElapsed += 0.5
 }
+$session.backend_up   = $true
+$session.frontend_up  = $frontendUp
+$session.models_ready = ($modelElapsed -lt $modelTimeout)
+$session.model_load_s = [math]::Round($modelElapsed, 1)
 
 # ── Open Chrome ────────────────────────────────────────────────────────────
 $chrome = @(
@@ -83,6 +120,10 @@ if ($chrome) {
         "--user-data-dir=$CHROME_PROFILE",
         "--no-first-run",
         "--no-default-browser-check",
+        # We force-kill this instance on exit, which Chrome reads as a crash on the next
+        # launch. This flag suppresses the "Restore pages?" bubble; stop_athena.ps1 also
+        # rewrites the profile's exit_type to clean as a second line of defence.
+        "--hide-crash-restore-bubble",
         "http://localhost:3000"
     )
     Start-Process $chrome -ArgumentList $chromeArgs
@@ -100,7 +141,9 @@ while ($elapsed -lt $maxWait) {
     $mine = Get-CimInstance Win32_Process -Filter "Name='chrome.exe'" -ErrorAction SilentlyContinue |
         Where-Object { $_.CommandLine -and $_.CommandLine -like "*$CHROME_PROFILE*" -and $_.CommandLine -notlike "*--type=*" }
     if ($mine) {
-        ($mine | Select-Object -First 1).ProcessId | Out-File $CHROME_PID_FILE -Encoding ascii
+        $chromePid = ($mine | Select-Object -First 1).ProcessId
+        $chromePid | Out-File $CHROME_PID_FILE -Encoding ascii
+        $session.chrome_pid = $chromePid
         break
     }
     Start-Sleep -Milliseconds 400
@@ -110,6 +153,13 @@ while ($elapsed -lt $maxWait) {
 # Give Chrome's window one more second to render its first frame,
 # then signal the splash — no more, no less.
 Start-Sleep -Seconds 1
+
+# Finalize the session state: launch reached the ready point. stop_athena.ps1
+# reads this to compute the overall session duration and emit the QA/debug record.
+$session.launch_ok      = $true
+$session.ready_at       = (Get-Date).ToString("o")
+$session.startup_secs   = [math]::Round(((Get-Date) - $sessionStart).TotalSeconds, 1)
+$session | ConvertTo-Json -Compress | Out-File $SESSION_STATE -Encoding utf8
 
 # Write flag: HTA sees this and closes within 500ms
 New-Item -Path $flagFile -ItemType File -Force | Out-Null
