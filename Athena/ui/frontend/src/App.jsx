@@ -1410,10 +1410,13 @@ function WorkQueuePanel({ taskQueue, onNavigate }) {
       </div>
       {visible.map(t => {
         const dot = DOT[t.status] ?? DOT.done;
-        const clickable = t.status !== "running" && AGENT_TAB[t.agentId];
+        // Items pending human review route to the Review queue; everything else
+        // goes to the agent's own output tab.
+        const target = t.status === "awaiting_review" ? "review" : AGENT_TAB[t.agentId];
+        const clickable = t.status !== "running" && target;
         return (
           <div key={t.id}
-            onClick={() => clickable && onNavigate(AGENT_TAB[t.agentId])}
+            onClick={() => clickable && onNavigate(target)}
             style={{
               display:"flex", alignItems:"flex-start", gap:8, marginBottom:8,
               cursor: clickable ? "pointer" : "default",
@@ -1554,8 +1557,9 @@ export default function App(){
           if(msg.type==="agent_done"){
             const label=AGENT_DISPLAY[msg.agent]||msg.agent;
             const finalStatus=msg.status==="awaiting_review"?"awaiting_review":msg.status==="success"?"done":"failed";
-            const ok=msg.status==="success";
-            addToast(`${label} ${ok?"ready for review":"failed"}`,ok?"success":"error");
+            const ok=msg.status==="success"||msg.status==="awaiting_review";
+            const toastMsg=msg.status==="awaiting_review"?`${label} awaiting your review`:ok?`${label} ready for review`:`${label} failed`;
+            addToast(toastMsg,ok?"success":"error");
             setRunningAgents(prev=>{const s=new Set(prev);s.delete(msg.agent);return s;});
             const doneAt=Date.now();
             setTaskQueue(prev=>prev.map(t=>
