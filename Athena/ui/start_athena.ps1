@@ -14,6 +14,21 @@ $errFile  = "$ATHENA\ui\.athena_error"
 # Remove stale flag/error from any previous run
 foreach ($f in @($flagFile, $errFile)) { if (Test-Path $f) { Remove-Item $f -Force } }
 
+# ── Duplicate-instance guard ────────────────────────────────────────────────
+# If Athena is already up, don't silently kill its backend and spawn a second
+# window. Warn the user and let them decide. The splash (started by the .vbs
+# before us) is released via the ready flag on every exit path so it never hangs.
+if (Test-AthenaRunning) {
+    $choice = Show-DuplicateWarning
+    if ($choice -ne 'Yes') {
+        Show-ExistingAthena
+        New-Item -Path $flagFile -ItemType File -Force | Out-Null   # release the splash
+        exit 0
+    }
+    # User chose to restart: stop the existing instance cleanly first.
+    & "$ATHENA\ui\stop_athena.ps1"
+}
+
 # ── Recover an orphaned session ────────────────────────────────────────────
 # A leftover stamp means the previous run never reached stop_athena.ps1 (backend
 # crash, hard taskkill, power loss). Flush it to the log as crash-terminated before
