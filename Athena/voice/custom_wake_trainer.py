@@ -1,34 +1,24 @@
-﻿"""
+"""
 Athena Custom Wake Word Trainer
 ================================
 Trains a binary OpenWakeWord classifier for "Hi Athena" and exports it as
-an ONNX model to voice/wake/hi_athena.onnx â€” the slot already wired in
-voice_bridge.py's _load_wake_model().
+a pickle model to voice/wake/hi_athena.pkl -- the slot wired in
+voice_bridge.py's _load_wake_model() via _SklearnWakeDetector.
 
 Pipeline:
-  1. GENERATE   â€” synthesise positive examples via Kokoro TTS (varied speed/pitch)
-  2. AUGMENT    â€” add room reverb, mic noise, and time-stretch variations
-  3. NEGATIVE   â€” pull background clips from voice/query_telemetry.jsonl silence windows
-  4. FEATURES   â€” extract mel-spectrogram embeddings (Google speech_embedding model)
-  5. TRAIN      â€” fit a lightweight binary MLP classifier
-  6. EXPORT     â€” save ONNX model + quantised int8 copy
-  7. VALIDATE   â€” smoke-test against a held-out 20% split; require >90% accuracy
-  8. DEPLOY     â€” copy to voice/wake/hi_athena.onnx; bridge picks it up on next start
+  1. GENERATE  -- synthesise positive examples via Kokoro TTS (varied speed/pitch)
+  2. AUGMENT   -- add noise and time-stretch variations
+  3. NEGATIVE  -- collect background/silence clips
+  4. FEATURES  -- extract OWW embeddings via AudioFeatures.embed_clips (N,16000) int16
+  5. TRAIN     -- fit a lightweight binary sklearn MLP classifier
+  6. EXPORT    -- pickle.dump to voice/wake_synth/hi_athena_candidate.pkl
+  7. VALIDATE  -- require >= 90% accuracy on held-out 20% split
+  8. DEPLOY    -- copy to voice/wake/hi_athena.pkl; bridge picks it up on next start
 
 Usage:
   python custom_wake_trainer.py                 # full pipeline
   python custom_wake_trainer.py --generate-only # only synthesise audio
-  python custom_wake_trainer.py --validate-only # only run accuracy check on existing model
-
-Dependencies (voice venv):
-  openwakeword, openai-whisper (or torchaudio), scipy, numpy, soundfile
-  torch (CPU is fine; GPU speeds up mel extraction only)
-
-Note on data volume:
-  OpenWakeWord recommends 500-2000 positive examples after augmentation.
-  This script generates 60 base TTS clips Ã— 6 augmentation variants = 360 samples.
-  Collecting 20+ real "Hi Athena" recordings and adding them improves accuracy further.
-  Place real WAV recordings (16 kHz mono) in voice/samples/wake/ to auto-include them.
+  python custom_wake_trainer.py --validate-only # only report on existing model
 """
 
 from __future__ import annotations
@@ -38,7 +28,6 @@ import json
 import math
 import os
 import random
-import subprocess
 import sys
 import tempfile
 import time
@@ -47,7 +36,7 @@ from pathlib import Path
 
 import numpy as np
 
-# â”€â”€ Path bootstrap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# -- Path bootstrap ----------------------------------------------------------
 
 VOICE_DIR  = Path(__file__).resolve().parent
 ATHENA     = VOICE_DIR.parent
@@ -59,9 +48,9 @@ MODEL_PKL  = WAKE_DIR / "hi_athena.pkl"
 MODEL_OUT  = MODEL_PKL
 LOG_FILE   = ATHENA / "logs" / "wake_word_trainer.log"
 
-KOKORO_PORT   = 8002
-TARGET_RATE   = 16000
-PHRASE        = "Hi Athena"
+KOKORO_PORT  = 8002
+TARGET_RATE  = 16000
+PHRASE       = "Hi Athena"
 
 
 def _log(msg: str):
@@ -76,12 +65,12 @@ def _log(msg: str):
         pass
 
 
-# â”€â”€ Dependency gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# -- Dependency gate ---------------------------------------------------------
 
 def _check_deps() -> bool:
     """Return True if all required packages are importable."""
     missing = []
-    for pkg in ("openwakeword", "torch", "scipy", "soundfile"):
+    for pkg in ("openwakeword", "scipy", "soundfile", "sklearn"):
         try:
             __import__(pkg)
         except ImportError:
@@ -92,9 +81,9 @@ def _check_deps() -> bool:
     return True
 
 
-# â”€â”€ Phase 1: TTS synthesis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# -- Phase 1: TTS synthesis --------------------------------------------------
 
-# Phrase variations â€” phonetically equivalent but different prosody
+# Phrase variations -- phonetically equivalent but different prosody
 _PHRASES = [
     "Hi Athena",
     "Hey Athena",
@@ -154,10 +143,7 @@ def _pyttsx3_synth(text: str, out_path: Path) -> bool:
 
 
 def generate_positives() -> list:
-    """
-    Synthesise base positive examples using TTS.
-    Returns list of WAV paths.
-    """
+    """Synthesise base positive examples using TTS. Returns list of WAV paths."""
     _log("Phase 1: Generating positive TTS examples...")
     SYNTH_DIR.mkdir(parents=True, exist_ok=True)
     paths = []
@@ -165,9 +151,9 @@ def generate_positives() -> list:
     try:
         urllib.request.urlopen(f"http://127.0.0.1:{KOKORO_PORT}/health", timeout=2)
         kokoro_up = True
-        _log("  Kokoro server reachable â€” using high-quality TTS")
+        _log("  Kokoro server reachable -- using high-quality TTS")
     except Exception:
-        _log("  Kokoro not running â€” using pyttsx3 fallback")
+        _log("  Kokoro not running -- using pyttsx3 fallback")
 
     idx = 0
     for phrase in _PHRASES:
@@ -192,7 +178,7 @@ def generate_positives() -> list:
     return paths
 
 
-# â”€â”€ Phase 2: Augmentation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# -- Phase 2: Augmentation ---------------------------------------------------
 
 def _add_noise(audio: np.ndarray, snr_db: float) -> np.ndarray:
     """Add Gaussian white noise at given SNR."""
@@ -213,10 +199,7 @@ def _time_stretch(audio: np.ndarray, rate: float) -> np.ndarray:
 
 
 def augment_positives(base_paths: list) -> list:
-    """
-    Create augmented variants of each base positive.
-    Returns all paths (base + augmented).
-    """
+    """Create augmented variants of each base positive. Returns all paths (base + augmented)."""
     import soundfile as sf
 
     _log("Phase 2: Augmenting positives...")
@@ -263,13 +246,11 @@ def augment_positives(base_paths: list) -> list:
     return all_paths
 
 
-# â”€â”€ Phase 3: Negative examples â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# -- Phase 3: Negative examples ----------------------------------------------
 
 def collect_negatives() -> list:
     """
-    Collect negative examples:
-      - Silence segments from captured query audio (voice/samples/*.wav)
-      - Synthetic random speech noise
+    Collect negative examples from ambient audio and synthetic noise.
     Returns list of WAV paths.
     """
     import soundfile as sf
@@ -286,7 +267,7 @@ def collect_negatives() -> list:
                 audio = audio.astype(np.float32)
                 if audio.ndim > 1:
                     audio = audio.mean(axis=1)
-                # Take a random 1-second window that is unlikely to contain "Hi Athena"
+                # Take a random 1-second window unlikely to contain "Hi Athena"
                 if len(audio) > sr:
                     start = random.randint(0, len(audio) - sr)
                     seg = audio[start:start + sr]
@@ -298,9 +279,9 @@ def collect_negatives() -> list:
 
     # Pad with synthetic Gaussian noise clips to reach at least 200 negatives
     while len(paths) < 200:
-        dur    = random.uniform(0.8, 1.5)
-        noise  = (np.random.normal(0, 0.02, int(TARGET_RATE * dur))).astype(np.float32)
-        out    = neg_dir / f"neg_synth_{len(paths):04d}.wav"
+        dur   = random.uniform(0.8, 1.5)
+        noise = (np.random.normal(0, 0.02, int(TARGET_RATE * dur))).astype(np.float32)
+        out   = neg_dir / f"neg_synth_{len(paths):04d}.wav"
         sf.write(str(out), noise, TARGET_RATE)
         paths.append(out)
 
@@ -308,19 +289,21 @@ def collect_negatives() -> list:
     return paths
 
 
-# â”€â”€ Phase 4 & 5: Feature extraction + training â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# -- Phase 4 & 5: Feature extraction + training ------------------------------
 
 def extract_embeddings(wav_paths: list, label: int) -> tuple:
     """
-    Extract Google speech_embedding (96-dim) from each WAV.
-    Falls back to simple MFCC if the OWW embedding model is unavailable.
+    Extract OWW speech embeddings (96-dim x 3 frames = 288-dim) from each WAV via
+    AudioFeatures.embed_clips on a (N, 16000) int16 batch.
+    Falls back to MFCC if OWW embedding model is unavailable.
     Returns (X: np.ndarray [N, features], y: np.ndarray [N]).
     """
     try:
         from openwakeword.utils import AudioFeatures
-        af       = AudioFeatures()
-        CLIP_LEN = TARGET_RATE   # 1 second of audio per sample
         import soundfile as sf
+
+        af       = AudioFeatures()
+        CLIP_LEN = TARGET_RATE   # 1 second per sample
 
         clips = []
         for p in wav_paths:
@@ -334,7 +317,7 @@ def extract_embeddings(wav_paths: list, label: int) -> tuple:
                     from math import gcd as _gcd
                     g = _gcd(TARGET_RATE, sr)
                     audio = resample_poly(audio, TARGET_RATE // g, sr // g).astype(np.float32)
-                # Pad or trim to exactly 1s, convert to int16
+                # Pad or trim to exactly 1 s, convert to int16
                 i16 = (audio * 32768).clip(-32768, 32767).astype(np.int16)
                 if len(i16) < CLIP_LEN:
                     i16 = np.pad(i16, (0, CLIP_LEN - len(i16)))
@@ -345,13 +328,13 @@ def extract_embeddings(wav_paths: list, label: int) -> tuple:
                 pass
 
         if not clips:
-            _log("  No valid clips — falling back to MFCC")
+            _log("  No valid clips -- falling back to MFCC")
             return _mfcc_embeddings(wav_paths, label)
 
         # Batch embed: (N, 16000) int16 -> (N, 3, 96) float32
         batch      = np.stack(clips, axis=0)
-        embeddings = np.array(af.embed_clips(batch))    # (N, 3, 96)
-        X          = embeddings.reshape(len(clips), -1) # (N, 288)
+        embeddings = np.array(af.embed_clips(batch))     # (N, 3, 96)
+        X          = embeddings.reshape(len(clips), -1)  # (N, 288)
         y          = np.full(len(clips), label, dtype=np.float32)
         return X.astype(np.float32), y
 
@@ -363,14 +346,11 @@ def extract_embeddings(wav_paths: list, label: int) -> tuple:
 def _mfcc_embeddings(wav_paths: list, label: int) -> tuple:
     """MFCC feature extraction fallback (no OWW dependency)."""
     import soundfile as sf
-    from scipy.fft import dct
 
     def _mfcc(audio: np.ndarray, sr: int, n_mfcc: int = 40) -> np.ndarray:
-        # Framing
         frame_len = int(0.025 * sr)
         hop       = int(0.010 * sr)
         n_fft     = 512
-        n_mels    = 40
         frames = []
         for start in range(0, len(audio) - frame_len, hop):
             frame = audio[start:start + frame_len]
@@ -380,10 +360,9 @@ def _mfcc_embeddings(wav_paths: list, label: int) -> tuple:
         if not frames:
             return np.zeros(n_mfcc * 3)
         specs = np.array(frames)
-        # Simple mean/std/delta summary
-        m  = specs.mean(axis=0)[:n_mfcc]
-        s  = specs.std(axis=0)[:n_mfcc]
-        d  = np.diff(specs, axis=0).mean(axis=0)[:n_mfcc] if len(specs) > 1 else np.zeros(n_mfcc)
+        m = specs.mean(axis=0)[:n_mfcc]
+        s = specs.std(axis=0)[:n_mfcc]
+        d = np.diff(specs, axis=0).mean(axis=0)[:n_mfcc] if len(specs) > 1 else np.zeros(n_mfcc)
         return np.concatenate([m, s, d]).astype(np.float32)
 
     X, y = [], []
@@ -401,10 +380,10 @@ def _mfcc_embeddings(wav_paths: list, label: int) -> tuple:
     return np.array(X, dtype=np.float32), np.array(y, dtype=np.float32)
 
 
-def train_classifier(pos_paths: list, neg_paths: list) -> object:
+def train_classifier(pos_paths: list, neg_paths: list) -> tuple:
     """
-    Fit a lightweight binary MLP on the embeddings.
-    Returns the trained sklearn MLPClassifier.
+    Fit a lightweight binary sklearn MLP on OWW embeddings.
+    Returns (trained Pipeline, validation_accuracy).
     """
     _log("Phase 5: Extracting features and training classifier...")
     X_pos, y_pos = extract_embeddings(pos_paths, 1)
@@ -420,14 +399,14 @@ def train_classifier(pos_paths: list, neg_paths: list) -> object:
     idx = np.random.permutation(len(X))
     X, y = X[idx], y[idx]
 
-    # Train/val split (80/20)
+    # Train/val split 80/20
     split = int(0.8 * len(X))
     X_train, X_val = X[:split], X[split:]
     y_train, y_val = y[:split], y[split:]
 
     from sklearn.neural_network import MLPClassifier
-    from sklearn.preprocessing   import StandardScaler
-    from sklearn.pipeline        import Pipeline
+    from sklearn.preprocessing  import StandardScaler
+    from sklearn.pipeline       import Pipeline
 
     clf = Pipeline([
         ("scaler", StandardScaler()),
@@ -446,41 +425,28 @@ def train_classifier(pos_paths: list, neg_paths: list) -> object:
     return clf, acc
 
 
-# â”€â”€ Phase 6 & 7: ONNX export + validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# -- Phase 6: Export ---------------------------------------------------------
 
 def export_model(clf) -> Path:
-    """
-    Export the sklearn pipeline to ONNX via skl2onnx.
-    Falls back to joblib pickle if skl2onnx is not installed.
-    """
-    tmp_out = SYNTH_DIR / "hi_athena_candidate.onnx"
-    try:
-        from skl2onnx import convert_sklearn
-        from skl2onnx.common.data_types import FloatTensorType
-        initial_type = [("float_input", FloatTensorType([None, feature_dim]))]
-        onnx_model = convert_sklearn(clf, initial_types=initial_type)
-        tmp_out.write_bytes(onnx_model.SerializeToString())
-        _log(f"  ONNX model written: {tmp_out}")
-        return tmp_out
-    except ImportError:
-        import pickle
-        pkl_out = SYNTH_DIR / "hi_athena_candidate.pkl"
-        with open(pkl_out, "wb") as f:
-            pickle.dump(clf, f)
-        _log(f"  skl2onnx not available â€” model saved as pickle: {pkl_out}")
-        _log("  Install skl2onnx to produce a proper ONNX model for OWW")
-        return pkl_out
+    """Pickle the sklearn pipeline to wake_synth/hi_athena_candidate.pkl."""
+    import pickle
+    tmp_out = SYNTH_DIR / "hi_athena_candidate.pkl"
+    tmp_out.parent.mkdir(parents=True, exist_ok=True)
+    with open(tmp_out, "wb") as f:
+        pickle.dump(clf, f)
+    _log(f"  Model saved: {tmp_out}")
+    return tmp_out
 
 
-# â”€â”€ Phase 8: Deploy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# -- Phase 7: Deploy ---------------------------------------------------------
 
-def deploy(model_path: Path, accuracy: float, threshold: float = 0.90):
+def deploy(model_path: Path, accuracy: float, threshold: float = 0.90) -> bool:
     """
-    Copy the model to voice/wake/hi_athena.onnx if accuracy >= threshold.
-    The bridge picks it up on next restart (no code change needed).
+    Copy hi_athena_candidate.pkl to voice/wake/hi_athena.pkl if accuracy >= threshold.
+    The bridge's _SklearnWakeDetector picks it up on next restart.
     """
     if accuracy < threshold:
-        _log(f"  Accuracy {accuracy:.1%} below {threshold:.0%} threshold â€” NOT deploying")
+        _log(f"  Accuracy {accuracy:.1%} below {threshold:.0%} threshold -- NOT deploying")
         _log("  Collect more training data and re-run")
         return False
     WAKE_DIR.mkdir(parents=True, exist_ok=True)
@@ -491,15 +457,15 @@ def deploy(model_path: Path, accuracy: float, threshold: float = 0.90):
     return True
 
 
-# â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# -- Main --------------------------------------------------------------------
 
 def run(generate_only: bool = False, validate_only: bool = False):
     _log("=" * 60)
-    _log("Athena Custom Wake Word Trainer â€” 'Hi Athena'")
+    _log("Athena Custom Wake Word Trainer -- 'Hi Athena'")
     _log("=" * 60)
 
     if not _check_deps():
-        _log("Aborting â€” install missing packages first")
+        _log("Aborting -- install missing packages first")
         sys.exit(1)
 
     if validate_only:
@@ -513,7 +479,7 @@ def run(generate_only: bool = False, validate_only: bool = False):
     # Full pipeline
     pos_paths = generate_positives()
     if not pos_paths:
-        _log("No positive samples generated â€” is Kokoro running?")
+        _log("No positive samples generated -- is Kokoro running?")
         sys.exit(1)
 
     pos_paths = augment_positives(pos_paths)
@@ -522,11 +488,9 @@ def run(generate_only: bool = False, validate_only: bool = False):
         _log(f"Generate-only mode: {len(pos_paths)} samples in {SYNTH_DIR}")
         return
 
-    neg_paths = collect_negatives()
-    clf, acc  = train_classifier(pos_paths, neg_paths)
-
-    feat_dim = clf.named_steps["mlp"].n_features_in_ if hasattr(clf, "named_steps") else 120
-    model_path = export_onnx(clf, feat_dim)
+    neg_paths  = collect_negatives()
+    clf, acc   = train_classifier(pos_paths, neg_paths)
+    model_path = export_model(clf)
     deploy(model_path, acc)
 
     _log("Wake word training complete.")
@@ -538,4 +502,3 @@ if __name__ == "__main__":
     parser.add_argument("--validate-only", action="store_true")
     args = parser.parse_args()
     run(generate_only=args.generate_only, validate_only=args.validate_only)
-
