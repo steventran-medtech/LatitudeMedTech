@@ -1,0 +1,15 @@
+{
+  "agent": "ma_intelligence",
+  "doc_name": "J&J, Medtronic back CereVasc’s $85M funding round",
+  "category": "ma_deal_news",
+  "source": "MedTech Dive",
+  "url": "https://www.medtechdive.com/news/jj-medtronic-back-cerevascs-85m-funding-round/822094/",
+  "ingested": "2026-06-05T14:46:38.682561",
+  "chunks": [
+    {
+      "text": "CereVasc is developing a minimally invasive treatment for the buildup of fluid in the brain.",
+      "doc_name": "J&J, Medtronic back CereVasc’s $85M funding round",
+      "category": "ma_deal_news"
+    }
+  ]
+}

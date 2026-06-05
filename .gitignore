@@ -70,6 +70,18 @@ Athena/ui/.chrome-profile/
 # Voice runtime state (regenerable session logs / history)
 Athena/voice/.athena_history.json
 Athena/voice/sessions.jsonl
+Athena/voice/.noise_profile.json
+Athena/voice/query_telemetry.jsonl
+
+# Session state (written at launch/exit, not source-controlled)
+Athena/ui/.athena_session.json
+
+# Generated deliverables output — not source
+Athena/documents/
 
 # Vendored third-party TTS clone (has its own .git — not a submodule)
 Athena/voice/miso/
+
+# Voice training artifacts (captured audio samples, candidate model files)
+Athena/voice/samples/
+Athena/voice/wake_synth/*.pkl
