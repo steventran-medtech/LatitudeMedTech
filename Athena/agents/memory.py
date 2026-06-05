@@ -265,8 +265,16 @@ class Memory:
         except sqlite3.IntegrityError:
             return False
 
-    def url_ingested(self, url):
+    def url_ingested(self, url, agent=None):
+        """Has this URL been registered in the knowledge base? Scoped per-agent
+        when `agent` is given so a URL ingested by one agent's stream doesn't
+        block another's (mirrors learning_ingested); a global check otherwise
+        (e.g. deep_scrape self-dedup, the sole writer of knowledge_items)."""
         url_hash = hashlib.md5(url.encode()).hexdigest()
+        if agent is not None:
+            return self.conn.execute(
+                "SELECT id FROM knowledge_items WHERE url_hash=? AND agent=?", (url_hash, agent)
+            ).fetchone() is not None
         return self.conn.execute(
             "SELECT id FROM knowledge_items WHERE url_hash=?", (url_hash,)
         ).fetchone() is not None

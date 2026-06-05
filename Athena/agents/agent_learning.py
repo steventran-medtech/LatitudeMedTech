@@ -157,8 +157,8 @@ def learn(agent_name: str, max_new: int = 10) -> Dict:
                 continue
             if mem.learning_ingested(item["url"], agent_name):
                 continue   # this agent already learned it
-            if mem.url_ingested(item["url"]):
-                continue   # already in main KB
+            if mem.url_ingested(item["url"], agent_name):
+                continue   # this agent already has it in the main KB
 
             chunks = _save_to_kb(
                 agent_name, source["name"], source["domain"],
