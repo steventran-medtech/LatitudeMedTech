@@ -601,11 +601,11 @@ function Sparkline({data, valueKey, color="#5B7FA6", height=48, label=""}){
 }
 
 // ── Hourly bar chart (per-hour token usage for today) ────────────────────────
-function HourlyBars({data, valueKey="tokens", color=C.blue, height=120}){
+function HourlyBars({data, valueKey="tokens", color=C.blue, height=120, highlightNow=true}){
   if(!data||!data.length) return null;
   const vals = data.map(d=>d[valueKey]||0);
   const max  = Math.max(...vals, 1);
-  const nowHour = new Date().getHours();
+  const nowHour = highlightNow?new Date().getHours():-1;
   return(
     <div>
       <div style={{display:"flex",alignItems:"flex-end",gap:2,height}}>
@@ -633,10 +633,14 @@ function HourlyBars({data, valueKey="tokens", color=C.blue, height=120}){
 function Dashboard({data}){
   const [history,setHistory]=useState([]);
   const [ts,setTs]=useState(null);
+  const [hourlyDay,setHourlyDay]=useState("today");  // which day the hourly chart shows
   useEffect(()=>{
     fetch(`${API}/api/dashboard/history?days=30`).then(r=>r.json()).then(d=>setHistory(d.daily||[])).catch(()=>{});
-    fetch(`${API}/api/dashboard/timeseries`).then(r=>r.json()).then(setTs).catch(()=>{});
   },[]);
+  // Refetch when the hourly day toggle changes (today/yesterday totals come back unchanged).
+  useEffect(()=>{
+    fetch(`${API}/api/dashboard/timeseries?day=${hourlyDay}`).then(r=>r.json()).then(setTs).catch(()=>{});
+  },[hourlyDay]);
 
   if(!data) return <div style={{color:C.muted,fontFamily:"Helvetica,sans-serif",fontSize:13}}>Loading dashboard...</div>;
   const t=data.token_report?.totals||{};
@@ -678,11 +682,23 @@ function Dashboard({data}){
           </div>
         ))}
       </div>
-      {/* Per-hour breakdown for today */}
+      {/* Per-hour breakdown — switchable between today and yesterday */}
       {ts?.hourly?.length>0&&(
         <div style={{...S.card,marginBottom:24}}>
-          <span style={S.label}>Tokens by hour — today (gold bar = current hour)</span>
-          <div style={{marginTop:14}}><HourlyBars data={ts.hourly} valueKey="tokens" color={C.blue}/></div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={S.label}>Tokens by hour{hourlyDay==="today"?" — gold bar = current hour":""}</span>
+            <div style={{display:"flex",gap:4}}>
+              {["today","yesterday"].map(d=>(
+                <button key={d} onClick={()=>setHourlyDay(d)}
+                  style={{padding:"3px 12px",borderRadius:6,cursor:"pointer",
+                    fontFamily:"Helvetica,sans-serif",fontSize:10,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",
+                    border:`1px solid ${hourlyDay===d?C.navy:C.mist}`,
+                    background:hourlyDay===d?C.navy:"transparent",
+                    color:hourlyDay===d?C.pearl:C.fog}}>{d}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{marginTop:14}}><HourlyBars data={ts.hourly} valueKey="tokens" color={C.blue} highlightNow={hourlyDay==="today"}/></div>
         </div>
       )}
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16,marginBottom:24}}>
