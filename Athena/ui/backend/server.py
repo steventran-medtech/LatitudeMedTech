@@ -16,7 +16,7 @@ import subprocess
 import asyncio
 from pathlib import Path
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, BackgroundTasks, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -717,6 +717,52 @@ class BriefRequest(BaseModel):
 async def trigger_brief(req: BriefRequest, background_tasks: BackgroundTasks):
     background_tasks.add_task(run_agent, "coaching_brief", "coaching_brief.py", [req.client])
     return {"status": "started", "agent": "coaching_brief", "client": req.client}
+
+
+# ── Deck Agent (Phase 2A) ─────────────────────────────────────────────────────
+
+_DECK_TYPES = Literal["strategy", "pitch", "regulatory", "coaching", "ma", "briefing"]
+
+class DeckRequest(BaseModel):
+    topic: str
+    deck_type: _DECK_TYPES = "strategy"
+    client_name: str = ""
+    context: str = ""
+
+@app.post("/api/decks/generate")
+async def generate_deck(req: DeckRequest, background_tasks: BackgroundTasks):
+    args = [
+        "--topic",   _safe_arg(req.topic),
+        "--type",    _safe_arg(req.deck_type),
+        "--context", _safe_arg(req.context),
+    ]
+    if req.client_name:
+        args += ["--client", _safe_arg(req.client_name)]
+    background_tasks.add_task(run_agent, "deck_agent", "deck_agent.py", args, req.topic)
+    return {"status": "started", "agent": "deck_agent",
+            "topic": req.topic, "deck_type": req.deck_type}
+
+@app.get("/api/decks")
+def list_decks():
+    decks_dir = ATHENA / "documents" / "decks"
+    if not decks_dir.exists():
+        return {"decks": []}
+    files = sorted(
+        [f for f in decks_dir.glob("*.pptx")],
+        key=lambda f: f.stat().st_mtime, reverse=True,
+    )
+    return {"decks": [{"filename": f.name, "path": str(f),
+                       "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat()}
+                      for f in files[:20]]}
+
+@app.get("/api/decks/download/{filename}")
+def download_deck(filename: str):
+    decks_dir = (ATHENA / "documents" / "decks").resolve()
+    path = (decks_dir / filename).resolve()
+    if not str(path).startswith(str(decks_dir)) or not path.exists() or path.suffix != ".pptx":
+        raise HTTPException(status_code=404, detail="Deck not found")
+    return FileResponse(str(path), media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                        filename=filename)
 
 
 # ── LangGraph coaching orchestration (Phase 1A) ──────────────────────────────

@@ -269,6 +269,7 @@ _AGENT_TOOL_SCHEMA = {
                     "marketing_events",    # Upcoming MedTech events calendar
                     "marketing_scorecard", # Marketing pipeline KPI scorecard
                     "marketing_outreach",  # Personalised outreach copy for a specific target
+                    "deck",                # Build a consulting PPTX slide deck on a topic
                 ],
                 "description": "The agent to trigger.",
             },
@@ -363,6 +364,7 @@ def _trigger_agent(agent_id: str, override: str = "") -> bool:
         "marketing_events":   ("/api/agents/marketing",  lambda _: _marketing_payload("events")),
         "marketing_scorecard":("/api/agents/marketing",  lambda _: _marketing_payload("scorecard")),
         "marketing_outreach": ("/api/agents/marketing",  lambda t: _marketing_payload("outreach", t)),
+        "deck":               ("/api/decks/generate",    lambda o: json.dumps({"topic": o or "Strategic Overview", "deck_type": "strategy"}).encode()),
     }
     route = ROUTE_MAP.get(agent_id)
     if not route:
@@ -400,6 +402,7 @@ _AGENT_LABELS = {
     "marketing_events":   "Events Calendar",
     "marketing_scorecard":"Marketing Scorecard",
     "marketing_outreach": "Outreach Copy",
+    "deck":               "Deck Builder",
 }
 
 _AGENT_ETA = {
@@ -415,6 +418,7 @@ _AGENT_ETA = {
     "marketing_events":    "about a minute",
     "marketing_scorecard": "about two minutes",
     "marketing_outreach":  "about a minute",
+    "deck":                "three to five minutes",
 }
 
 _AGENT_ETA_SECONDS = {
@@ -430,6 +434,7 @@ _AGENT_ETA_SECONDS = {
     "marketing_events":     60,
     "marketing_scorecard": 120,
     "marketing_outreach":   60,
+    "deck":                300,
 }
 
 # Queue of short spoken notifications Athena delivers between listening turns.
