@@ -610,6 +610,65 @@ class TelemetryAnalyzer:
 
         return result
 
+    def needs_training_prompt(self, telemetry: dict) -> tuple:
+        """
+        Decide whether discrepancies in recent conversations warrant prompting
+        Steven to record more wake word samples.
+
+        Returns (should_prompt: bool, reason: str).
+
+        Triggers when ANY of:
+          - poor_stt_rate > 0.15   — Whisper low-confidence on >15% of utterances
+          - empty_rate   > 0.25   — >25% of wake events produce no speech (false triggers
+                                    OR mic cutting off speech onset)
+          - wake score p10 within 0.08 of threshold — detections are borderline,
+                                    model may start missing real wakes soon
+          - fewer than 10 real samples on disk — synthetic-only model in production
+        """
+        if not telemetry.get("available"):
+            return False, ""
+
+        reasons = []
+
+        poor_stt = telemetry.get("poor_stt_rate", 0.0)
+        if poor_stt > 0.15:
+            reasons.append(
+                f"Whisper is uncertain on {poor_stt:.0%} of utterances "
+                f"(threshold: 15%) — your voice may have drifted from training data"
+            )
+
+        empty = telemetry.get("empty_rate", 0.0)
+        if empty > 0.25:
+            reasons.append(
+                f"{empty:.0%} of wake events produced no speech "
+                f"— possible false triggers or mic onset clipping"
+            )
+
+        p10_wake = telemetry.get("wake_p10")
+        if p10_wake is not None:
+            wake_thresh = telemetry.get("noise_profile", {}).get(
+                "recommended_wake_threshold", 0.5)
+            margin = p10_wake - wake_thresh
+            if margin < 0.08:
+                reasons.append(
+                    f"Wake word detections are borderline "
+                    f"(p10 score {p10_wake:.2f} vs threshold {wake_thresh:.2f}, "
+                    f"margin only {margin:.2f}) — model may miss real wakes soon"
+                )
+
+        # Check real sample count on disk
+        real_dir = ATHENA_ROOT / "voice" / "samples" / "wake"
+        real_count = len(list(real_dir.glob("*.wav"))) if real_dir.exists() else 0
+        if real_count < 10:
+            reasons.append(
+                f"Only {real_count} real 'Hi Athena' recordings on disk "
+                f"— model is mostly synthetic; real samples improve accuracy"
+            )
+
+        if reasons:
+            return True, "; ".join(reasons)
+        return False, ""
+
     def suggest_from_telemetry(self, telemetry: dict, voice_cfg: dict) -> dict:
         """
         Convert telemetry analysis into concrete Tier-1 parameter changes.
@@ -1048,12 +1107,23 @@ class VoiceOptimizerAgent:
                                metadata=summary)
             self._update_agent_health(len(applied) + len(queued))
 
+        # ── Training prompt: fire if telemetry shows recognition drift ──────────
+        should_prompt, prompt_reason = self.telemetry.needs_training_prompt(telem)
+        if should_prompt:
+            _log(f"  Discrepancy detected: {prompt_reason[:100]}")
+            self._fire_training_prompt(prompt_reason, dry_run=self.dry_run)
+            summary["training_prompt_fired"] = True
+            summary["training_prompt_reason"] = prompt_reason
+        else:
+            summary["training_prompt_fired"] = False
+
         _log("-" * 62)
         code_applied = sum(1 for r in code_results if r["status"] == "applied")
         _log(f"Cycle complete — {len(applied)} Tier-1 applied, "
              f"{code_applied} code changes written, "
              f"{len(queued)} Tier-3 queued, "
-             f"{len(research_insights)} research insights")
+             f"{len(research_insights)} research insights"
+             + (" | training prompt fired" if should_prompt else ""))
         return summary
 
     # ── Internal helpers ───────────────────────────────────────────────────────
@@ -1158,6 +1228,58 @@ Keep each point to 2 sentences max. No generic advice."""
                 })
 
         return items[:6]   # cap at 6 per cycle
+
+    def _fire_training_prompt(self, reason: str, dry_run: bool = False):
+        """
+        Notify Steven that voice recognition discrepancies were detected and
+        prompt him to run the wake word recorder.
+
+        Two delivery channels — both are attempted so the message reaches him
+        regardless of whether Athena is currently listening:
+
+          1. Spoken notification via /api/voice/notify — Athena speaks it aloud
+             between the next two listening turns (works while she's running).
+
+          2. review_queue entry — shows as a card in the Athena dashboard even
+             when the voice bridge is offline (e.g. after the 03:00 cron run).
+        """
+        spoken = (
+            "Hey Steven, your voice optimizer picked up some recognition issues. "
+            "When you get a chance, run the wake word recorder to collect a few "
+            "fresh samples. That keeps Hi Athena sharp."
+        )
+        detail = (
+            f"Voice recognition discrepancies detected: {reason}. "
+            f"Run: python Athena/voice/record_wake_samples.py  "
+            f"(collect 10-20 samples, then python Athena/voice/custom_wake_trainer.py)"
+        )
+
+        if not dry_run:
+            # Channel 1: live spoken notification
+            try:
+                import urllib.request as _ur, json as _j
+                payload = _j.dumps({"text": spoken}).encode()
+                req = _ur.Request(
+                    "http://127.0.0.1:8000/api/voice/notify",
+                    data=payload,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                _ur.urlopen(req, timeout=3)
+                _log("  Training prompt queued for voice delivery")
+            except Exception:
+                _log("  Voice backend offline — prompt delivered via review queue only")
+
+            # Channel 2: dashboard review card (persists across restarts)
+            self.mem.submit_for_review(
+                agent=AGENT_NAME,
+                item_type="voice_training_prompt",
+                title=f"Record more Hi Athena samples — {reason[:120]}",
+            )
+            self.mem.log_event(AGENT_NAME, "training_prompt_fired",
+                               metadata={"reason": reason})
+        else:
+            _log(f"  [DRY] Would fire training prompt: {reason[:100]}")
 
     def _update_agent_health(self, actions_taken: int):
         """Mark voice_optimizer healthy in agent_health table."""
