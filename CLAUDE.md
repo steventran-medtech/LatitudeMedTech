@@ -183,6 +183,6 @@ cd "C:\Users\huann\LatitudeMedTech"; git add -A; git commit -m "<what changed>";
 
 Phase 1A gate (Steve runs the full coaching workflow end-to-end) is met for the coaching line; only the optional custom wake word remains.
 
-**⚠ Known issue (flagged, not yet fixed):** code+config live in `LatitudeMedTech\Athena` but agents resolve runtime data via `Path.home()/Athena` (memory DB, briefs). It works because the server-launched env supplies paths/keys, but standalone runs are fragile. Decide on one canonical root before Phase 1B.
+**✅ Resolved (2026-06-05):** canonical-root path issue fixed. New `agents/pathconfig.py` derives `ATHENA_ROOT` from its own file location (no `Path.home()` assumption); all 17 agent modules import it, and entry points (`voice_bridge.py`, `ui/backend/server.py`) resolve the same root from `Path(__file__)`. Verified: imports clean, `ATHENA_ROOT` → `LatitudeMedTech\Athena`, runtime paths exist. Standalone runs no longer fragile.
 
 See `.claude/rules/` — agents.md · architecture.md · compliance.md · business.md
