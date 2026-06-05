@@ -494,6 +494,15 @@ function useMultiSelect() {
   return { checked, toggle, clear, selectAll, allSelected };
 }
 
+// ── Title-case helper (underscore filenames → readable labels) ───────────
+const UPPER_WORDS = new Set(["qa","ra","qms","iso","fda","eu","us","ivd","samd","vp","hr","md","ii","iii","iv","llc","inc"]);
+function toTitleCase(str){
+  return str.split(" ").map(w=>
+    UPPER_WORDS.has(w.toLowerCase()) ? w.toUpperCase()
+    : w.charAt(0).toUpperCase()+w.slice(1)
+  ).join(" ");
+}
+
 // ── Bulk delete helper ────────────────────────────────────────────────────
 async function bulkDelete(items) {
   // items: [{folder, filename}, ...]
@@ -538,7 +547,6 @@ function FileItem({title, subtitle, selected, checked, onSelect, onCheck, onDele
           color:selected?C.ink:C.slate,
           fontWeight:selected?600:400,
           lineHeight:1.4,
-          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
         }}>{title}</div>
         {subtitle&&<div style={{fontFamily:F.sans,fontSize:10,color:C.fog,marginTop:2}}>{subtitle}</div>}
       </div>
@@ -883,9 +891,9 @@ function BriefingView(){
     <div>
       <h2 style={{...S.h2,marginBottom:20}}>Daily Briefing</h2>
       <div style={{display:"flex",gap:20}}>
-        <div style={{width:230,flexShrink:0}}>
+        <div style={{width:280,flexShrink:0}}>
           <BulkBar count={ms.checked.size} onDeleteSelected={deleteSelected} onClear={ms.clear} onSelectAll={()=>ms.selectAll(allIds)}/>
-          {briefings.map(b=>(<FileItem key={b.filename} title={b.date} subtitle="" selected={selected===b.filename} checked={ms.checked.has(b.filename)} onCheck={()=>ms.toggle(b.filename)} onSelect={()=>{setSelected(b.filename);setEditing(false);}} onDelete={()=>deleteFile(b.filename)} onEdit={()=>{setSelected(b.filename);setEditing(true);}}/>))}
+          {briefings.map(b=>(<FileItem key={b.filename} title={b.title||b.date} subtitle={b.date} selected={selected===b.filename} checked={ms.checked.has(b.filename)} onCheck={()=>ms.toggle(b.filename)} onSelect={()=>{setSelected(b.filename);setEditing(false);}} onDelete={()=>deleteFile(b.filename)} onEdit={()=>{setSelected(b.filename);setEditing(true);}}/>))}
           {briefings.length===0&&<div style={{fontFamily:"Helvetica,sans-serif",fontSize:12,color:C.muted}}>No briefings yet.</div>}
         </div>
         <div style={{flex:1}}>
@@ -957,7 +965,7 @@ function ContentView({onGenerate}){
         </div>
       </div>
       <div style={{display:"flex",gap:20}}>
-        <div style={{width:240,flexShrink:0}}>
+        <div style={{width:280,flexShrink:0}}>
           <BulkBar count={ms.checked.size} onDeleteSelected={deleteSelected} onClear={ms.clear} onSelectAll={()=>ms.selectAll(allIds)}/>
           {drafts.map(d=>(<FileItem key={d.filename} title={d.title} subtitle={d.modified?.slice(0,10)} selected={selected===d.filename} checked={ms.checked.has(d.filename)} onCheck={()=>ms.toggle(d.filename)} onSelect={()=>{setSelected(d.filename);setEditing(false);}} onDelete={()=>deleteFile(d.filename)} onEdit={()=>{setSelected(d.filename);setEditing(true);}}/>))}
           {drafts.length===0&&<div style={{fontFamily:"Helvetica,sans-serif",fontSize:12,color:C.muted}}>No drafts yet.</div>}
@@ -1029,12 +1037,12 @@ function CoachingView({onGenerate}){
         {status&&<span style={{fontFamily:"Helvetica,sans-serif",fontSize:11,color:C.teal}}>{status}</span>}
       </div>
       <div style={{display:"flex",gap:20}}>
-        <div style={{width:240,flexShrink:0}}>
+        <div style={{width:280,flexShrink:0}}>
           <BulkBar count={ms.checked.size} onDeleteSelected={deleteSelected} onClear={ms.clear} onSelectAll={()=>ms.selectAll(allIds)}/>
           {briefs.map(b=>{
             const noExt=b.filename.replace(/\.md$/,"");
             const dated=/^(\d{4}-\d{2}-\d{2})_(.+)$/.exec(noExt);
-            const briefTitle=(dated?dated[2]:noExt.replace(/^brief_/,"")).replace(/_/g," ");
+            const briefTitle=toTitleCase((dated?dated[2]:noExt.replace(/^brief_/,"")).replace(/_/g," "));
             const briefDate=dated?dated[1]:"";
             return(<FileItem key={b.filename} title={briefTitle} subtitle={briefDate} selected={selected===b.filename} checked={ms.checked.has(b.filename)} onCheck={()=>ms.toggle(b.filename)} onSelect={()=>{setSelected(b.filename);setEditing(false);}} onDelete={()=>deleteFile(b.filename)} onEdit={()=>{setSelected(b.filename);setEditing(true);}}/>);
           })}
