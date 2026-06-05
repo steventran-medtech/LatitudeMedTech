@@ -1272,18 +1272,13 @@ export default function App(){
   const handleExit = async () => {
     setExitDialog(false);
     try {
+      // Await the response — the backend blocks until TTS finishes before replying.
       await fetch(`${API}/api/shutdown`, { method: "POST" });
     } catch {}
-    // Electron IPC path
+    // TTS is complete by now; close immediately.
     window.athena?.quit?.();
-    // Close the browser window (works in Chrome --app mode and Electron)
-    // Small delay so goodbye TTS has started before the window disappears
-    setTimeout(() => {
-      window.close();
-      // Fallback: if window.close() is blocked (regular tab not opened by script)
-      // redirect to a blank page so the UI at least goes away
-      window.location.replace("about:blank");
-    }, 800);
+    window.close();
+    window.location.replace("about:blank");
   };
 
   const pages={

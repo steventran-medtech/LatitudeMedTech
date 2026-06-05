@@ -7,90 +7,208 @@ import mammoth from "mammoth";
 
 const API = "http://localhost:8000";
 
-// Minimal, safe Markdown renderer for the review modal (headings, bold,
-// bullets, rules, paragraphs). Avoids dangerouslySetInnerHTML on raw text.
+// Inline Markdown: **bold**, *italic*, `code`. Safe (no dangerouslySetInnerHTML).
+function inlineMd(s, keyBase = "") {
+  const parts = s.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g).filter(Boolean);
+  return parts.map((p, k) => {
+    const key = `${keyBase}-${k}`;
+    if (p.startsWith("**") && p.endsWith("**")) return <strong key={key}>{p.slice(2, -2)}</strong>;
+    if (p.startsWith("*") && p.endsWith("*"))   return <em key={key}>{p.slice(1, -1)}</em>;
+    if (p.startsWith("`") && p.endsWith("`"))
+      return <code key={key} style={{ background: "#EEF2F6", padding: "1px 5px",
+        borderRadius: 4, fontSize: "0.9em", fontFamily: "ui-monospace,monospace" }}>{p.slice(1, -1)}</code>;
+    return <span key={key}>{p}</span>;
+  });
+}
+
+// Strip leading YAML frontmatter; return { meta: [[k,v]...], body }.
+function stripFrontmatter(md) {
+  const text = md.replace(/\r\n/g, "\n");
+  if (!text.startsWith("---\n")) return { meta: [], body: text };
+  const end = text.indexOf("\n---", 3);
+  if (end === -1) return { meta: [], body: text };
+  const block = text.slice(4, end);
+  const rest  = text.slice(text.indexOf("\n", end + 1) + 1);
+  const meta  = block.split("\n").map(l => {
+    const m = l.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
+    return m ? [m[1], m[2].replace(/^["']|["']$/g, "")] : null;
+  }).filter(Boolean);
+  return { meta, body: rest };
+}
+
+// Consulting-clean Markdown renderer: frontmatter → metadata strip, proper
+// heading hierarchy, serif body, lists, tables, blockquotes, rules.
 function renderMarkdown(md) {
-  const lines = md.replace(/\r\n/g, "\n").split("\n");
+  const { meta, body } = stripFrontmatter(md);
+  const lines = body.split("\n");
   const out = [];
-  let para = [];
-  const flush = (i) => {
+  let para = [], i = 0;
+  const SERIF = "Georgia, 'Times New Roman', serif";
+
+  const flush = () => {
     if (para.length) {
-      out.push(<p key={`p${i}`} style={{ margin: "0 0 12px", lineHeight: 1.7,
-        color: "#1A2A3A", fontSize: 14 }}>{inline(para.join(" "))}</p>);
+      out.push(<p key={`p${i}-${out.length}`} style={{ margin: "0 0 14px",
+        lineHeight: 1.75, color: "#26333F", fontSize: 15, fontFamily: SERIF }}>
+        {inlineMd(para.join(" "), `p${i}`)}</p>);
       para = [];
     }
   };
-  const inline = (s) => {
-    // bold **x** → <strong>
-    const parts = s.split(/(\*\*[^*]+\*\*)/g);
-    return parts.map((p, k) => p.startsWith("**") && p.endsWith("**")
-      ? <strong key={k}>{p.slice(2, -2)}</strong> : <span key={k}>{p}</span>);
-  };
-  lines.forEach((raw, i) => {
-    const t = raw.trim();
-    if (!t) { flush(i); return; }
+
+  // Metadata strip (badges) from frontmatter
+  if (meta.length) {
+    out.push(
+      <div key="meta" style={{ display: "flex", flexWrap: "wrap", gap: 8,
+        padding: "0 0 16px", marginBottom: 18, borderBottom: "1px solid #EDF1F5" }}>
+        {meta.filter(([k]) => !/^title$/i.test(k)).map(([k, v], n) => (
+          <span key={n} style={{ fontFamily: "Inter,sans-serif", fontSize: 10.5,
+            color: "#5A6B7B", background: "#F4F7FA", border: "1px solid #E3EAF1",
+            padding: "3px 9px", borderRadius: 5 }}>
+            <span style={{ color: "#9AAAB8", textTransform: "uppercase",
+              letterSpacing: "0.06em", fontSize: 9 }}>{k} </span>{v}
+          </span>
+        ))}
+      </div>
+    );
+  }
+
+  while (i < lines.length) {
+    const t = lines[i].trim();
+
+    // Table: a line with pipes followed by a separator row
+    if (t.includes("|") && /^\|?.*\|.*$/.test(t) && i + 1 < lines.length &&
+        /^\|?[\s:|-]+\|[\s:|-]*$/.test(lines[i + 1].trim())) {
+      flush();
+      const parseRow = r => r.trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim());
+      const head = parseRow(t);
+      i += 2;
+      const rows = [];
+      while (i < lines.length && lines[i].includes("|")) { rows.push(parseRow(lines[i].trim())); i++; }
+      out.push(
+        <table key={`tbl${i}`} style={{ width: "100%", borderCollapse: "collapse",
+          margin: "8px 0 18px", fontFamily: "Inter,sans-serif", fontSize: 13 }}>
+          <thead><tr>{head.map((h, n) => (
+            <th key={n} style={{ textAlign: "left", padding: "8px 10px",
+              borderBottom: "2px solid #0A2540", color: "#0A2540", fontWeight: 700 }}>
+              {inlineMd(h, `th${n}`)}</th>))}</tr></thead>
+          <tbody>{rows.map((r, ri) => (
+            <tr key={ri}>{r.map((c, ci) => (
+              <td key={ci} style={{ padding: "7px 10px", borderBottom: "1px solid #EDF1F5",
+                color: "#26333F" }}>{inlineMd(c, `td${ri}${ci}`)}</td>))}</tr>))}</tbody>
+        </table>
+      );
+      continue;
+    }
+
+    if (!t) { flush(); i++; continue; }
+
     if (/^#{1,6}\s/.test(t)) {
-      flush(i);
+      flush();
       const level = t.match(/^#+/)[0].length;
       const text = t.replace(/^#+\s/, "");
-      const size = level === 1 ? 20 : level === 2 ? 16 : 14;
-      out.push(<div key={`h${i}`} style={{ fontWeight: 700, fontSize: size,
-        color: "#0A2540", margin: "18px 0 8px" }}>{text}</div>);
+      const sizes = { 1: 24, 2: 18, 3: 15.5, 4: 14 };
+      out.push(<div key={`h${i}`} style={{ fontFamily: "Inter,sans-serif",
+        fontWeight: 700, fontSize: sizes[level] || 14, color: "#0A2540",
+        margin: level <= 2 ? "26px 0 10px" : "18px 0 6px",
+        lineHeight: 1.3, letterSpacing: level === 1 ? "-0.01em" : 0 }}>{inlineMd(text, `h${i}`)}</div>);
+    } else if (/^>\s?/.test(t)) {
+      flush();
+      out.push(<blockquote key={`bq${i}`} style={{ margin: "0 0 14px",
+        padding: "8px 16px", borderLeft: "3px solid #1A6FA3", background: "#F4F8FB",
+        color: "#3C5470", fontStyle: "italic", fontFamily: SERIF, fontSize: 14.5 }}>
+        {inlineMd(t.replace(/^>\s?/, ""), `bq${i}`)}</blockquote>);
+    } else if (/^(\d+)\.\s/.test(t)) {
+      flush();
+      const num = t.match(/^(\d+)\./)[1];
+      out.push(<div key={`ol${i}`} style={{ display: "flex", gap: 10,
+        margin: "3px 0", fontFamily: SERIF, fontSize: 15, color: "#26333F", lineHeight: 1.65 }}>
+        <span style={{ color: "#1A6FA3", fontWeight: 700, minWidth: 18 }}>{num}.</span>
+        <span>{inlineMd(t.replace(/^\d+\.\s/, ""), `ol${i}`)}</span></div>);
     } else if (/^[-*]\s/.test(t)) {
-      flush(i);
-      out.push(<div key={`li${i}`} style={{ display: "flex", gap: 8,
-        margin: "2px 0", fontSize: 14, color: "#1A2A3A", lineHeight: 1.6 }}>
+      flush();
+      out.push(<div key={`li${i}`} style={{ display: "flex", gap: 10,
+        margin: "3px 0", fontFamily: SERIF, fontSize: 15, color: "#26333F", lineHeight: 1.65 }}>
         <span style={{ color: "#1A6FA3" }}>•</span>
-        <span>{inline(t.replace(/^[-*]\s/, ""))}</span></div>);
-    } else if (/^(-{3,}|\*{3,})$/.test(t)) {
-      flush(i);
+        <span>{inlineMd(t.replace(/^[-*]\s/, ""), `li${i}`)}</span></div>);
+    } else if (/^(-{3,}|\*{3,}|_{3,})$/.test(t)) {
+      flush();
       out.push(<hr key={`hr${i}`} style={{ border: "none",
-        borderTop: "1px solid #DDE4EB", margin: "16px 0" }} />);
-    } else if (/^\*[^*].*\*$/.test(t)) {
-      flush(i);
+        borderTop: "1px solid #DDE4EB", margin: "20px 0" }} />);
+    } else if (/^\*[^*].*\*$/.test(t) && !t.includes(" ** ")) {
+      flush();
       out.push(<div key={`em${i}`} style={{ fontStyle: "italic", color: "#7B90A0",
-        fontSize: 13, margin: "0 0 12px" }}>{t.slice(1, -1)}</div>);
+        fontSize: 13, fontFamily: SERIF, margin: "0 0 14px" }}>{t.slice(1, -1)}</div>);
     } else {
       para.push(t);
     }
-  });
-  flush("end");
+    i++;
+  }
+  flush();
   return out;
 }
 
 function ReviewViewer({ itemId, title, onClose }) {
   const [state, setState] = useState({ loading: true, ext: "", content: "", html: "", error: "" });
+  const [instruction, setInstruction] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [editMsg, setEditMsg] = useState("");
+
+  const loadContent = async (signal) => {
+    setState({ loading: true, ext: "", content: "", html: "", error: "" });
+    try {
+      const r = await fetch(`${API}/api/review/${itemId}/content`);
+      if (!r.ok) throw (await r.json()).error || "Not found";
+      const d = await r.json();
+      if (signal?.aborted) return;
+      if (d.ext === "md" || d.ext === "txt") {
+        setState({ loading: false, ext: d.ext, content: d.content || "", html: "", error: "" });
+      } else if (d.ext === "docx") {
+        const buf = await fetch(`${API}/api/review/${itemId}/serve`).then(r => r.arrayBuffer());
+        const res = await mammoth.convertToHtml({ arrayBuffer: buf });
+        if (!signal?.aborted) setState({ loading: false, ext: "docx", content: "", html: res.value, error: "" });
+      } else {
+        setState({ loading: false, ext: d.ext, content: "", html: "", error: "" });
+      }
+    } catch (err) {
+      if (!signal?.aborted) setState({ loading: false, ext: "", content: "", html: "",
+        error: typeof err === "string" ? err : "Could not open file" });
+    }
+  };
 
   useEffect(() => {
-    let active = true;
-    setState({ loading: true, ext: "", content: "", html: "", error: "" });
-    fetch(`${API}/api/review/${itemId}/content`)
-      .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.error || "Not found")))
-      .then(async d => {
-        if (!active) return;
-        if (d.ext === "md" || d.ext === "txt") {
-          setState({ loading: false, ext: d.ext, content: d.content || "", html: "", error: "" });
-        } else if (d.ext === "docx") {
-          const buf = await fetch(`${API}/api/review/${itemId}/serve`).then(r => r.arrayBuffer());
-          const res = await mammoth.convertToHtml({ arrayBuffer: buf });
-          if (active) setState({ loading: false, ext: "docx", content: "", html: res.value, error: "" });
-        } else {
-          setState({ loading: false, ext: d.ext, content: "", html: "", error: "" });
-        }
-      })
-      .catch(err => active && setState({ loading: false, ext: "", content: "", html: "",
-        error: typeof err === "string" ? err : "Could not open file" }));
-    return () => { active = false; };
+    const ctrl = new AbortController();
+    loadContent(ctrl.signal);
+    return () => ctrl.abort();
   }, [itemId]);
 
+  const applyEdit = async () => {
+    if (!instruction.trim() || editing) return;
+    setEditing(true); setEditMsg("");
+    try {
+      const r = await fetch(`${API}/api/review/${itemId}/edit`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instruction }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw d.error || "Edit failed";
+      setState({ loading: false, ext: d.ext, content: d.content || "", html: "", error: "" });
+      setInstruction(""); setEditMsg("✓ Document revised and saved.");
+    } catch (err) {
+      setEditMsg("✕ " + (typeof err === "string" ? err : "Edit failed"));
+    } finally {
+      setEditing(false);
+    }
+  };
+
   const serveUrl = `${API}/api/review/${itemId}/serve`;
+  const editable = state.ext === "md" || state.ext === "txt";
   return (
-    <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    <div onClick={e => { if (e.target === e.currentTarget && !editing) onClose(); }}
       style={{ position: "fixed", inset: 0, background: "rgba(10,37,64,0.45)",
         zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ background: "#fff", borderRadius: 10, width: "82vw", maxWidth: 900,
-        height: "88vh", display: "flex", flexDirection: "column", overflow: "hidden",
+        height: "90vh", display: "flex", flexDirection: "column", overflow: "hidden",
         boxShadow: "0 8px 40px rgba(10,37,64,0.3)" }}>
+        {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "12px 20px", borderBottom: "1px solid #DDE4EB", flexShrink: 0 }}>
           <span style={{ fontFamily: "Inter,sans-serif", fontWeight: 700, fontSize: 14,
@@ -107,11 +225,19 @@ function ReviewViewer({ itemId, title, onClose }) {
             </button>
           </div>
         </div>
-        <div style={{ flex: 1, overflow: "auto", padding: "28px 40px",
-          fontFamily: "Inter,sans-serif", background: "#FCFDFE" }}>
+        {/* Body */}
+        <div style={{ flex: 1, overflow: "auto", padding: "32px 48px",
+          fontFamily: "Inter,sans-serif", background: "#FCFDFE", position: "relative" }}>
+          {editing && (
+            <div style={{ position: "absolute", inset: 0, background: "rgba(252,253,254,0.75)",
+              display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5,
+              fontFamily: "Inter,sans-serif", fontSize: 13, color: "#1A6FA3", fontWeight: 600 }}>
+              Revising document…
+            </div>
+          )}
           {state.loading && <div style={{ color: "#7B90A0", fontSize: 13 }}>Loading…</div>}
           {state.error && <div style={{ color: "#C0392B", fontSize: 13 }}>{state.error}</div>}
-          {!state.loading && !state.error && (state.ext === "md" || state.ext === "txt") && (
+          {!state.loading && !state.error && editable && (
             <div style={{ maxWidth: 720, margin: "0 auto" }}>{renderMarkdown(state.content)}</div>
           )}
           {!state.loading && state.ext === "docx" && (
@@ -123,6 +249,42 @@ function ReviewViewer({ itemId, title, onClose }) {
               style={{ width: "100%", height: "100%", border: "none" }} />
           )}
         </div>
+        {/* Edit-with-prompt footer (markdown/text only) */}
+        {editable && (
+          <div style={{ flexShrink: 0, borderTop: "1px solid #DDE4EB",
+            padding: "12px 20px", background: "#F8FAFC" }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: "Inter,sans-serif", fontSize: 10, fontWeight: 700,
+                  letterSpacing: "0.08em", textTransform: "uppercase", color: "#7B90A0", marginBottom: 4 }}>
+                  Edit with a prompt
+                </div>
+                <textarea
+                  value={instruction}
+                  onChange={e => setInstruction(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); applyEdit(); } }}
+                  placeholder="e.g. Tighten the opening, add a 21 CFR citation in section 2, cut the conclusion… (Ctrl+Enter)"
+                  rows={2}
+                  style={{ width: "100%", boxSizing: "border-box", resize: "vertical",
+                    padding: "8px 10px", border: "1px solid #DDE4EB", borderRadius: 6,
+                    fontFamily: "Inter,sans-serif", fontSize: 12.5, color: "#26333F",
+                    background: "#fff", outline: "none", lineHeight: 1.5 }}
+                />
+              </div>
+              <button onClick={applyEdit} disabled={editing || !instruction.trim()}
+                style={{ padding: "9px 18px", background: editing || !instruction.trim() ? "#9AAAB8" : "#1A6FA3",
+                  color: "#fff", border: "none", borderRadius: 6,
+                  cursor: editing || !instruction.trim() ? "not-allowed" : "pointer",
+                  fontFamily: "Inter,sans-serif", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
+                {editing ? "Revising…" : "Apply Edit"}
+              </button>
+            </div>
+            {editMsg && (
+              <div style={{ marginTop: 6, fontFamily: "Inter,sans-serif", fontSize: 11,
+                color: editMsg.startsWith("✓") ? "#1F7A6D" : "#C0392B" }}>{editMsg}</div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
