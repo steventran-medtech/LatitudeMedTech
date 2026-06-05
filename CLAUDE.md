@@ -1,5 +1,5 @@
 # Latitude MedTech — Master Instructions
-**Version:** 2026-06-05 v6 · Compressed and updated after each session per Agent Principle #7.
+**Version:** 2026-06-05 v7 · Compressed and updated after each session per Agent Principle #7.
 
 ---
 
@@ -186,5 +186,7 @@ cd "C:\Users\huann\LatitudeMedTech"; git add -A; git commit -m "<what changed>";
 Phase 1A gate (Steve runs the full coaching workflow end-to-end) is met for the coaching line; only the optional custom wake word remains.
 
 **✅ Resolved (2026-06-05):** canonical-root path issue fixed. New `agents/pathconfig.py` derives `ATHENA_ROOT` from its own file location (no `Path.home()` assumption); all 17 agent modules import it, and entry points (`voice_bridge.py`, `ui/backend/server.py`) resolve the same root from `Path(__file__)`. Verified: imports clean, `ATHENA_ROOT` → `LatitudeMedTech\Athena`, runtime paths exist. Standalone runs no longer fragile.
+
+**✅ Resolved (2026-06-05):** Skills & KB accumulation fully wired. `agents/skills_profile.py` generates per-agent profiles (`knowledge_base/skills/<agent>.md`) and master `SKILLS.md`. `memory.get_skill_accumulation()` is the single source of truth. Workforce UI now shows an **Accumulated** column (all-time items + chunks) live from the DB, with a Refresh Skills button (`POST /api/agents/skills-profile`). `.gitignore` hardened to exclude `*.sqlite-shm`, `*.sqlite-wal`, and `.athena_ready`.
 
 See `.claude/rules/` — agents.md · architecture.md · compliance.md · business.md
