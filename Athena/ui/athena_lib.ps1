@@ -69,13 +69,20 @@ function Stop-Port($port, $timeoutSec = 8) {
 }
 
 # Poll an HTTP endpoint until it responds or we time out.
+# "Responds" means any HTTP reply, including non-2xx: the Vite dev server answers
+# the bare "/" probe with 404, which still proves it's up and listening. Treating
+# only a 2xx as success made frontend_up log false negatives. Real not-ready states
+# (connection refused / timeout) raise an exception with no .Response, so we retry.
 function Wait-Http($url, $maxSeconds = 35) {
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     while ($sw.Elapsed.TotalSeconds -lt $maxSeconds) {
         try {
             Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 1 -ErrorAction Stop | Out-Null
             return $true
-        } catch { Start-Sleep -Milliseconds 700 }
+        } catch {
+            if ($_.Exception.Response) { return $true }   # got an HTTP status (e.g. 404) => server is up
+            Start-Sleep -Milliseconds 700
+        }
     }
     return $false
 }
