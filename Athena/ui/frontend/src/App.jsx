@@ -527,7 +527,7 @@ function FileItem({title, subtitle, selected, checked, onSelect, onCheck, onDele
 
       {/* Main row */}
       <div onClick={onSelect} style={{
-        flex:1, padding:"9px 12px",
+        flex:1, minWidth:0, padding:"9px 12px",
         background: selected ? C.sand : hover ? "#F4F7FA" : C.pearl,
         border:`1px solid ${selected?C.ocean:C.mist}`,
         borderLeft: selected?`3px solid ${C.ocean}`:`1px solid ${C.mist}`,
@@ -538,7 +538,8 @@ function FileItem({title, subtitle, selected, checked, onSelect, onCheck, onDele
           color:selected?C.ink:C.slate,
           fontWeight:selected?600:400,
           lineHeight:1.4,
-        }}>{title?.slice(0,44)}</div>
+          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+        }}>{title}</div>
         {subtitle&&<div style={{fontFamily:F.sans,fontSize:10,color:C.fog,marginTop:2}}>{subtitle}</div>}
       </div>
 
@@ -1017,7 +1018,7 @@ function CoachingView({onGenerate}){
     <div>
       <h2 style={{...S.h2,marginBottom:20}}>Coaching Briefs</h2>
       <div style={{...S.card,display:"flex",gap:12,alignItems:"center",marginBottom:20}}>
-        <input value={client} onChange={e=>setClient(e.target.value)} onKeyDown={e=>e.key==="Enter"&&runBrief()} placeholder="Client name or LinkedIn URL" style={{...S.input,flex:1}}/>
+        <input value={client} onChange={e=>setClient(e.target.value)} onKeyDown={e=>e.key==="Enter"&&runBrief()} placeholder="Client name, LinkedIn URL, or topic" style={{...S.input,flex:1}}/>
         <button style={S.btn()} onClick={runBrief}>Generate Brief</button>
         {content&&<button style={S.btn("teal")} onClick={exportDoc}>Save as Word Doc</button>}
         {status&&<span style={{fontFamily:"Helvetica,sans-serif",fontSize:11,color:C.teal}}>{status}</span>}
