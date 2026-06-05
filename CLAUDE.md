@@ -103,6 +103,13 @@ Subdirs: `learning/` · `consulting/` (frameworks, methodologies) · `ma/` (deal
 - 50-year historical Brave queries included
 - Modes: `learn`, `--analyse`, `--historical`
 
+**Marketing Agent** (`marketing_agent.py`) — Guerilla marketing manager; SoCal MedTech corridor:
+- Pipeline DB: `ops/marketing/pipeline.db` — 20+ seeded targets across 6 channel types
+- Channels: conference circuit (MD&M, Biocom, RAPS), podcast circuit (Medical Device Podcast, MedTech Talk), regulatory clinic, MedTech Meridian Substack, FDA docket participation, warm email outreach
+- Modes: default=`brief`, `--plan` (30-60-90 day), `--outreach TARGET`, `--pipeline`, `--events`, `--scorecard`
+- API: `POST /api/agents/marketing` with `{"mode": "brief|plan|events|scorecard|learn", "target": "optional"}`
+- Output: `ops/marketing/` — briefs, plans, outreach drafts, events calendar, KB entries
+
 ---
 
 ## Content Standards *(MedTech Meridian)*

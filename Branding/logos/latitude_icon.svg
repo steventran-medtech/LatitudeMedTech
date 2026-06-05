@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
+  <title>Latitude MedTech — Icon Mark</title>
+  <!-- Outer ring -->
+  <circle cx="40" cy="40" r="36" fill="none" stroke="#5B7FA6" stroke-width="3"/>
+  <!-- Latitude bearing line -->
+  <line x1="4" y1="40" x2="76" y2="40" stroke="#5B7FA6" stroke-width="2.5"/>
+  <!-- Meridian ticks -->
+  <line x1="40" y1="4"  x2="40" y2="16"  stroke="#5B7FA6" stroke-width="2"/>
+  <line x1="40" y1="64" x2="40" y2="76"  stroke="#5B7FA6" stroke-width="2"/>
+  <!-- Cardinal dots -->
+  <circle cx="40" cy="10" r="3.5" fill="#5B7FA6"/>
+  <circle cx="40" cy="70" r="3.5" fill="#5B7FA6"/>
+  <circle cx="10" cy="40" r="3"   fill="#2C3E50"/>
+  <circle cx="70" cy="40" r="3"   fill="#2C3E50"/>
+  <!-- Inner ring + center -->
+  <circle cx="40" cy="40" r="7" fill="none" stroke="#5B7FA6" stroke-width="2"/>
+  <circle cx="40" cy="40" r="3" fill="#5B7FA6"/>
+</svg>

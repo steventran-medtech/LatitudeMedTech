@@ -1,0 +1,141 @@
+/* ============================================================
+   Latitude MedTech LLC — Design Tokens
+   Source of truth for all web, UI, and document styling
+   Updated: 2026-06-05
+   ============================================================ */
+
+:root {
+
+  /* --- Color palette --------------------------------------- */
+  --lm-black:       #1A1A1A;   /* primary text, headings */
+  --lm-slate:       #2C3E50;   /* secondary headings, nav */
+  --lm-blue:        #5B7FA6;   /* brand accent, links, rules */
+  --lm-muted:       #8A8680;   /* captions, metadata, LLC mark */
+  --lm-white:       #FFFFFF;   /* backgrounds, reversed text */
+  --lm-off-white:   #F7F7F6;   /* page/card backgrounds */
+  --lm-light-rule:  #E0E0DC;   /* dividers, borders */
+  --lm-blue-tint:   #EBF0F6;   /* highlight backgrounds, chips */
+
+  /* --- Typography ------------------------------------------ */
+  --lm-font-body:   'Calibri', 'Gill Sans MT', 'Gill Sans', Arial, sans-serif;
+  --lm-font-mono:   'Roboto Mono', 'Courier New', monospace;
+
+  --lm-size-hero:   48px;
+  --lm-size-h1:     32px;
+  --lm-size-h2:     24px;
+  --lm-size-h3:     18px;
+  --lm-size-body:   15px;
+  --lm-size-small:  12px;
+  --lm-size-micro:  10px;
+
+  --lm-weight-bold:    700;
+  --lm-weight-medium:  500;
+  --lm-weight-regular: 400;
+
+  --lm-tracking-wide:  0.12em;  /* wordmark, category labels */
+  --lm-tracking-body:  0.01em;
+  --lm-line-height:    1.55;
+
+  /* --- Spacing --------------------------------------------- */
+  --lm-space-xs:   4px;
+  --lm-space-sm:   8px;
+  --lm-space-md:   16px;
+  --lm-space-lg:   24px;
+  --lm-space-xl:   40px;
+  --lm-space-2xl:  64px;
+  --lm-space-3xl:  96px;
+
+  /* --- Layout ---------------------------------------------- */
+  --lm-max-width:       1200px;
+  --lm-content-width:   760px;   /* single-column reading width */
+  --lm-border-radius:   4px;
+  --lm-border-radius-lg: 8px;
+
+  /* --- Elevation / shadow ---------------------------------- */
+  --lm-shadow-card: 0 2px 8px rgba(26, 26, 26, 0.08);
+  --lm-shadow-modal: 0 8px 32px rgba(26, 26, 26, 0.16);
+
+  /* --- Document (DOCX parity) ----------------------------- */
+  --lm-doc-margin:  1in;
+  --lm-doc-width:   8.5in;
+
+  /* --- Motion ---------------------------------------------- */
+  --lm-transition: 180ms ease;
+}
+
+/* ============================================================
+   Semantic aliases (use these in components)
+   ============================================================ */
+:root {
+  --color-text-primary:   var(--lm-black);
+  --color-text-secondary: var(--lm-slate);
+  --color-text-muted:     var(--lm-muted);
+  --color-text-link:      var(--lm-blue);
+  --color-bg-page:        var(--lm-white);
+  --color-bg-subtle:      var(--lm-off-white);
+  --color-bg-accent:      var(--lm-blue-tint);
+  --color-border:         var(--lm-light-rule);
+  --color-accent:         var(--lm-blue);
+  --color-brand-dark:     var(--lm-slate);
+}
+
+/* ============================================================
+   Dark mode overrides
+   ============================================================ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-text-primary:   #E8E8E6;
+    --color-text-secondary: #A8B4BE;
+    --color-text-muted:     #8A8680;
+    --color-bg-page:        #141414;
+    --color-bg-subtle:      #1E1E1E;
+    --color-bg-accent:      #1A2433;
+    --color-border:         #2A2A2A;
+  }
+}
+
+/* ============================================================
+   Utility classes
+   ============================================================ */
+
+/* Wordmark / brand heading */
+.lm-wordmark {
+  font-family: var(--lm-font-body);
+  font-weight: var(--lm-weight-bold);
+  letter-spacing: var(--lm-tracking-wide);
+  color: var(--color-text-primary);
+  text-transform: uppercase;
+}
+
+/* Section / category label */
+.lm-label {
+  font-family: var(--lm-font-body);
+  font-size: var(--lm-size-small);
+  font-weight: var(--lm-weight-medium);
+  letter-spacing: 0.1em;
+  color: var(--lm-muted);
+  text-transform: uppercase;
+}
+
+/* Brand rule line (horizontal) */
+.lm-rule {
+  border: none;
+  border-top: 1.5px solid var(--lm-blue);
+  margin: var(--lm-space-md) 0;
+}
+
+/* Disclaimer / footnote */
+.lm-disclaimer {
+  font-size: var(--lm-size-small);
+  color: var(--lm-muted);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* Pull stat / key number */
+.lm-stat {
+  font-size: var(--lm-size-hero);
+  font-weight: var(--lm-weight-bold);
+  color: var(--lm-blue);
+  line-height: 1;
+}

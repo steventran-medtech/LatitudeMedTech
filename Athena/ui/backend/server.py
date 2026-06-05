@@ -411,6 +411,22 @@ async def trigger_learning(request: Request, background_tasks: BackgroundTasks):
     return {"status": "started", "agent": "agent_learning", "target": agent or "all"}
 
 
+@app.post("/api/agents/run-all")
+async def trigger_run_all(background_tasks: BackgroundTasks):
+    """Run all standard agents in parallel (briefing, content, RAG, consulting, M&A, ISO)."""
+    batch = [
+        ("briefing_agent",        "briefing_agent.py",        []),
+        ("content_agent",         "content_agent.py",         []),
+        ("rag_agent",             "rag_agent.py",             []),
+        ("consulting_agent",      "consulting_agent.py",      []),
+        ("ma_intelligence_agent", "ma_intelligence_agent.py", []),
+        ("iso_coach",             "iso_coach_agent.py",       ["--next"]),
+    ]
+    for name, script, args in batch:
+        background_tasks.add_task(run_agent, name, script, args)
+    return {"status": "started", "agents": [b[0] for b in batch]}
+
+
 @app.post("/api/agents/consulting")
 async def trigger_consulting(request: Request, background_tasks: BackgroundTasks):
     body = await request.json()
@@ -418,6 +434,27 @@ async def trigger_consulting(request: Request, background_tasks: BackgroundTasks
     args = ["--generate", "report"] if mode == "report" else []
     background_tasks.add_task(run_agent, "consulting_agent", "consulting_agent.py", args)
     return {"status": "started", "agent": "consulting_agent", "mode": mode}
+
+
+@app.post("/api/agents/marketing")
+async def trigger_marketing(request: Request, background_tasks: BackgroundTasks):
+    body   = await request.json()
+    mode   = body.get("mode", "brief")   # "brief" | "plan" | "events" | "scorecard" | "learn"
+    target = body.get("target", "")
+    if mode == "plan":
+        args = ["--plan"]
+    elif mode == "events":
+        args = ["--events"]
+    elif mode == "scorecard":
+        args = ["--scorecard"]
+    elif mode == "learn":
+        args = ["learn"]
+    elif mode == "outreach" and target:
+        args = ["--outreach", _safe_arg(target)]
+    else:
+        args = []  # default: brief
+    background_tasks.add_task(run_agent, "marketing_agent", "marketing_agent.py", args)
+    return {"status": "started", "agent": "marketing_agent", "mode": mode}
 
 
 @app.post("/api/agents/ma")
@@ -1245,6 +1282,74 @@ def review_serve(item_id: int):
                      headers={"Content-Disposition": f'inline; filename="{f.name}"'})
 
 
+def _split_frontmatter(text: str):
+    """Return (frontmatter_block_including_fences, body). Empty fm if none."""
+    if text.startswith("---"):
+        end = text.find("\n---", 3)
+        if end != -1:
+            nl = text.find("\n", end + 1)
+            if nl != -1:
+                return text[:nl + 1], text[nl + 1:]
+    return "", text
+
+
+def _ai_edit_document(body: str, instruction: str) -> str:
+    """Revise a Markdown document per a reviewer instruction, at consulting
+    quality, returning the full revised Markdown body (no preamble)."""
+    import anthropic
+    key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not key:
+        raise RuntimeError("ANTHROPIC_API_KEY not configured")
+    client = anthropic.Anthropic(api_key=key)
+    system = (
+        "You are a senior editor at a Big 4-calibre MedTech/Pharma consulting firm "
+        "(Latitude MedTech). Revise the document per the reviewer's instruction while "
+        "preserving its Markdown structure and factual claims. Keep the house style: "
+        "specific citations (21 CFR §, ISO clause, company, dollar figure), no filler "
+        "phrases ('it is important to note', 'leverage', 'robust', 'in conclusion'), "
+        "concrete opening sentence. Return ONLY the full revised Markdown document — "
+        "no commentary, no code fences, no preamble."
+    )
+    resp = client.messages.create(
+        model="claude-sonnet-4-6", max_tokens=4000, system=system,
+        messages=[{"role": "user",
+                   "content": f"Reviewer instruction:\n{instruction}\n\n"
+                              f"---\nDocument to revise:\n\n{body}"}],
+    )
+    return resp.content[0].text.strip()
+
+
+class ReviewEditRequest(BaseModel):
+    instruction: str
+
+
+@app.post("/api/review/{item_id}/edit")
+async def review_edit(item_id: int, req: ReviewEditRequest):
+    """Apply an AI edit to a review item's document from a reviewer prompt.
+    Writes the revised content back to the same file and returns it."""
+    if not req.instruction.strip():
+        return JSONResponse(status_code=400, content={"error": "Instruction is empty"})
+    f = _resolve_review_file(item_id)
+    if not f:
+        return JSONResponse(status_code=404, content={"error": "File not found for this item"})
+    if f.suffix.lower() not in (".md", ".txt"):
+        return JSONResponse(status_code=400,
+            content={"error": f"Only markdown/text documents are editable (got {f.suffix})"})
+    try:
+        original    = f.read_text(encoding="utf-8", errors="replace")
+        fm, body    = _split_frontmatter(original)
+        revised     = await asyncio.to_thread(_ai_edit_document, body, req.instruction)
+        new_content = (fm + "\n" + revised) if fm else revised
+        f.write_text(new_content, encoding="utf-8")
+        if mem:
+            mem.log_event("human_review", "ai_edit",
+                          subject=f.name, metadata={"item_id": item_id})
+        return {"status": "edited", "filename": f.name,
+                "ext": f.suffix.lower().lstrip("."), "content": new_content}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
 @app.get("/api/dashboard/knowledge-growth")
 def knowledge_growth(days: int = 90):
     """Cumulative knowledge accumulation over time — every ingested KB document
@@ -1416,22 +1521,21 @@ async def greet():
     return {"phrase": phrase}
 
 @app.post("/api/shutdown")
-async def shutdown_app():
+async def shutdown_app(background_tasks: BackgroundTasks):
     """Play a goodbye, hand off to the verified stop script, then exit.
 
-    The stop script runs detached so it survives this process dying — it kills
-    both the backend (port 8000) and the frontend (port 3000) and confirms they
-    are gone, matching what stop_athena.bat does from the command line.
+    TTS is awaited synchronously so the response only returns after Athena
+    finishes speaking. The stop script and os._exit run as a background task
+    so they fire after the response has been fully sent to the client.
     """
     phrase = _random.choice(_GOODBYES)
     stop_script = ATHENA / "ui" / "stop_athena.ps1"
-    def _bye():
-        _speak_phrase(phrase)
-        import time; time.sleep(0.5)
-        # Spawn the stop script so it outlives our os._exit and can still clean
-        # up the frontend. On Windows a child survives the parent exiting; we use
-        # CREATE_NO_WINDOW (not DETACHED_PROCESS — that strips the console/handles
-        # PowerShell needs and the script silently no-ops) to avoid a flashing window.
+
+    # Block until TTS finishes — response is sent only after this completes.
+    await asyncio.get_event_loop().run_in_executor(None, _speak_phrase, phrase)
+
+    def _cleanup():
+        import time; time.sleep(0.15)  # brief buffer for response to flush
         try:
             flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
             subprocess.Popen(
@@ -1442,7 +1546,8 @@ async def shutdown_app():
         except Exception:
             pass
         import os; os._exit(0)
-    asyncio.get_event_loop().run_in_executor(None, _bye)
+
+    background_tasks.add_task(_cleanup)
     return {"phrase": phrase, "status": "shutting_down"}
 
 
