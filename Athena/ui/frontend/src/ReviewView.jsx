@@ -222,7 +222,7 @@ function ReviewViewer({ itemId, title, onClose, editState, onEdit, readOnly = fa
     <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
       style={{ position: "fixed", inset: 0, background: "rgba(10,37,64,0.45)",
         zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ background: "#fff", borderRadius: 10, width: "82vw", maxWidth: 900,
+      <div style={{ background: "#fff", borderRadius: 20, width: "82vw", maxWidth: 900,
         height: "90vh", display: "flex", flexDirection: "column", overflow: "hidden",
         boxShadow: "0 8px 40px rgba(10,37,64,0.3)" }}>
         {/* Header */}
@@ -329,6 +329,29 @@ const TYPE_LABEL = {
   lesson:  "ISO Lesson",
 };
 
+const AGENT_LABEL = {
+  coaching_brief:  "Coaching Agent",
+  coaching_agent:  "Coaching Agent",
+  content_agent:   "Content Agent",
+  iso_agent:       "ISO Agent",
+  consulting_agent:"Consulting Agent",
+  rag_agent:       "Knowledge Agent",
+  fda_agent:       "FDA Monitor",
+};
+
+function friendlyDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d)) return iso.slice(0, 16).replace("T", " ");
+  const now  = new Date();
+  const diff = (now - d) / 1000;   // seconds
+  if (diff < 60)              return "Just now";
+  if (diff < 3600)            return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400)           return `Today at ${d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+  if (diff < 172800)          return `Yesterday at ${d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+  return d.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+}
+
 export default function ReviewView() {
   const [items,  setItems]  = useState([]);
   const [stats,  setStats]  = useState({});
@@ -400,21 +423,25 @@ export default function ReviewView() {
   return (
     <div style={{ maxWidth: 780 }}>
       {/* Header */}
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
         <div>
           <h2 style={{ fontSize:"1.15rem", fontWeight:700, color:C.navy, margin:0 }}>
             Review Queue
           </h2>
           <p style={{ fontFamily:"Inter,sans-serif", fontSize:"0.78rem", color:C.fog, margin:"4px 0 0" }}>
-            All client-facing outputs require your approval before they're considered final.
+            Approve or reject agent outputs before they're delivered to clients.
           </p>
         </div>
-        <div style={{ display:"flex", gap:12, fontFamily:"Inter,sans-serif", fontSize:12 }}>
-          {[["pending","#C4922A"],["approved","#1F7A6D"],["rejected","#C0392B"]].map(([k,col])=>(
-            <div key={k} style={{ textAlign:"center" }}>
-              <div style={{ fontSize:22, fontWeight:700, color:col }}>{stats[k]||0}</div>
-              <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase",
-                letterSpacing:"0.1em", color:C.fog }}>{k}</div>
+        <div style={{ display:"flex", gap:8, fontFamily:"Inter,sans-serif" }}>
+          {[
+            { key:"pending",  label:"Awaiting",  col:"#C4922A", bg:"#FDF6EC" },
+            { key:"approved", label:"Approved",  col:"#1F7A6D", bg:"#EDF7F4" },
+            { key:"rejected", label:"Rejected",  col:"#C0392B", bg:"#FBEAEA" },
+          ].map(({ key, label, col, bg }) => (
+            <div key={key} style={{ textAlign:"center", background:bg, borderRadius:8,
+              padding:"8px 14px", minWidth:60 }}>
+              <div style={{ fontSize:20, fontWeight:700, color:col, lineHeight:1.1 }}>{stats[key]||0}</div>
+              <div style={{ fontSize:10, color:col, opacity:0.8, marginTop:2 }}>{label}</div>
             </div>
           ))}
         </div>
@@ -438,91 +465,87 @@ export default function ReviewView() {
 
       {/* ── Pending Queue ── */}
       {tab === "queue" && (items.length === 0 ? (
-        <div style={{ padding:"48px 0", textAlign:"center",
+        <div style={{ padding:"52px 0", textAlign:"center",
           border:`1px dashed ${C.mist}`, borderRadius:10,
-          fontFamily:"Inter,sans-serif", fontSize:13, color:C.fog }}>
-          <div style={{ fontSize:28, marginBottom:8 }}>✓</div>
-          Queue is clear. No pending reviews.
+          fontFamily:"Inter,sans-serif", color:C.fog }}>
+          <div style={{ fontSize:32, marginBottom:10 }}>✓</div>
+          <div style={{ fontSize:14, fontWeight:600, color:C.navy, marginBottom:4 }}>All caught up</div>
+          <div style={{ fontSize:12 }}>No documents are waiting for your review.</div>
         </div>
       ) : items.map(item => {
         const typeColor = TYPE_COLOR[item.item_type] || C.fog;
         const typeLabel = TYPE_LABEL[item.item_type] || item.item_type;
-        const date = item.timestamp?.slice(0, 10);
-        const time = item.timestamp?.slice(11, 16);
+        const agentLabel = AGENT_LABEL[item.agent] || item.agent;
+        const whenLabel  = friendlyDate(item.timestamp);
         return (
           <div key={item.id} style={{
             background: C.pearl, border:`1px solid ${C.mist}`,
             borderLeft: `3px solid ${typeColor}`,
-            borderRadius:"0 10px 10px 0", padding:"16px 20px",
+            borderRadius:"0 10px 10px 0", padding:"18px 22px",
             marginBottom:12,
           }}>
             <div style={{ display:"flex", justifyContent:"space-between",
               alignItems:"flex-start", gap:12 }}>
               <div style={{ flex:1 }}>
-                {/* Type badge + title */}
-                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+                {/* Type badge + meta */}
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" }}>
                   <span style={{
-                    fontFamily:"Inter,sans-serif", fontSize:9, fontWeight:700,
-                    letterSpacing:"0.1em", textTransform:"uppercase",
+                    fontFamily:"Inter,sans-serif", fontSize:10, fontWeight:600,
                     background: typeColor + "18", color: typeColor,
-                    padding:"2px 8px", borderRadius:4,
+                    padding:"3px 9px", borderRadius:5,
                   }}>{typeLabel}</span>
-                  <span style={{ fontFamily:"Inter,sans-serif", fontSize:9,
-                    color:C.fog }}>{item.agent}</span>
-                  <span style={{ fontFamily:"Inter,sans-serif", fontSize:9,
-                    color:C.fog }}>{date} {time}</span>
+                  <span style={{ fontFamily:"Inter,sans-serif", fontSize:11, color:C.fog }}>
+                    {agentLabel}
+                  </span>
+                  <span style={{ fontFamily:"Inter,sans-serif", fontSize:11, color:C.fog, opacity:0.7 }}>
+                    · Submitted {whenLabel}
+                  </span>
                   {edits[item.id]?.status === "editing" && (
                     <span style={{ display:"inline-flex", alignItems:"center", gap:5,
-                      fontFamily:"Inter,sans-serif", fontSize:9, fontWeight:700,
-                      letterSpacing:"0.06em", textTransform:"uppercase",
-                      background:C.ocean+"18", color:C.ocean, padding:"2px 8px", borderRadius:4 }}>
+                      fontFamily:"Inter,sans-serif", fontSize:10, fontWeight:600,
+                      background:C.ocean+"18", color:C.ocean, padding:"3px 9px", borderRadius:5 }}>
                       <span style={{ width:6, height:6, borderRadius:"50%", background:C.ocean,
                         animation:"revPulse 1s ease-in-out infinite" }} />
                       Revising…
                     </span>
                   )}
                   {edits[item.id]?.status === "done" && (
-                    <span style={{ fontFamily:"Inter,sans-serif", fontSize:9, fontWeight:700,
-                      letterSpacing:"0.06em", textTransform:"uppercase",
-                      background:C.teal+"18", color:C.teal, padding:"2px 8px", borderRadius:4 }}>
+                    <span style={{ fontFamily:"Inter,sans-serif", fontSize:10, fontWeight:600,
+                      background:C.teal+"18", color:C.teal, padding:"3px 9px", borderRadius:5 }}>
                       ✓ Revised
                     </span>
                   )}
                   {edits[item.id]?.status === "error" && (
                     <span title={edits[item.id]?.msg} style={{ fontFamily:"Inter,sans-serif",
-                      fontSize:9, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase",
-                      background:C.red+"18", color:C.red, padding:"2px 8px", borderRadius:4 }}>
-                      ✕ Edit failed
+                      fontSize:10, fontWeight:600,
+                      background:C.red+"18", color:C.red, padding:"3px 9px", borderRadius:5 }}>
+                      Edit failed
                     </span>
                   )}
                 </div>
                 <div
                   onClick={() => setViewing({ id: item.id, title: item.title })}
-                  title="Open to read"
+                  title="Click to read"
                   style={{ fontFamily:"Inter,sans-serif", fontWeight:600,
-                  fontSize:14, color:C.ocean, lineHeight:1.4, cursor:"pointer",
+                  fontSize:15, color:C.ocean, lineHeight:1.4, cursor:"pointer",
                   textDecoration:"underline", textDecorationColor:C.mist,
                   textUnderlineOffset:3 }}>
                   {item.title}
                 </div>
-                {item.file_path && (
-                  <div style={{ fontFamily:"monospace", fontSize:10, color:C.fog, marginTop:4 }}>
-                    {item.file_path.split("\\").slice(-2).join("\\")}
-                  </div>
-                )}
               </div>
             </div>
 
             {/* Notes + actions */}
             {(() => { const busy = acting[item.id] || edits[item.id]?.status === "editing"; return (
-            <div style={{ marginTop:12, display:"flex", gap:8, alignItems:"flex-end" }}>
+            <div style={{ marginTop:14, borderTop:`1px solid ${C.mist}`, paddingTop:12,
+              display:"flex", gap:8, alignItems:"center" }}>
               <input
                 value={notes[item.id] || ""}
                 onChange={e => setNotes(p => ({ ...p, [item.id]: e.target.value }))}
-                placeholder="Optional review notes…"
+                placeholder="Add a review note (optional)…"
                 style={{
-                  flex:1, padding:"6px 10px", border:`1px solid ${C.mist}`,
-                  borderRadius:6, fontFamily:"Inter,sans-serif", fontSize:12,
+                  flex:1, padding:"7px 12px", border:`1px solid ${C.mist}`,
+                  borderRadius:7, fontFamily:"Inter,sans-serif", fontSize:12.5,
                   color:"#3C5470", background:C.cloud, outline:"none",
                 }}
               />
@@ -531,9 +554,10 @@ export default function ReviewView() {
                 disabled={busy}
                 title={edits[item.id]?.status === "editing" ? "Wait for the revision to finish" : ""}
                 style={{
-                  padding:"7px 18px", background: busy ? C.fog : C.teal,
-                  color:"#fff", border:"none", borderRadius:6, cursor: busy ? "not-allowed" : "pointer",
-                  fontFamily:"Inter,sans-serif", fontSize:12, fontWeight:700, whiteSpace:"nowrap",
+                  padding:"8px 20px", background: busy ? C.fog : C.teal,
+                  color:"#fff", border:"none", borderRadius:7, cursor: busy ? "not-allowed" : "pointer",
+                  fontFamily:"Inter,sans-serif", fontSize:12.5, fontWeight:700, whiteSpace:"nowrap",
+                  boxShadow: busy ? "none" : "0 1px 4px rgba(31,122,109,0.25)",
                 }}>
                 ✓ Approve
               </button>
@@ -541,12 +565,12 @@ export default function ReviewView() {
                 onClick={() => act(item.id, "reject")}
                 disabled={busy}
                 style={{
-                  padding:"7px 14px", background:"transparent", color:C.red,
-                  border:`1px solid ${C.red}55`, borderRadius:6,
+                  padding:"8px 16px", background:"transparent", color:C.red,
+                  border:`1px solid ${C.red}55`, borderRadius:7,
                   cursor: busy ? "not-allowed" : "pointer",
-                  fontFamily:"Inter,sans-serif", fontSize:12, fontWeight:600,
+                  fontFamily:"Inter,sans-serif", fontSize:12.5, fontWeight:600,
                 }}>
-                ✕ Reject
+                Reject
               </button>
             </div>
           ); })()}
@@ -556,66 +580,58 @@ export default function ReviewView() {
 
       {/* ── History ── */}
       {tab === "history" && (histItems.length === 0 ? (
-        <div style={{ padding:"48px 0", textAlign:"center",
+        <div style={{ padding:"52px 0", textAlign:"center",
           border:`1px dashed ${C.mist}`, borderRadius:10,
-          fontFamily:"Inter,sans-serif", fontSize:13, color:C.fog }}>
-          No reviewed documents yet.
+          fontFamily:"Inter,sans-serif", color:C.fog }}>
+          <div style={{ fontSize:14, fontWeight:600, color:C.navy, marginBottom:4 }}>No history yet</div>
+          <div style={{ fontSize:12 }}>Approved and rejected documents will appear here.</div>
         </div>
       ) : histItems.map(item => {
-        const typeColor = TYPE_COLOR[item.item_type] || C.fog;
-        const typeLabel = TYPE_LABEL[item.item_type] || item.item_type;
-        const approved  = item.status === "approved";
-        const statusCol = approved ? C.teal : C.red;
-        const reviewedDate = item.reviewed_at?.slice(0, 10);
-        const reviewedTime = item.reviewed_at?.slice(11, 16);
+        const typeColor  = TYPE_COLOR[item.item_type] || C.fog;
+        const typeLabel  = TYPE_LABEL[item.item_type] || item.item_type;
+        const agentLabel = AGENT_LABEL[item.agent] || item.agent;
+        const approved   = item.status === "approved";
+        const statusCol  = approved ? C.teal : C.red;
+        const whenLabel  = friendlyDate(item.reviewed_at || item.timestamp);
         return (
           <div key={item.id} style={{
             background: C.pearl, border:`1px solid ${C.mist}`,
             borderLeft: `3px solid ${statusCol}`,
-            borderRadius:"0 10px 10px 0", padding:"14px 20px",
+            borderRadius:"0 10px 10px 0", padding:"16px 22px",
             marginBottom:10, opacity: reopening[item.id] ? 0.5 : 1,
             transition:"opacity 0.2s",
           }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
               <div style={{ flex:1 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
-                  {/* Status pill */}
-                  <span style={{ fontFamily:"Inter,sans-serif", fontSize:9, fontWeight:700,
-                    letterSpacing:"0.1em", textTransform:"uppercase",
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" }}>
+                  <span style={{ fontFamily:"Inter,sans-serif", fontSize:10, fontWeight:600,
                     background: statusCol + "18", color: statusCol,
-                    padding:"2px 8px", borderRadius:4 }}>
+                    padding:"3px 9px", borderRadius:5 }}>
                     {approved ? "✓ Approved" : "✕ Rejected"}
                   </span>
-                  <span style={{ fontFamily:"Inter,sans-serif", fontSize:9, fontWeight:700,
-                    letterSpacing:"0.1em", textTransform:"uppercase",
+                  <span style={{ fontFamily:"Inter,sans-serif", fontSize:10, fontWeight:600,
                     background: typeColor + "18", color: typeColor,
-                    padding:"2px 8px", borderRadius:4 }}>{typeLabel}</span>
-                  <span style={{ fontFamily:"Inter,sans-serif", fontSize:9, color:C.fog }}>
-                    {item.agent}
+                    padding:"3px 9px", borderRadius:5 }}>{typeLabel}</span>
+                  <span style={{ fontFamily:"Inter,sans-serif", fontSize:11, color:C.fog }}>
+                    {agentLabel}
                   </span>
-                  {reviewedDate && (
-                    <span style={{ fontFamily:"Inter,sans-serif", fontSize:9, color:C.fog }}>
-                      reviewed {reviewedDate} {reviewedTime}
-                    </span>
-                  )}
+                  <span style={{ fontFamily:"Inter,sans-serif", fontSize:11, color:C.fog, opacity:0.7 }}>
+                    · Reviewed {whenLabel}
+                  </span>
                 </div>
                 <div
                   onClick={() => setViewing({ id: item.id, title: item.title, readOnly: true })}
-                  title="Open to read"
-                  style={{ fontFamily:"Inter,sans-serif", fontWeight:600, fontSize:14,
+                  title="Click to read"
+                  style={{ fontFamily:"Inter,sans-serif", fontWeight:600, fontSize:15,
                     color:C.ocean, lineHeight:1.4, cursor:"pointer",
                     textDecoration:"underline", textDecorationColor:C.mist, textUnderlineOffset:3 }}>
                   {item.title}
                 </div>
                 {item.notes && (
-                  <div style={{ fontFamily:"Inter,sans-serif", fontSize:11, color:C.fog,
-                    marginTop:5, fontStyle:"italic" }}>
-                    "{item.notes}"
-                  </div>
-                )}
-                {item.file_path && (
-                  <div style={{ fontFamily:"monospace", fontSize:10, color:C.fog, marginTop:4 }}>
-                    {item.file_path.split("\\").slice(-2).join("\\")}
+                  <div style={{ fontFamily:"Inter,sans-serif", fontSize:11.5, color:C.fog,
+                    marginTop:6, fontStyle:"italic", borderLeft:`2px solid ${C.mist}`,
+                    paddingLeft:10 }}>
+                    {item.notes}
                   </div>
                 )}
               </div>
