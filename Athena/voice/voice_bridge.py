@@ -589,12 +589,54 @@ def _track_query(latency_ms: float, empty: bool = False,
 
 # ── Wake word ─────────────────────────────────────────────────────────────────
 
+
+class _SklearnWakeDetector:
+    """
+    OWW-compatible wrapper for the sklearn pipeline trained by custom_wake_trainer.py.
+    Mirrors Model.predict() / reset() so the voice loop needs no changes.
+    Loaded when voice/wake/hi_athena.pkl exists (preferred over ONNX fallback).
+    predict(chunk) -> {"hi_athena": float}
+    """
+
+    def __init__(self, clf, n_history: int = 5):
+        from openwakeword.utils import AudioFeatures
+        self._clf = clf
+        self._af  = AudioFeatures()
+        self._buf = []
+        self._n   = n_history
+
+    def predict(self, audio_chunk: np.ndarray) -> dict:
+        CLIP = 16000
+        try:
+            i16 = audio_chunk.astype(np.int16)
+            i16 = np.pad(i16, (0, max(0, CLIP - len(i16))))[:CLIP]
+            emb = np.array(self._af.embed_clips(i16.reshape(1, -1)))  # (1,3,96)
+            self._buf.append(emb.reshape(1, -1))
+            if len(self._buf) > self._n:
+                self._buf.pop(0)
+            avg  = np.mean(np.concatenate(self._buf), axis=0, keepdims=True)
+            prob = self._clf.predict_proba(avg)[0][1]
+            return {"hi_athena": float(prob)}
+        except Exception:
+            return {"hi_athena": 0.0}
+
+    def reset(self):
+        self._buf.clear()
+
+
 def _load_wake_model():
     try:
+        custom_pkl  = ATHENA / "voice" / "wake" / "hi_athena.pkl"
+        custom_onnx = ATHENA / "voice" / "wake" / "hi_athena.onnx"
+        if custom_pkl.exists():
+            import pickle
+            with open(custom_pkl, "rb") as f:
+                clf = pickle.load(f)
+            _emit("loading", message="Custom 'Hi Athena' wake word model loaded")
+            return _SklearnWakeDetector(clf)
         from openwakeword.model import Model
-        custom = ATHENA / "voice" / "wake" / "hi_athena.onnx"
-        if custom.exists():
-            return Model(wakeword_models=[str(custom)], inference_framework="onnx")
+        if custom_onnx.exists():
+            return Model(wakeword_models=[str(custom_onnx)], inference_framework="onnx")
         return Model(wakeword_models=["alexa"], inference_framework="onnx")
     except Exception as e:
         _emit("error", message=f"Wake word model failed: {e}")
