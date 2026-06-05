@@ -192,6 +192,68 @@ def learn(agent_name: str, max_new: int = 10) -> Dict:
     return {"agent": agent_name, "new_items": new_items, "chunks": new_chunks}
 
 
+# ── Single-run lock ───────────────────────────────────────────────────────────
+# Two learning runs firing at once (e.g. an overlapping schedule) both race on
+# the dedup table and can wedge together. An exclusive lock file guarantees only
+# one run proceeds; a stale lock (older than a run could legitimately take) is
+# reclaimed automatically so a crashed run never blocks future ones.
+
+LOCK_FILE = LOG_DIR / "agent_learning.lock"
+LOCK_STALE_MINUTES = 30
+
+
+def _read_lock() -> Optional[Dict]:
+    try:
+        return json.loads(LOCK_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _acquire_lock() -> bool:
+    """Atomically claim the run lock. Returns True if acquired, False if another
+    live run already holds it. Reclaims a stale lock left by a crashed run."""
+    for _ in range(2):
+        try:
+            fd = os.open(str(LOCK_FILE), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump({"pid": os.getpid(), "started": datetime.now().isoformat()}, f)
+            return True
+        except FileExistsError:
+            info    = _read_lock()
+            started = None
+            if info and info.get("started"):
+                try:
+                    started = datetime.fromisoformat(info["started"])
+                except ValueError:
+                    started = None
+            age_min = (datetime.now() - started).total_seconds() / 60 if started else float("inf")
+            if age_min > LOCK_STALE_MINUTES:
+                log.warning(f"Reclaiming stale learning lock (pid {info.get('pid') if info else '?'}, "
+                            f"age {age_min:.0f}m)")
+                try:
+                    LOCK_FILE.unlink()
+                except FileNotFoundError:
+                    pass
+                continue  # retry the exclusive create
+            log.warning(f"Another learning run is already in progress "
+                        f"(pid {info.get('pid') if info else '?'}, "
+                        f"started {info.get('started') if info else '?'}). Exiting.")
+            return False
+    return False
+
+
+def _release_lock() -> None:
+    """Remove the lock only if we still own it (avoid deleting a reclaimed lock)."""
+    try:
+        info = _read_lock()
+        if info and info.get("pid") == os.getpid():
+            LOCK_FILE.unlink()
+    except FileNotFoundError:
+        pass
+    except Exception:
+        pass
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 ALL_AGENTS = ["content", "briefing", "iso", "coaching", "fda", "rag",
@@ -204,8 +266,20 @@ def main():
                         help="Single agent name, or blank for all")
     parser.add_argument("--max",   type=int, default=10,
                         help="Max new items per agent per source run")
+    parser.add_argument("--force", action="store_true",
+                        help="Bypass the single-run lock")
     args = parser.parse_args()
 
+    if not args.force and not _acquire_lock():
+        return
+    try:
+        _run(args)
+    finally:
+        if not args.force:
+            _release_lock()
+
+
+def _run(args):
     targets = [args.agent] if args.agent else ALL_AGENTS
     results = []
 
