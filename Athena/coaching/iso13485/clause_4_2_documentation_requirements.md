@@ -1,8 +1,8 @@
 ---
 clause: 4.2
 title: Documentation Requirements
-generated: 2026-06-05T10:40:40.414643
-word_count: 1426
+generated: 2026-06-05T11:45:00.318713
+word_count: 1451
 status: DRAFT — review before sharing with clients
 ---
 
@@ -10,100 +10,102 @@ status: DRAFT — review before sharing with clients
 
 ## What This Clause Is About
 
-Every medical device company runs on documents — procedures, forms, records, labels, work instructions. Clause 4.2 sets the rules for how those documents are structured, controlled, and maintained. Without these rules, you end up with people working from outdated procedures, missing records during audits, or — worst case — devices built to the wrong specifications.
+Every medical device company runs on documents — procedures, records, forms, specifications. Clause 4.2 sets the rules for how your Quality Management System (QMS) documentation must be structured and controlled. Without these rules, you end up with outdated procedures people ignore, missing records that can't prove compliance, and audits that go sideways fast.
 
 ---
 
 ## What It Requires (The Essentials)
 
-**1. You need a documented Quality Management System (QMS)**
-The standard requires your QMS to be documented. That means having a Quality Manual (or equivalent) that describes the scope of your QMS, your documented procedures, and how the pieces fit together. Some companies still use a traditional Quality Manual; others embed this information differently — but the content must exist somewhere.
+**1. You must have a documented Quality Manual.**
+ISO 13485 requires a Quality Manual that describes the scope of your QMS, references your procedures, and explains how your processes interact. Think of it as the map of your entire quality system. If your company makes orthopedic implants but not software, your Quality Manual documents that scope and explains why certain clauses may not apply.
 
-**2. You must have specific documented procedures**
-ISO 13485 requires certain procedures to be documented in writing — not just understood or verbally communicated. Control of documents and control of records are two examples required by this clause specifically. If an auditor asks for your document control procedure and you don't have one in writing, that's a nonconformity.
+**2. Your QMS needs documented procedures — some are mandatory.**
+The standard requires written procedures for specific activities (like document control, record control, and corrective action). Beyond the mandatory ones, your company decides what else needs a documented procedure based on the complexity of your processes and the competency of your people. A three-person startup handles this differently than a 200-person manufacturer.
 
-**3. Documents must be controlled**
-"Controlled" means approved before use, kept current, protected from unintended changes, and available where needed. A procedure sitting in someone's personal Google Drive that nobody else can access is not controlled. A procedure with no approval signature is not controlled. Control is about making sure the right people are using the right version at the right time.
+**3. Records are a separate category — and they need special protection.**
+A *document* tells people what to do. A *record* is evidence that they did it. Both need to be controlled, but records have extra requirements: you can't alter them improperly, they must be legible, and you must retain them for defined periods. A Device History Record (DHR) proving a lot of catheters was built to spec is a record. The work instruction explaining how to build it is a document.
 
-**4. Records are a special category**
-Records are documents that show what actually happened — a completed inspection form, a signed training log, a device history record. The standard treats records differently from other documents because records prove conformity and must be retained for defined periods. For implantable devices, that retention period is a minimum of the device's lifetime plus two years — and in some markets even longer.
+**4. Documents must be controlled — the right version, in the right hands, at the right time.**
+This means approved before use, reviewed and updated when needed, and protected from accidental use of outdated versions. If a technician on the production floor is working from a procedure that was revised six months ago, that's a Clause 4.2 problem.
 
-**5. You must consider document legibility, retrievability, and protection**
-Documents and records must be readable, findable when you need them, and protected from damage or loss. A water-damaged paper batch record or a corrupted electronic file doesn't fulfill this requirement.
+**5. You must control documents of external origin.**
+This catches people off guard. If you use a customer drawing, a supplier specification, or a recognized standard (like IEC 60601 for electrical safety) as part of your process, those documents need to be identified and controlled too — not just floating around in someone's email inbox.
 
 ---
 
 ## What This Looks Like in Practice
 
-Imagine you're a QA Coordinator at a 45-person company that makes orthopedic surgical instruments. Your QMS lives in an electronic document management system (eDMS) — let's say it's Greenlight Guru or MasterControl.
+Imagine a 50-person company in Minnesota that makes powered surgical handpieces. Their QMS looks something like this:
 
-When a process engineer wants to update a work instruction for instrument cleaning, here's what actually happens: She drafts the change in the system and routes it to a reviewer (usually a senior engineer) and then to the QA Manager for approval. Nobody can pull up the new version on the production floor until both signatures are captured in the system. The old version is automatically archived — it's still accessible if you need to look back, but it's clearly marked as obsolete so nobody accidentally uses it.
+The **Quality Manager** owns the document control procedure (SOP-001) and the Quality Manual. When an engineer wants to revise a work instruction for handpiece assembly, she submits a change request through their document control software (something like Greenlight Guru, MasterControl, or even a well-structured SharePoint). The **Document Control Coordinator** — often a junior QA role — reviews the request for completeness and routes it to the appropriate approvers.
 
-Your job as QA Coordinator might include things like: checking that the document has the right template, confirming that all reviewers are the right approvers per your procedure, and making sure the document number follows your numbering convention (something like WI-MANUF-042, Rev B).
+Before the revision goes live, it gets reviewed by Engineering for technical accuracy and by QA for compliance impact. Once approved, the system automatically archives the old version and publishes the new one. The coordinator then notifies the production supervisor, who confirms that floor personnel have been trained on the change before using the updated procedure.
 
-On the records side, when a technician completes an inspection, they fill out a form that gets scanned and linked to the device history record (DHR) for that lot. Your document control procedure specifies that those records are retained for 10 years. If an auditor shows up and asks for the DHR for Lot 2022-089, you should be able to pull it in minutes — not hours.
+Records from that process — the training acknowledgment forms, the approval signatures, the change history — all get stored and retained per the company's record retention schedule. For a Class II device, that might mean retaining manufacturing records for the expected device lifetime plus two years, or longer depending on regulatory requirements in their markets.
+
+A new QA associate in this company spends their first few weeks learning this system — understanding how documents are numbered, where approved versions live, and why you never, ever print and use a document without checking that it's the current approved version.
 
 ---
 
 ## Common Mistakes and Audit Findings
 
-**1. Using documents that haven't been formally approved**
-This shows up constantly in audits. Someone creates a "quick reference" laminated card on the production floor, or a supervisor emails out an updated procedure before it's approved in the system. Both are nonconformities. If people are working from it, it needs to be controlled.
+**1. Confusing documents with records.**
+Early-career professionals frequently mix these up. An auditor asks for your "calibration records" and you hand them the calibration procedure. These are not the same thing. Know the difference cold.
 
-**2. Obsolete documents accessible at point of use**
-Finding a previous revision of a procedure posted on a wall next to a current revision — or both floating around in an uncontrolled shared drive — is a classic finding. The standard requires obsolete documents to be removed from use or clearly identified so they can't be accidentally used.
+**2. Uncontrolled documents on the production floor.**
+Printed copies of SOPs or work instructions sitting in binders with no revision date, no indication they're controlled copies, and no system to pull them when procedures change. Notified bodies find this constantly.
 
-**3. Records that are incomplete or illegible**
-A batch record with blank fields, crossed-out entries with no initials, or handwriting nobody can read will get flagged. Records need to demonstrate that required activities actually happened.
+**3. Missing control of external documents.**
+A team is using a customer-supplied drawing or a specific ASTM standard in their test method but it's not listed in their controlled document system. When the customer updates their drawing, nobody knows. This creates both a quality risk and a compliance finding.
 
-**4. No defined retention periods**
-Companies sometimes have records but no policy specifying how long to keep them. An auditor will ask: "How do you know when it's okay to destroy this record?" If you can't answer that, you have a gap.
+**4. Quality Manual that doesn't match reality.**
+The Quality Manual says the company uses a risk-based approach to supplier qualification and documents all critical processes — but the actual procedures and records don't support that. Auditors read your Quality Manual and then go looking for evidence. If the two don't align, you have a problem.
 
 ---
 
 ## Key Terms to Know
 
-**Quality Manual** — A document (or set of documents) that describes the scope of your QMS and how it operates. Think of it as the top-level map of your quality system.
+**Quality Manual** — The top-level document describing your QMS scope, structure, and how your processes connect. Required by ISO 13485.
 
-**Documented Procedure** — A procedure that is written down and formally controlled. The standard specifically requires certain procedures to exist in this form.
+**Documented Procedure** — A written procedure that describes how to carry out a specific activity. Some are explicitly required by the standard; others are determined by your company's needs.
 
-**Document Control** — The system for managing how documents are created, reviewed, approved, distributed, changed, and retired.
+**Record** — Objective evidence that something happened or a result was achieved. Records can't be revised the way procedures can — they document what actually occurred.
 
-**Record** — A completed document that provides evidence that something happened. Unlike procedures, records don't get revised — they capture a moment in time.
+**Document Control** — The system for managing the creation, review, approval, distribution, and retirement of documents to ensure only current, approved versions are in use.
 
-**Device History Record (DHR)** — The collection of records that prove a specific device or lot was manufactured according to its specifications. Required by both ISO 13485 and FDA 21 CFR Part 820.
+**Quality Management System (QMS)** — The complete set of processes, procedures, and records a company uses to consistently meet quality and regulatory requirements.
 
-**Obsolete Document** — A previous version of a document that is no longer current. Must be prevented from unintended use.
+**Device History Record (DHR)** — A collection of records proving that a specific device lot or unit was manufactured according to the Device Master Record (specifications and procedures).
 
-**Retention Period** — How long a record must be kept before it can be destroyed. Varies by record type and regulatory market.
+**Retention Period** — The minimum length of time a record must be kept. Varies by document type and applicable regulations.
 
-**eDMS (Electronic Document Management System)** — Software used to create, store, approve, and control documents and records electronically.
+**External Document** — A document created outside your company (customer drawings, supplier specs, industry standards) that you use in your processes and must therefore control.
 
 ---
 
 ## Check Your Understanding
 
-**1. What is the difference between a document and a record?**
-A document (like a procedure or work instruction) describes what to do and can be revised. A record captures evidence that something was done — it's a snapshot of a completed activity and is not revised.
+**1. What is the primary purpose of the Quality Manual?**
+*Answer: It describes the scope of the QMS, references key procedures, and explains how processes interact — essentially a map of the quality system.*
 
-**2. Why does ISO 13485 require certain procedures to be documented in writing?**
-Because verbal procedures can be interpreted differently by different people, can't be reviewed during audits, and can't be consistently updated and communicated. Written procedures create a baseline everyone works from.
+**2. What is the difference between a document and a record?**
+*Answer: A document tells people what to do (procedure, work instruction, specification). A record is evidence that something was done (test result, training log, inspection form). Records cannot be revised the way procedures can.*
 
-**3. Scenario: An operator finds two versions of a cleaning procedure — one posted on the wall (Rev C) and one in the eDMS (Rev D). What is the problem and what should happen?**
-The problem is that an obsolete document (Rev C) is accessible at the point of use. The operator might follow the wrong procedure. The Rev C copy should be removed immediately, and the situation should be documented as a potential nonconformity for investigation.
+**3. Why does ISO 13485 require control of external documents?**
+*Answer: Because if you're using external documents in your processes, outdated or incorrect external documents can cause the same quality and compliance failures as outdated internal ones.*
 
-**4. What does "controlled document" mean?**
-A controlled document has been formally approved, is the current version, is available to the people who need it, and is protected from unauthorized changes.
+**4. Scenario: During an audit, an inspector finds a technician using a printed assembly procedure. The header shows Revision B, but the document control system shows Revision C was approved three months ago. Which clause is implicated and what's the core problem?**
+*Answer: Clause 4.2, specifically document control. The core problem is that an obsolete document version was in use — meaning either the old copy wasn't removed when the revision went live, or the technician retrieved an uncontrolled copy.*
 
-**5. Scenario: Your company retains batch records for 3 years, but you manufacture a Class III implantable device. Is this compliant with ISO 13485?**
-No. ISO 13485 requires records for implantable devices to be retained for at least the lifetime of the device plus two years — and specific markets (like the US or EU) may require longer. Three years is almost certainly insufficient.
+**5. Scenario: Your company's Quality Manual states that all suppliers are evaluated annually. An auditor asks to see the supplier evaluation records and finds that three critical suppliers haven't been evaluated in 18 months. What's the issue beyond just the supplier management clause?**
+*Answer: There's also a Clause 4.2 issue — the Quality Manual doesn't reflect actual practice. Documentation must describe what the system actually does, not an idealized version of it.*
 
 ---
 
 ## How This Connects to Your Career
 
-Document control is often the first real responsibility handed to early-career QA professionals — and companies can tell immediately whether you understand it or are just following steps. When you understand *why* documents need to be controlled, not just *how* to process them in a system, you catch problems before they become audit findings. You'll also work with almost every department in the company through document control — engineering, manufacturing, regulatory, clinical — which gives you visibility and relationships that accelerate your growth faster than almost any other QA role. Employers hiring for QA Specialist and QA Engineer roles consistently list document control experience as a baseline expectation. Knowing Clause 4.2 cold is not just checkbox compliance — it's the foundation everything else in the QMS rests on.
+Document control is often the first real responsibility handed to an early-career QA professional — and it's where a lot of people either build credibility or lose it quickly. Companies need people who understand not just how to file documents, but *why* the system is structured the way it is. When you understand Clause 4.2, you can catch problems before they become audit findings, train colleagues on why version control matters, and contribute meaningfully to QMS improvement projects. Hiring managers notice candidates who can speak to document hierarchy, controlled distribution, and record retention with confidence — because it signals that you understand the foundation the entire QMS is built on.
 
 ---
 
-*This lesson is educational content only and is not regulatory or legal advice. Always refer to the official ISO 13485:2016 standard for authoritative requirements, and consult qualified regulatory professionals for guidance specific to your products and markets.*
+*This lesson is educational content only and is not regulatory or legal advice. Always refer to the official ISO 13485:2016 standard for actual requirements, and consult qualified regulatory professionals for guidance specific to your company and products.*

@@ -52,6 +52,20 @@ if (-not $backendUp) {
     exit 1
 }
 
+# ── Wait for voice models to finish loading ────────────────────────────────
+# Models preload in a background thread; we block here so Chrome never opens
+# before Athena is fully ready to take requests.
+$modelTimeout = 60   # seconds
+$modelElapsed = 0
+while ($modelElapsed -lt $modelTimeout) {
+    try {
+        $r = Invoke-RestMethod "http://127.0.0.1:8000/api/voice/status" -TimeoutSec 3 -ErrorAction Stop
+        if ($r.models_ready -eq $true) { break }
+    } catch { }
+    Start-Sleep -Milliseconds 500
+    $modelElapsed += 0.5
+}
+
 # ── Open Chrome ────────────────────────────────────────────────────────────
 $chrome = @(
     "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
@@ -60,17 +74,35 @@ $chrome = @(
 ) | Where-Object { Test-Path $_ } | Select-Object -First 1
 
 if ($chrome) {
-    Start-Process $chrome "--app=http://localhost:3000 --window-size=1440,900"
+    # Isolated profile => its own browser process tree, every member of which
+    # carries --user-data-dir=$CHROME_PROFILE in its command line. stop_athena.ps1
+    # closes exactly that instance by matching on this path — the user's main
+    # Chrome (default profile) is never touched.
+    $chromeArgs = @(
+        "--app=http://localhost:3000",
+        "--window-size=1440,900",
+        "--user-data-dir=$CHROME_PROFILE",
+        "--no-first-run",
+        "--no-default-browser-check"
+    )
+    Start-Process $chrome -ArgumentList $chromeArgs
 } else {
     Start-Process "http://localhost:3000"
 }
 
-# ── Wait for Chrome process to actually appear (not a fixed sleep) ─────────
+# ── Wait for our isolated Chrome window, then record its main PID ───────────
+# WMI is reliable here (normal console); we do the command-line match now so
+# stop can simply taskkill the PID tree without WMI in its detached context.
+if (Test-Path $CHROME_PID_FILE) { Remove-Item $CHROME_PID_FILE -Force -ErrorAction SilentlyContinue }
 $maxWait = 20   # seconds
 $elapsed = 0
 while ($elapsed -lt $maxWait) {
-    $procs = Get-Process -Name "chrome" -ErrorAction SilentlyContinue
-    if ($procs -and $procs.Count -gt 0) { break }
+    $mine = Get-CimInstance Win32_Process -Filter "Name='chrome.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -and $_.CommandLine -like "*$CHROME_PROFILE*" -and $_.CommandLine -notlike "*--type=*" }
+    if ($mine) {
+        ($mine | Select-Object -First 1).ProcessId | Out-File $CHROME_PID_FILE -Encoding ascii
+        break
+    }
     Start-Sleep -Milliseconds 400
     $elapsed += 0.4
 }

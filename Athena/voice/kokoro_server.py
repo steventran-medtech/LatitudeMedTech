@@ -33,10 +33,10 @@ except Exception as e:
     sys.exit(1)
 
 
-def _synthesise(text: str, voice: str) -> bytes:
+def _synthesise(text: str, voice: str, speed: float = 0.92) -> bytes:
     """Return WAV bytes for the given text."""
     chunks = []
-    for _, _, audio in _pipeline(text, voice=voice):
+    for _, _, audio in _pipeline(text, voice=voice, speed=speed):
         chunks.append(audio)
     if not chunks:
         raise RuntimeError("No audio generated")
@@ -75,7 +75,8 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         try:
-            wav_bytes = _synthesise(text, voice)
+            speed = float(body.get("speed", 0.92))
+            wav_bytes = _synthesise(text, voice, speed)
             self.send_response(200)
             self.send_header("Content-Type", "audio/wav")
             self.send_header("Content-Length", str(len(wav_bytes)))

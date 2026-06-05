@@ -462,15 +462,6 @@ Style reference (use these as tone/format guides only — do not copy content):
         f"REQUIRED TOPIC (non-negotiable — write specifically about this):\n{topic['_override']}\n"
     ) if topic.get('_override') else ""
 
-    # ── Image suggestions ──────────────────────────────────────────────────
-    # Unsplash Source API — free, no API key, embeds directly in Markdown.
-    # Keywords derived from topic title and angle.
-    import urllib.parse as _ul
-    topic_words = " ".join(topic['title'].split()[:4])
-    img_keywords = _ul.quote_plus(f"medical device {topic_words}".lower()[:60])
-    hero_img = f"https://source.unsplash.com/1200x500/?{img_keywords}"
-    inline_img = f"https://source.unsplash.com/800x400/?{_ul.quote_plus('regulatory compliance laboratory science')}"
-
     prompt = f"""{override_header}Write a complete MedTech Meridian Substack article based on this brief:
 
 Title: {topic['title']}
@@ -484,13 +475,9 @@ Recent industry context (weave in naturally where relevant):
 {style_note}
 {kb_header}
 
-IMAGES — embed these exactly after the H1 title line (do not put them in the body text):
-![{topic['title']}]({hero_img})
-
 If the article references numerical data or a comparison, include ONE markdown table to present it cleanly. Tables must have real data, not placeholders.
 
-Write the full article now. Follow the MedTech Meridian voice and structure. 900-1200 words.
-Include the images exactly as specified above. Do not omit them."""
+Write the full article now. Follow the MedTech Meridian voice and structure. 900-1200 words."""
 
     try:
         import time as _time

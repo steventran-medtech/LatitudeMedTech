@@ -19,7 +19,11 @@ anthropic>=0.25.0
 # TTS — piper via subprocess (installed separately, see README)
 # Download piper from: https://github.com/rhasspy/piper/releases
 
+# TTS — ElevenLabs cloud (human-quality voice)
+elevenlabs>=1.0.0
+
 # Utilities
 scipy>=1.11.0
 requests>=2.31.0
 python-dotenv>=1.0.0
+webrtcvad

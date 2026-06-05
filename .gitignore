@@ -60,3 +60,15 @@ Thumbs.db
 *.sqlite-wal
 # Runtime flag files
 Athena/ui/.athena_ready
+Athena/ui/.athena_error
+Athena/ui/.athena_chrome.pid
+
+# Isolated Chrome profile — contains cookies/login data, never commit
+Athena/ui/.chrome-profile/
+
+# Voice runtime state (regenerable session logs / history)
+Athena/voice/.athena_history.json
+Athena/voice/sessions.jsonl
+
+# Vendored third-party TTS clone (has its own .git — not a submodule)
+Athena/voice/miso/

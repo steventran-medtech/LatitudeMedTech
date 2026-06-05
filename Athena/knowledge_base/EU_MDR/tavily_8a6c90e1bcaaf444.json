@@ -1,0 +1,19 @@
+{
+  "doc_id": "tavily_8a6c90e1bcaaf444",
+  "doc_name": "Notified Bodies and Certificates module - Public Health",
+  "category": "EU_MDR",
+  "source": "tavily:EU MDR notified body medical device regulatory",
+  "ingested_at": "2026-06-05T11:53:34.143001",
+  "chunk_count": 1,
+  "chunks": [
+    {
+      "id": "tavily_8a6c90e1bcaaf444_chunk_0",
+      "doc_id": "tavily_8a6c90e1bcaaf444",
+      "doc_name": "Notified Bodies and Certificates module - Public Health",
+      "category": "EU_MDR",
+      "chunk_num": 0,
+      "text": "![European Commission logo](/themes/contrib/oe_theme/dist/ec/images/logo/logo-ec--mute.svg) # Notified Bodies and Certificates module [Regulation (EU) 2017/745 on medical devices](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A02017R0745-20250110) (MDR) and [Regulation (EU) 2017/746 on in vitro diagnostic medical devices](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A02017R0746-20250110) (IVDR) establish that Notified Bodies (NB) should register in EUDAMED any information regarding certificates issued (including amendments and supplements), suspended, reinstated, withdrawn or refused and other restrictions imposed on these certificates. Such information is accessible to the public. The [Commission Decision (EU) 2025/2371](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=OJ:L_202502371) of 26 November 2025 on the notice regarding the functionality and the fulfilment of the functional specifications of certain electronic systems included in the European Database on Medical Devices has declared this module functional and, in accordance with the transitional provisions set out in [Regulation (EU) 2024/1860](https://eur-lex.europa.eu/legal-content/EN/ALL/?uri=OJ:L_202401860) ; as from 28 May 2926 the NBs & Certificates module is mandatory to use. Notified Bodies can enter information in the system on a voluntary basis since October 2021. Some elements referenced in the certificate, need to be first registered in EUDAMED. These would include the manufacturer, the authorised representative (where applicable), the system-procedure pack producer and the Basic UDI-DI(s). ## Infographics ## Documentation ## Guidance ## Useful links ## Latest updates ## Documents ![](https://health.ec.europa.eu/sites/default/files/styles/oe_theme_ratio_3_2_medium/public/2021-12/events-icon.jpg?h=f2329d93&itok=W42yCN2F) ![](https://health.ec.europa.eu/sites/default/files/styles/oe_theme_ratio_3_2_medium/public/2021-12/publications-icon.jpg?h=f2329d93&itok=_e0oEKA8) Share this page ![European Commission logo](/themes/contrib/oe_theme/dist/ec/images/logo/negative/logo-ec--en.svg) Follow the European Commission",
+      "word_count": 203
+    }
+  ]
+}

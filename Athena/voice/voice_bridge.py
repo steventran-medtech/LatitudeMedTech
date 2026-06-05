@@ -38,6 +38,14 @@ from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
 from scipy.signal import resample_poly
+
+try:
+    import webrtcvad as _webrtcvad
+    _vad = _webrtcvad.Vad(2)   # aggressiveness 2: filters keyboard/ambient, keeps speech
+    _VAD_FRAME = 480            # 30 ms @ 16 kHz — exact frame size required by webrtcvad
+except ImportError:
+    _vad = None
+    _VAD_FRAME = 480
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 ATHENA = Path(__file__).resolve().parent.parent          # voice/ -> Athena/
@@ -144,6 +152,31 @@ _UP   = TARGET_RATE  // _g
 _DOWN = DEVICE_RATE  // _g
 CHUNK_NATIVE = int(CHUNK_SAMPLES_16K * DEVICE_RATE / TARGET_RATE)
 
+# ── Conversation history persistence ─────────────────────────────────────────
+_HISTORY_FILE = ATHENA / "voice" / ".athena_history.json"
+_HISTORY_MAX  = 40   # keep last 40 messages (~20 turns)
+
+def _load_history() -> list:
+    """Load conversation history from disk. Returns empty list if missing/corrupt."""
+    try:
+        if _HISTORY_FILE.exists():
+            data = json.loads(_HISTORY_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, list):
+                return data[-_HISTORY_MAX:]
+    except Exception:
+        pass
+    return []
+
+def _save_history(history: list):
+    """Persist conversation history to disk after each turn."""
+    try:
+        _HISTORY_FILE.write_text(
+            json.dumps(history[-_HISTORY_MAX:], ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    except Exception:
+        pass
+
 # ── Model pre-warm cache ──────────────────────────────────────────────────────
 # Models are loaded once at startup into these module-level variables.
 # _voice_loop() reuses them instead of reloading on every start.
@@ -249,10 +282,12 @@ _AGENT_TOOL_SCHEMA = {
             "confirmation": {
                 "type": "string",
                 "description": (
-                    "Spoken confirmation for Steven. One sentence, max 15 words. "
-                    "British English. No markdown or lists. "
-                    "Example: 'Starting your marketing brief now.' "
-                    "or 'On it — generating outreach for Jon Speer.'"
+                    "Spoken confirmation for Steven. Exactly two sentences. British English. No markdown or lists. "
+                    "Sentence 1: name the agent and describe the specific deliverable "
+                    "(e.g. 'Running your Daily Briefing — pulling market intel and your pipeline updates.'). "
+                    "Sentence 2: estimated delivery time "
+                    "(e.g. 'Expect your brief in about two minutes.'). "
+                    "Be specific: if override context is given (client name, topic, target), name it."
                 ),
             },
         },
@@ -304,7 +339,7 @@ def _classify_intent(text: str, history: list):
                 )
         return None, None, None
     except Exception as e:
-        log.warning(f"Intent classification failed, falling through to conversation: {e}")
+        print(f"[voice] Intent classification failed, falling through to conversation: {e}")
         return None, None, None
 
 def _trigger_agent(agent_id: str, override: str = "") -> bool:
@@ -358,6 +393,21 @@ _AGENT_LABELS = {
     "marketing_events":   "Events Calendar",
     "marketing_scorecard":"Marketing Scorecard",
     "marketing_outreach": "Outreach Copy",
+}
+
+_AGENT_ETA = {
+    "content":             "about three to five minutes",
+    "briefing":            "about two minutes",
+    "rag":                 "about a minute",
+    "iso":                 "about a minute",
+    "coaching_brief":      "about two minutes",
+    "consulting":          "two to three minutes",
+    "ma":                  "three to four minutes",
+    "marketing":           "about two minutes",
+    "marketing_plan":      "three to five minutes",
+    "marketing_events":    "about a minute",
+    "marketing_scorecard": "about two minutes",
+    "marketing_outreach":  "about a minute",
 }
 
 # ── Kokoro persistent server ──────────────────────────────────────────────────
@@ -418,6 +468,19 @@ def _resample(audio_f32):
 
 def _rms(chunk_f32):
     return float(np.sqrt(np.mean(chunk_f32 ** 2)))
+
+def _chunk_is_speech(chunk_f32_16k: np.ndarray) -> bool:
+    """True if the 16 kHz chunk likely contains human speech (not keyboard/ambient noise)."""
+    if _vad is None:
+        return True
+    frame = chunk_f32_16k[:_VAD_FRAME]
+    if len(frame) < _VAD_FRAME:
+        return True
+    pcm = (frame * 32768).clip(-32768, 32767).astype(np.int16).tobytes()
+    try:
+        return _vad.is_speech(pcm, TARGET_RATE)
+    except Exception:
+        return True
 
 def _play_chime(activate=True):
     """
@@ -492,9 +555,9 @@ def _load_wake_model():
 
 def _preload_models():
     """
-    Pre-warm OWW + Whisper in a background thread at server startup.
-    The voice loop blocks until this completes, so the first activation
-    is immediate instead of waiting 10-20 s for model loading.
+    Pre-warm OWW, Whisper, AND Kokoro in a background thread at server startup.
+    _models_ready fires only after all three are up so the startup script's
+    readiness gate and the voice loop both have a single reliable signal.
     """
     global _oww_model, _whisper_model, _models_loading, _models_ready
     if _models_loading:
@@ -506,9 +569,12 @@ def _preload_models():
         try:
             _emit("loading", message="Loading wake word model…")
             _oww_model = _load_wake_model()
-            _emit("loading", message="Loading Whisper transcription model (cached after first run)…")
+            _emit("loading", message="Loading Whisper transcription model…")
             _whisper_model = _load_whisper()
-            _emit("loading", message="Models ready.")
+            if TTS_BACKEND == "kokoro":
+                _emit("loading", message="Starting Kokoro TTS server…")
+                _start_kokoro_server()   # blocks until Kokoro health-check passes
+            _emit("loading", message="All systems ready.")
         except Exception as e:
             _emit("error", message=f"Model preload failed: {e}")
         finally:
@@ -537,11 +603,12 @@ def _listen_for_wake(oww_model):
                     n += 1
                     if n % level_every == 0:
                         _emit("level", level=round(min(1.0, _rms(mono) * 8), 3))
-                    i16 = (rs * 32768).clip(-32768, 32767).astype(np.int16)
-                    pred = oww_model.predict(i16)
-                    for _, score in pred.items():
-                        if score >= WAKE_THRESHOLD:
-                            return True
+                    if _chunk_is_speech(rs):
+                        i16 = (rs * 32768).clip(-32768, 32767).astype(np.int16)
+                        pred = oww_model.predict(i16)
+                        for _, score in pred.items():
+                            if score >= WAKE_THRESHOLD:
+                                return True
         except Exception as e:
             # Audio device hiccup — wait briefly and retry instead of crashing
             _emit("level", level=0.0)
@@ -577,12 +644,27 @@ def _record_query():
             rs   = _resample(mono)
             _emit("level", level=round(min(1.0, _rms(mono) * 8), 3))
             frames.append(rs)
-            silence = silence + 1 if _rms(mono) < SILENCE_THRESHOLD else 0
+            is_speech = _chunk_is_speech(rs)
+            silence = silence + 1 if (_rms(mono) < SILENCE_THRESHOLD or not is_speech) else 0
             if silence >= sil_chunks: break
     _emit("level", level=0.0)
     return np.concatenate(frames) if frames else np.array([], dtype=np.float32)
 
 _LOW_CONFIDENCE_THRESHOLD = -0.7   # avg_logprob below this = uncertain transcript
+
+# Domain vocabulary injected as Whisper's initial_prompt.
+# Biases the decoder toward MedTech/regulatory terms before any LLM correction,
+# catching substitutions like "part of FDA 483s" → "report of FDA 483s"
+# at zero latency cost (no extra API call).
+_WHISPER_DOMAIN_PROMPT = (
+    "Latitude MedTech, FDA 483, Form 483, 483 observations, inspectional observations, "
+    "warning letter, FDA report, ISO 13485, 510(k), PMA, De Novo, CAPA, QMS, MDR, "
+    "MDSAP, CFR 820, CFR 21, medical device, regulatory submission, predicate device, "
+    "substantial equivalence, design controls, risk management, clinical evaluation, "
+    "post-market surveillance, adverse event, recall, field safety, FDA audit, "
+    "generate report, draft briefing, run briefing, M&A report, pipeline report, "
+    "Steven, Latitude MedTech, San Diego."
+)
 
 def _transcribe(whisper_model, audio):
     """
@@ -596,7 +678,8 @@ def _transcribe(whisper_model, audio):
     try:
         sf.write(tmp, audio, TARGET_RATE)
         segs_iter, _ = whisper_model.transcribe(
-            tmp, language="en", beam_size=5, vad_filter=True)
+            tmp, language="en", beam_size=5, vad_filter=True,
+            initial_prompt=_WHISPER_DOMAIN_PROMPT)
         segs = list(segs_iter)
         text = " ".join(s.text.strip() for s in segs).strip()
         # Confidence: average log-prob across segments (higher = better)
@@ -625,15 +708,23 @@ def _correct_transcript(raw: str) -> str:
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
         resp = client.messages.create(
             model="claude-haiku-4-5",
-            max_tokens=80,
+            max_tokens=120,
             system=(
-                "You are a speech-to-text correction assistant for a MedTech executive. "
-                "Fix transcription errors — wrong homophones, missing words, garbled STT — "
-                "while preserving meaning. MedTech terms: FDA, ISO 13485, MDR, QMS, CAPA, "
-                "510(k), PMA, MDSAP, RAPS, RA/QA. "
-                "Return ONLY the corrected text with no explanation."
+                "You are a speech-to-text correction assistant for a MedTech regulatory executive. "
+                "Fix transcription errors — wrong homophones, missing words, garbled STT output — "
+                "while preserving the speaker's intent exactly.\n\n"
+                "Key domain vocabulary (prefer these over phonetically similar common words):\n"
+                "- Documents: report, briefing, brief, memorandum, submission, filing\n"
+                "- FDA: FDA 483, Form 483, 483 observations, inspectional observations, "
+                "warning letter, untitled letter, consent decree, import alert\n"
+                "- Regulatory: ISO 13485, 510(k), PMA, De Novo, MDSAP, MDR, CFR 820, "
+                "CAPA, QMS, design controls, risk management, post-market surveillance\n"
+                "- Actions: generate, draft, run, analyze, summarize, pull, find, search\n"
+                "- People/places: Steven, Latitude MedTech, San Diego\n\n"
+                "If the text is already correct, return it unchanged. "
+                "Return ONLY the corrected text with no explanation or punctuation changes."
             ),
-            messages=[{"role": "user", "content": f"Correct: {raw}"}],
+            messages=[{"role": "user", "content": f"Correct this transcript: {raw}"}],
         )
         corrected = resp.content[0].text.strip()
         return corrected if corrected else raw
@@ -671,12 +762,44 @@ def _build_system_prompt():
         "or marketing tasks (weekly brief, 30-60-90 plan, outreach copy, events calendar, "
         "pipeline status).\n\n"
         "VOICE RULES — follow strictly:\n"
-        "- Spoken British English. No markdown, lists, or symbols.\n"
+        "- Conversational British English. Use contractions naturally: don't, can't, it's, I'd, you'll.\n"
+        "- No markdown, lists, bullet points, asterisks, or symbols — these won't render in speech.\n"
         "- Maximum 2 sentences. Never more unless explicitly asked.\n"
-        "- Answer first. Cut all preamble, filler, and restating the question.\n"
+        "- Answer first. Cut all preamble and restating the question.\n"
+        "- Vary sentence length for natural rhythm — mix short punchy sentences with longer ones.\n"
+        "- Speak like a trusted colleague, not a formal report.\n"
         "- Agent confirmations: one sentence only.\n"
         "DISCLAIMER: Regulatory content is educational. Not licensed advice."
     )
+
+# ── TTS text pre-processing ───────────────────────────────────────────────────
+# Cleans LLM output before it hits Kokoro: strips markdown remnants, expands
+# MedTech shorthand that Kokoro would mangle, and normalises symbols.
+
+_TTS_SUBS = [
+    (re.compile(r'\*+([^*]+)\*+'),          r'\1'),          # bold/italic markdown
+    (re.compile(r'`([^`]+)`'),              r'\1'),          # inline code
+    (re.compile(r'^#+\s*', re.MULTILINE),   ''),             # heading hashes
+    (re.compile(r'\b510\(k\)', re.I),       'five-ten-K'),
+    (re.compile(r'\b510k\b',   re.I),       'five-ten-K'),
+    (re.compile(r'\bISO\s*13485\b'),        'I S O thirteen four eighty-five'),
+    (re.compile(r'\bCAPAs?\b'),             'CAPA'),         # already word-like; keep
+    (re.compile(r'\bFDA\b'),                'F D A'),
+    (re.compile(r'\bQMS\b'),                'Q M S'),
+    (re.compile(r'\bMDR\b'),                'M D R'),
+    (re.compile(r'\bPMA\b'),                'P M A'),
+    (re.compile(r'\bMDSAP\b'),              'M D S A P'),
+    (re.compile(r'\bUDI\b'),                'U D I'),
+    (re.compile(r'\bRAQA\b'),               'R A Q A'),
+    (re.compile(r'&'),                      'and'),
+    (re.compile(r'\s{2,}'),                 ' '),            # collapse extra spaces
+]
+
+def _preprocess_tts(text: str) -> str:
+    for pattern, repl in _TTS_SUBS:
+        text = pattern.sub(repl, text)
+    return text.strip()
+
 
 _SENTENCE_END = re.compile(r'(?<=[.!?])\s+')
 
@@ -747,9 +870,34 @@ def _ask_claude(text: str, history: list, kb_ctx: str = "") -> str:
 
 # ── TTS ───────────────────────────────────────────────────────────────────────
 
+KOKORO_SPEED           = float(os.getenv("VOICE_KOKORO_SPEED",         "0.92"))
+ELEVENLABS_API_KEY     = os.getenv("VOICE_ELEVENLABS_API_KEY",    "")
+ELEVENLABS_VOICE_ID    = os.getenv("VOICE_ELEVENLABS_VOICE_ID",   "9BWtsMINqrJLrRacOk9x")
+ELEVENLABS_MODEL       = os.getenv("VOICE_ELEVENLABS_MODEL",      "eleven_turbo_v2_5")
+ELEVENLABS_SAMPLE_RATE = 24000
+
+def _speak_elevenlabs(text: str):
+    """
+    Stream PCM audio from ElevenLabs and play via sounddevice.
+    pcm_24000 = raw 16-bit signed PCM at 24 kHz — no decode overhead.
+    eleven_turbo_v2_5 targets ~150 ms first-byte latency.
+    """
+    from elevenlabs.client import ElevenLabs
+    client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+    audio_gen = client.text_to_speech.convert(
+        text=text,
+        voice_id=ELEVENLABS_VOICE_ID,
+        model_id=ELEVENLABS_MODEL,
+        output_format="pcm_24000",
+    )
+    pcm = b"".join(audio_gen)
+    audio_arr = np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
+    sd.play(audio_arr, ELEVENLABS_SAMPLE_RATE)
+    sd.wait()
+
 def _speak_kokoro(text: str):
     """Send text to persistent Kokoro server, play returned WAV."""
-    payload = json.dumps({"text": text, "voice": KOKORO_VOICE}).encode()
+    payload = json.dumps({"text": text, "voice": KOKORO_VOICE, "speed": KOKORO_SPEED}).encode()
     req = urllib.request.Request(
         f"http://127.0.0.1:{KOKORO_PORT}/speak",
         data=payload,
@@ -767,11 +915,13 @@ def _speak_sentence(text: str):
     Sentence-level TTS — called per sentence during streaming.
     Plays synchronously (waits for audio to finish) before next sentence TTS starts.
     """
-    text = text.strip()
+    text = _preprocess_tts(text)
     if not text:
         return
     try:
-        if TTS_BACKEND == "piper":
+        if TTS_BACKEND == "elevenlabs":
+            _speak_elevenlabs(text)
+        elif TTS_BACKEND == "piper":
             _speak_piper(text)
         elif TTS_BACKEND == "miso":
             raise NotImplementedError("Miso API not yet available")
@@ -785,9 +935,8 @@ def _speak_sentence(text: str):
             e.say(text); e.runAndWait()
         except Exception:
             pass
-    # Brief pause after TTS — lets Windows audio device fully release
-    # before we re-open the input stream for wake word detection
-    time.sleep(0.25)
+    # Pause after TTS — lets room echo decay so the mic doesn't hear Athena's own voice
+    time.sleep(0.4)
 
 def _speak_piper(text: str):
     if not (PIPER_EXE.exists() and PIPER_MODEL.exists()):
@@ -808,7 +957,9 @@ def _speak_piper(text: str):
 
 def _speak(text: str):
     try:
-        if TTS_BACKEND == "piper":
+        if TTS_BACKEND == "elevenlabs":
+            _speak_elevenlabs(text)
+        elif TTS_BACKEND == "piper":
             _speak_piper(text)
         elif TTS_BACKEND == "miso":
             raise NotImplementedError("Miso API not yet available")
@@ -820,6 +971,30 @@ def _speak(text: str):
             e = pyttsx3.init(); e.setProperty("rate", 175)
             e.say(text); e.runAndWait()
         except Exception: pass
+
+def _post_response_cooldown(oww_model):
+    """
+    After TTS finishes, prevent the speaker audio from echoing back into the mic
+    and falsely triggering wake word detection or filling _record_query with
+    non-silent audio. Strategy:
+      1. Wait for the Windows audio pipeline to fully drain (speaker reverb dies out).
+      2. Open the mic and discard ~0.75 s of buffered audio.
+      3. Reset the OWW model's accumulated prediction scores.
+    """
+    time.sleep(1.0)
+    try:
+        flush_chunks = int(1.5 * DEVICE_RATE / CHUNK_NATIVE)
+        with sd.InputStream(device=INPUT_DEVICE, samplerate=DEVICE_RATE,
+                            channels=DEVICE_CH, dtype="int16",
+                            blocksize=CHUNK_NATIVE) as stream:
+            for _ in range(flush_chunks):
+                stream.read(CHUNK_NATIVE)
+    except Exception:
+        pass
+    try:
+        oww_model.reset()
+    except Exception:
+        pass
 
 # ── Main voice loop ───────────────────────────────────────────────────────────
 
@@ -834,20 +1009,14 @@ def _voice_loop():
         _emit("loading", message=f"Mic: {DEVICE_NAME} @ {DEVICE_RATE} Hz")
 
     # Ensure Kokoro is running (fast no-op health check if already up)
-    if TTS_BACKEND == "kokoro":
-        if not already_ready:
-            _emit("loading", message="Starting Kokoro TTS server…")
-        kokoro_thread = threading.Thread(target=_start_kokoro_server, daemon=True)
-        kokoro_thread.start()
-
-    # Wait for pre-loaded models only if not yet ready
+    # If preload hasn't finished yet (very fast launch), wait for it
     if not already_ready:
         _emit("loading", message="Waiting for models to finish loading…")
-        _models_ready.wait(timeout=60)
+        _models_ready.wait(timeout=90)
 
     oww     = _oww_model
     whisper = _whisper_model
-    history = []
+    history = _load_history()
 
     if oww is None:
         _state = VS.STOPPED
@@ -874,7 +1043,14 @@ def _voice_loop():
             time.sleep(0.5)
             continue
 
-        text, confident = _transcribe(whisper, audio)
+        try:
+            text, confident = _transcribe(whisper, audio)
+        except Exception as e:
+            _emit("info", message=f"Transcription error (retrying): {e}")
+            _state = VS.LISTENING
+            _emit("listening", message="Say 'Alexa' to activate")
+            continue
+
         empty = not bool(text)
         _track_query(0, empty=empty)
 
@@ -883,54 +1059,63 @@ def _voice_loop():
             _emit("listening", message="No speech detected — listening again")
             continue
 
-        # Confidence check: silently correct via LLM if Whisper was uncertain.
-        # This fixes homophone swaps and garbled words without blocking the
-        # response or asking the user to repeat. Falls back to raw text if
-        # the correction call fails.
-        if not confident:
+        # Always run LLM correction — Whisper can be confident but still wrong
+        # on domain-specific terms (e.g. "part of FDA 483s" → "report of FDA 483s").
+        # Falls back to raw text if the correction call fails.
+        try:
             corrected = _correct_transcript(text)
             if corrected != text:
                 _emit("transcript", text=f"{corrected}  [corrected]")
+                text = corrected
             else:
-                _emit("transcript", text=f"{text}  [low conf]")
-            text = corrected
-        else:
-            _emit("transcript", text=text)
+                tag = "" if confident else "  [low conf]"
+                _emit("transcript", text=f"{text}{tag}")
 
-        # ── Intent classification: LLM-driven, not regex ──────────────────
-        # Haiku+tool_use decides whether to dispatch an agent or fall through
-        # to the full conversational path. Classification adds ~200ms but only
-        # fires when Haiku returns a tool_use block — conversational turns
-        # proceed to streaming Sonnet as before.
-        _state = VS.THINKING
-        _emit("thinking", query=text)
-        agent_id, override, confirm = _classify_intent(text, history)
-        if agent_id:
-            ok = _trigger_agent(agent_id, override or "")
-            if not ok:
-                confirm = "I couldn't reach that agent — check the backend is running."
-            elif not confirm:
-                label = _AGENT_LABELS.get(agent_id, agent_id)
-                confirm = f"On it — starting the {label} now."
-            _emit("thinking", query=text, agent=agent_id)
-            _state = VS.SPEAKING
-            _emit("speaking", response=confirm, agent=agent_id)
-            _speak_sentence(confirm)
-            history.append({"role": "user", "content": text})
-            history.append({"role": "assistant", "content": confirm})
-            if len(history) > 20: history = history[-20:]
+            # ── Intent classification: LLM-driven, not regex ──────────────────
+            # Haiku+tool_use decides whether to dispatch an agent or fall through
+            # to the full conversational path. Classification adds ~200ms but only
+            # fires when Haiku returns a tool_use block — conversational turns
+            # proceed to streaming Sonnet as before.
+            _state = VS.THINKING
+            _emit("thinking", query=text)
+            agent_id, override, confirm = _classify_intent(text, history)
+            if agent_id:
+                ok = _trigger_agent(agent_id, override or "")
+                if not ok:
+                    confirm = "I couldn't reach that agent — check the backend is running."
+                elif not confirm:
+                    label = _AGENT_LABELS.get(agent_id, agent_id)
+                    eta   = _AGENT_ETA.get(agent_id, "a few minutes")
+                    confirm = f"Running your {label} now. Should be ready in {eta}."
+                _emit("thinking", query=text, agent=agent_id)
+                _state = VS.SPEAKING
+                _emit("speaking", response=confirm, agent=agent_id)
+                # Speak sentence by sentence so UI builds up progressively
+                for s in _split_sentences(confirm):
+                    _emit("speaking_partial", sentence=s)
+                    _speak_sentence(s)
+                history.append({"role": "user", "content": text})
+                history.append({"role": "assistant", "content": confirm})
+                if len(history) > _HISTORY_MAX: history = history[-_HISTORY_MAX:]
+                _save_history(history)
+                _post_response_cooldown(oww)
+                _state = VS.LISTENING
+                _emit("listening", message="Say 'Alexa' to activate")
+                continue
+
+            # ── Conversational query: KB grounding + streaming Claude → TTS ───
+            kb_ctx = ""
+            if _kb and _kb.has_content():
+                chunks = _kb.search(text, top_k=3)
+                kb_ctx = _kb.format_context(chunks, max_chars=1200)
+
+            _state = VS.THINKING
+            _emit("thinking", query=text)
+        except Exception as e:
+            print(f"[voice] Request handling error (retrying): {e}")
             _state = VS.LISTENING
             _emit("listening", message="Say 'Alexa' to activate")
             continue
-
-        # ── Conversational query: KB grounding + streaming Claude → TTS ───
-        kb_ctx = ""
-        if _kb and _kb.has_content():
-            chunks = _kb.search(text, top_k=3)
-            kb_ctx = _kb.format_context(chunks, max_chars=1200)
-
-        _state = VS.THINKING
-        _emit("thinking", query=text)
 
         # Streaming: Claude text streams → sentence TTS plays progressively
         # First audio arrives in ~1.2s instead of 4-6s (CAPA-Voice-001)
@@ -943,9 +1128,11 @@ def _voice_loop():
 
         history.append({"role": "user",      "content": text})
         history.append({"role": "assistant", "content": response})
-        if len(history) > 20: history = history[-20:]
+        if len(history) > _HISTORY_MAX: history = history[-_HISTORY_MAX:]
+        _save_history(history)
         _emit("speaking", response=response)   # update UI with full text
         _play_chime(False)
+        _post_response_cooldown(oww)
 
         _state = VS.LISTENING
         _emit("listening", message="Say 'Alexa' to activate")
@@ -992,7 +1179,8 @@ async def stop_voice():
 async def voice_status():
     return {"active": _active, "state": _state, "tts_backend": TTS_BACKEND,
             "wake_phrase": WAKE_PHRASE, "device": DEVICE_NAME,
-            "device_rate": DEVICE_RATE, "voice": KOKORO_VOICE}
+            "device_rate": DEVICE_RATE, "voice": KOKORO_VOICE,
+            "models_ready": _models_ready.is_set()}
 
 
 @router.get("/devices")
@@ -1005,6 +1193,13 @@ async def list_devices():
 
 async def voice_websocket_endpoint(ws: WebSocket):
     await voice_manager.connect(ws)
+    # Send current state immediately so clients that connect after voice started
+    # don't miss the transition (e.g. "listening" emitted before WS was open).
+    try:
+        await ws.send_json({"type": f"voice_{_state}", "ts": datetime.now().isoformat(),
+                            "models_ready": _models_ready.is_set()})
+    except Exception:
+        pass
     try:
         while True: await ws.receive_text()
     except WebSocketDisconnect:

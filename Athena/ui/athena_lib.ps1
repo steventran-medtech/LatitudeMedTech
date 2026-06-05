@@ -5,6 +5,13 @@ $ATHENA   = "C:\Users\huann\LatitudeMedTech\Athena"
 $LOG_DIR  = "$ATHENA\ui\logs"
 $BACK_LOG = "$LOG_DIR\backend.log"
 $FRONT_LOG= "$LOG_DIR\frontend.log"
+# Athena's Chrome app window runs as an isolated instance (its own profile dir)
+# so we can close exactly that window on exit — every process of that instance
+# carries this path in its command line — without touching the user's main Chrome.
+# start_athena.ps1 resolves the instance's main PID (via WMI, in a normal console
+# where it's reliable) and writes it here; stop just taskkill /T's that PID tree.
+$CHROME_PROFILE  = "$ATHENA\ui\.chrome-profile"
+$CHROME_PID_FILE = "$ATHENA\ui\.athena_chrome.pid"
 
 if (-not (Test-Path $LOG_DIR)) { New-Item -ItemType Directory -Path $LOG_DIR -Force | Out-Null }
 

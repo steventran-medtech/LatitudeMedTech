@@ -1,0 +1,19 @@
+{
+  "doc_id": "tavily_cdaa3b28da6bfd20",
+  "doc_name": "Understanding the New FDA Guidance on Changes to 510(k) - Global Medical Device Podcast powered by Greenlight Guru",
+  "category": "General",
+  "source": "tavily:FDA 510k guidance update medical device quality",
+  "ingested_at": "2026-06-05T11:54:39.867354",
+  "chunk_count": 1,
+  "chunks": [
+    {
+      "id": "tavily_cdaa3b28da6bfd20_chunk_0",
+      "doc_id": "tavily_cdaa3b28da6bfd20",
+      "doc_name": "Understanding the New FDA Guidance on Changes to 510(k) - Global Medical Device Podcast powered by Greenlight Guru",
+      "category": "General",
+      "chunk_num": 0,
+      "text": "### Global Medical Device Podcast #### Episode 30 # Understanding the New FDA Guidance on Changes to 510(k) What happens you need to make a change to a device that’s been cleared via 510(k)? We discuss the importance of decision making during this process and relevant guidance from the FDA. The FDA just released updated guidelines on procedures regarding changes to 501(k) devices and software. Such changes in design or manufacturing are very common in the industry, so it’s important to understand the regulations as it pertains to your device. Our guest today is Mike Drues, president of Vascular Sciences and international regulatory affairs consultant. He works with governmental agencies and medical device companies around the world. Some of the topics discussed today include: - New FDA guidance on changes to 501(k) devices and software - Difference between FDA draft and final guidance - Keeping track of changes to medical devices in a “letter to file” - Limitations to FDA guidance flowcharts - Ways to notify the FDA of a change - Multiple changes made to an existing medical device - Going above and beyond to introduce quality controls for device changes [Next Episode](https://podcast.greenlight.guru/episode/zebra-medical-technologies-how-a-new-breed-of-medical-device-companies-is-leveraging-technology) [All Episodes](https://podcast.greenlight.guru/episodes) [Previous Episode](https://podcast.greenlight.guru/episode/what-devicemakers-need-to-know-about-the-fda-pre-submission-process-part-two) #### About the Podcast ![Show artwork for Global Medical Device Podcast powered by Greenlight Guru](https://artwork.captivate.fm/f3297e97-361b-4695-a988-73b542339ca1/m59j4YHxFSMRXrfbTFoT008y.png) Global Medical Device Podcast powered by Greenlight Guru The Global Medical Device Podcast, powered by Greenlight Guru, is where today's brightest minds in the medical device industry go to get their most useful and actionable insider knowledge, direct from some of the world's leading medical device experts ... #### Listen for free [RSS Feed](https://podcast.greenlight.guru/rssfeed) [Spotify](https://podcast.greenlight.guru/spotify) [Apple Podcasts](https://podcast.greenlight.guru/apple) [Amazon Music](https://podcast.greenlight.guru/amazon) #### About your host ![Profile picture for Etienne Nichols](https://media.captivate.fm/profile_picture/ddb1703b-8126-4655-8ec6-bed27637cdee/567e2b4c-6c18-4208-8f17-809f41e72ede/UFeSDSEbDcrdnKQpOHz0r9v4.png) #### Etienne Nichols Mechanical Engineer, Medical Device Guru, and host of the Global Medical Device Podcast [Request a demo!](https://www.greenlight.guru/etienne-nichols-thankyou)",
+      "word_count": 300
+    }
+  ]
+}

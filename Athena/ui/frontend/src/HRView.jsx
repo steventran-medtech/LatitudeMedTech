@@ -23,7 +23,17 @@ function DaysPill({ ts, warnAt = 7, redAt = 14 }) {
   if (!ts) return <span style={{ color: "#7B90A0", fontSize: 11 }}>Never</span>;
   const d = daysAgo(ts);
   const c = d >= redAt ? "#C0392B" : d >= warnAt ? "#C4922A" : "#1F7A6D";
-  return <span style={{ color: c, fontWeight: 600, fontSize: 11 }}>{d === 0 ? "Today" : `${d}d ago`}</span>;
+  const dt = new Date(ts);
+  const timeStr = dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const dateStr = dt.toLocaleDateString([], { month: "short", day: "numeric" });
+  const label = d === 0 ? `Today ${timeStr}` : `${d}d ago`;
+  const sub   = d === 0 ? null : dateStr;
+  return (
+    <span style={{ color: c, fontWeight: 600, fontSize: 11 }}>
+      {label}
+      {sub && <span style={{ fontWeight: 400, color: "#7B90A0", marginLeft: 3 }}>{sub}</span>}
+    </span>
+  );
 }
 
 // Cumulative knowledge-accumulation chart (pure SVG — no chart library).

@@ -56,7 +56,7 @@ Subdirs: `learning/` · `consulting/` (frameworks, methodologies) · `ma/` (deal
 |---|---|---|
 | LLM | claude-sonnet-4-6 / claude-haiku-4-5 | Same |
 | Voice STT | Whisper `tiny.en` CPU/CUDA auto-detect | Same |
-| Voice TTS | **Kokoro 82M** `bf_emma` British, port 8002 | Miso One API |
+| Voice TTS | **Kokoro 82M** `bf_emma` British, port 8002 | Phase 2A (Miso One API) |
 | Voice Wake | openwakeword "alexa" → `voice/wake/hi_athena.onnx` (train via Colab) |
 | Frontend | React + Vite + WebSocket, localhost:3000 | Same + Auth |
 | API | FastAPI, localhost:8000, rate-limited, security headers | Hardened |
@@ -88,27 +88,15 @@ Subdirs: `learning/` · `consulting/` (frameworks, methodologies) · `ma/` (deal
 
 ---
 
-## New Agents (added this session)
+## Established Agents *(prior sessions)*
+- **Consulting Agent** (`consulting_agent.py`) — MECE/Pyramid/7-S/BCG/Porter frameworks; SCQA + strategy slide structures; McKinsey/BCG/Bain/PwC sources. Modes: `learn`, `--generate report`.
+- **M&A Intelligence Agent** (`ma_intelligence_agent.py`) — 5 landmark deals preloaded; QARA diligence/integration frameworks; 50-year Brave queries. Modes: `learn`, `--analyse`, `--historical`.
+- **Marketing Agent** (`marketing_agent.py`) — SoCal guerilla pipeline; `ops/marketing/pipeline.db` **lazy-created on first run** (20+ targets, 6 channel types). Modes: `brief`, `--plan`, `--outreach TARGET`, `--pipeline`, `--events`, `--scorecard`. Full UI: **MarketingView.jsx** (`POST /api/agents/marketing`).
 
-**Consulting Agent** (`consulting_agent.py`) — builds methodology library:
-- Built-in: MECE, Pyramid Principle, McKinsey 7-S, BCG Matrix, Porter's 5 Forces, Issue Tree, Storyboarding
-- Slide structures: Executive Summary (SCQA), Strategy Deck, Regulatory Strategy, M&A Diligence, Pitch Deck
-- Sources: McKinsey, BCG, Bain, PwC Strategy+, HBR, MIT Sloan, Stanford Social Innovation
-- Modes: `learn` (default), `--generate report`
-
-**M&A Intelligence Agent** (`ma_intelligence_agent.py`) — MedTech/Pharma deal intelligence:
-- Pre-loaded: 5 landmark deals (Medtronic/Covidien, Abbott/St. Jude, J&J/Synthes, Stryker/Wright, BD/Bard) with QARA impact + lessons
-- QARA frameworks: pre-close diligence checklist, post-close integration steps, failure patterns
-- Sources: BioPharma Dive, Fierce Biotech/MedTech, STAT News, Evaluate Vantage
-- 50-year historical Brave queries included
-- Modes: `learn`, `--analyse`, `--historical`
-
-**Marketing Agent** (`marketing_agent.py`) — Guerilla marketing manager; SoCal MedTech corridor:
-- Pipeline DB: `ops/marketing/pipeline.db` — 20+ seeded targets across 6 channel types
-- Channels: conference circuit (MD&M, Biocom, RAPS), podcast circuit (Medical Device Podcast, MedTech Talk), regulatory clinic, MedTech Meridian Substack, FDA docket participation, warm email outreach
-- Modes: default=`brief`, `--plan` (30-60-90 day), `--outreach TARGET`, `--pipeline`, `--events`, `--scorecard`
-- API: `POST /api/agents/marketing` with `{"mode": "brief|plan|events|scorecard|learn", "target": "optional"}`
-- Output: `ops/marketing/` — briefs, plans, outreach drafts, events calendar, KB entries
+## Recent Changes *(2026-06-05)*
+- **Review edit-prompt** — `POST /api/review/{item_id}/edit` rewrites a pending document via natural-language instruction at consulting quality (Claude Sonnet 4.6). Button in ReviewView.jsx.
+- **Dashboard charts** — `/api/dashboard/timeseries` (today/yesterday hourly token toggle) and `/api/dashboard/knowledge-growth` (daily + cumulative KB items).
+- **Learning infrastructure** — `agent_learning.py` + `learning_sources.py` drive autonomous RSS/scrape feeds. `skills_profile.py` generates per-agent profiles (`knowledge_base/skills/<agent>.md`) + master `SKILLS.md`. Endpoints: `/api/agents/learn`, `/api/agents/skills-profile`.
 
 ---
 
@@ -205,6 +193,13 @@ Update the CLAUDE.md version line (date + vN) in the same final commit.
 
 **Secrets stay out of Git** — `.gitignore` excludes `*.pfx`, `.env`, `.athena.key`, venvs, `node_modules/`, logs. `StevenTran.pfx` / `voice/.env` / `voice/.athena.key` live local-only; restore manually on a fresh clone.
 
+### Application versioning (what the user sees)
+Separate from Git history, Athena tracks a user-facing **release version** so Steven can see what build he's running and what changed.
+- **Single source of truth:** `Athena/VERSION.json` (`version`, `released`, `channel`, `codename`). Currently **v0.5.0 · alpha**.
+- **Human history:** `Athena/CHANGELOG.md` — Keep a Changelog format, SemVer (`0.x` while alpha; each feature batch bumps minor).
+- **In-app display:** sidebar footer shows `v<version> · <channel>`; clicking it opens an About panel (`AboutModal` in `App.jsx`) rendering the changelog. Served by `GET /api/version` (`server.py`, reads VERSION.json + CHANGELOG.md).
+- **Cutting a release:** add notes under `## [Unreleased]` in CHANGELOG.md → move them to a new `## [x.y.z] - <date>` heading → run `ops/release.ps1 -Version x.y.z` (stamps VERSION.json, syncs `ui/frontend/package.json`, creates git tag `vx.y.z`) → commit all three together. **Bump the version whenever a meaningful feature/fix ships**, and record it in the changelog in the same commit. The backend reads VERSION.json at startup, so a version bump requires a backend restart to show in the UI.
+
 ---
 
 ## Current Phase
@@ -213,6 +208,9 @@ Update the CLAUDE.md version line (date + vN) in the same final commit.
 - ✅ **Human review queue** — `/api/review/*`, `ReviewView.jsx`, `review_queue` table (now has `thread_id` linking each item to its workflow).
 - ✅ **Disclaimer layer** — applied at orchestrator `finalize` (brief gets disclaimer + "Alpha — Steve Review Required" label), plus docx + agent system prompts.
 - ✅ **Auth (Phase 1A scope)** — session token `.athena.key`. Clerk/Auth0 is Phase 2B.
+- ✅ **Marketing UI** — MarketingView.jsx wired to MarketingAgent; pipeline DB lazy-initialized on first run; full campaign/outreach/events/scorecard modes live.
+- ✅ **Review edit-prompt** — Steven can request AI-driven revisions to queued documents via natural language before approving.
+- ✅ **Dashboard charts** — timeseries (hourly token spend today/yesterday) + knowledge-growth (cumulative KB items) live in DashboardView.
 - ⏳ **Custom "Hi Athena" wake word** — wiring done (`voice_bridge.py` auto-loads `voice/wake/hi_athena.onnx`, else "alexa"); trainer + `voice/wake/README.md` ready. **Awaiting Steven's one-time Colab training run** (external GPU). Until then, "alexa" fallback.
 
 Phase 1A gate (Steve runs the full coaching workflow end-to-end) is met for the coaching line; only the optional custom wake word remains.
