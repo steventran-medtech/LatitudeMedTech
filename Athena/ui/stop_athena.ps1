@@ -38,9 +38,39 @@ if (Test-Path $CHROME_PID_FILE) {
     Remove-Item $CHROME_PID_FILE -Force -ErrorAction SilentlyContinue
 }
 
+# 3a. Now that Chrome is force-killed, rewrite its isolated profile's exit_type so the
+#     next launch doesn't show "Restore pages? Chrome didn't shut down correctly".
+Set-ChromeProfileClean
+
 # 4. Report.
 $b = if ($port8000 -and -not (Get-PortPids 8000)) { "stopped" } else { "STILL RUNNING" }
 $f = if ($port3000 -and -not (Get-PortPids 3000)) { "stopped" } else { "STILL RUNNING" }
 Write-Host "Backend (8000): $b"
 Write-Host "Frontend (3000): $f"
+
+# 5. Log the overall Athena session (start->stop) for QA/debug. Reads the launch
+#    stamp written by start_athena.ps1, computes wall-clock duration, and appends
+#    one JSON line to logs\athena_sessions.jsonl alongside shutdown metadata.
+$endedAt = Get-Date
+$record = [ordered]@{
+    ended_at        = $endedAt.ToString("o")
+    end_reason      = "clean_stop"
+    backend_stop    = $b
+    frontend_stop   = $f
+}
+if (Test-Path $SESSION_STATE) {
+    try {
+        $s = Get-Content $SESSION_STATE -Raw -Encoding utf8 | ConvertFrom-Json
+        foreach ($p in $s.PSObject.Properties) { $record[$p.Name] = $p.Value }
+        if ($s.started_at) {
+            $record["duration_secs"] = [math]::Round(($endedAt - [datetime]$s.started_at).TotalSeconds)
+        }
+    } catch { $record["session_state_error"] = "$_" }
+    Remove-Item $SESSION_STATE -Force -ErrorAction SilentlyContinue
+} else {
+    $record["note"] = "no session state found (start stamp missing)"
+}
+try { ($record | ConvertTo-Json -Compress) | Out-File $SESSION_LOG -Append -Encoding utf8 }
+catch { Write-Host "[athena] could not write session log: $_" }
+
 if ($b -ne "stopped" -or $f -ne "stopped") { exit 1 }
