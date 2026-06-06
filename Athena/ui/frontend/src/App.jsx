@@ -7,6 +7,7 @@ import FileViewer from "./FileViewer.jsx";
 import ReviewView from "./ReviewView.jsx";
 import MarketingView from "./MarketingView.jsx";
 import DeckView from "./DeckView.jsx";
+import ClientsView from "./ClientsView.jsx";
 import { useVoiceSession } from "./useVoiceSession.js";
 
 const API = "http://localhost:8000";
@@ -71,6 +72,7 @@ const NAV_ITEMS = [
   {id:"briefing",  label:"Daily Briefing",   group:"work"},
   {id:"content",   label:"Content Drafts",   group:"work"},
   {id:"coaching",  label:"Coaching",         group:"work"},
+  {id:"clients",   label:"Clients",          group:"work"},
   {id:"marketing", label:"Marketing",        group:"work"},
   {id:"decks",     label:"Decks",            group:"work"},
   {id:"iso",       label:"ISO Case Studies", group:"work"},
@@ -1228,7 +1230,7 @@ function AgentsView({logs,onRun,runningAgents}){
   if(runningAgents){
     runningAgents.forEach(a=>{ running[a]=true; });
     // Also map short IDs used in the agent cards
-    const MAP={rag:"rag_agent",briefing:"briefing_agent",content:"content_agent",iso:"iso_coach",consulting:"consulting_agent",ma:"ma_intelligence_agent",marketing:"marketing_agent"};
+    const MAP={rag:"rag_agent",briefing:"briefing_agent",content:"content_agent",iso:"iso_coach",consulting:"consulting_agent",ma:"ma_intelligence_agent",marketing:"marketing_agent",sow:"sow_agent",regulatory:"regulatory_strategy_agent"};
     Object.entries(MAP).forEach(([short,full])=>{if(runningAgents.has(full)) running[short]=true;});
   }
 
@@ -1359,6 +1361,8 @@ const AGENT_DISPLAY = {
   consulting_agent:"Consulting Agent", ma_intelligence_agent:"M&A Intelligence",
   marketing_agent:"Marketing Agent",
   deck_agent:     "Deck Builder",
+  sow_agent:              "SOW Generation",
+  regulatory_strategy_agent: "Regulatory Gap Assessment",
 };
 
 // Estimated completion times in seconds (mirrors _AGENT_ETA_SECONDS in voice_bridge.py)
@@ -1375,6 +1379,8 @@ const AGENT_ETA_SECONDS = {
   hr_agent:               90,
   skills_profile:         60,
   deck_agent:            300,
+  sow_agent:             180,
+  regulatory_strategy_agent: 240,
 };
 
 // Maps agent IDs to the tab to navigate to when the task completes
@@ -1383,9 +1389,11 @@ const AGENT_TAB = {
   content_agent:         "content",
   marketing_agent:       "marketing",
   iso_coach:             "iso",
-  coaching_brief:        "review",
-  consulting_agent:      "documents",
-  ma_intelligence_agent: "documents",
+  coaching_brief:              "review",
+  consulting_agent:            "documents",
+  ma_intelligence_agent:       "documents",
+  sow_agent:                   "review",
+  regulatory_strategy_agent:   "review",
   deck_agent:            "decks",
 };
 
@@ -2287,6 +2295,7 @@ export default function App(){
     voice:    <VoiceView voice={voice}/>,
     content:  <ContentView onGenerate={runAgent}/>,
     coaching: <CoachingView onGenerate={runAgent}/>,
+    clients:  <ClientsView runningAgents={runningAgents}/>,
     marketing:<MarketingView runningAgents={runningAgents}/>,
     decks:    <DeckView runningAgents={runningAgents}/>,
     documents:<DocumentsView/>,
