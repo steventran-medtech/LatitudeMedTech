@@ -1293,6 +1293,53 @@ def test_DI_021_A():
              "Restore Test-AthenaRunning in athena_lib.ps1 and the guard block in start_athena.ps1")
 
 
+# ── UN-023 / Historical Data Depth ───────────────────────────────────────────
+
+def test_DI_023_A():
+    """DI-023-A: RAG pipeline has no hard date cutoff blocking sources older than 50 years"""
+    di = "DI-023-A"
+    if _skip_if_filtered(di): return
+    f = AGENTS / "rag_agent.py"
+    if not f.exists():
+        _log(WARN, di, "rag_agent.py not found -- cannot verify historical data depth",
+             "Create or locate rag_agent.py; DI-023-A will remain OPEN until pipeline is inspected")
+        return
+    content = _read(f)
+    # Hard date filters that would exclude 50+ year old documents
+    hard_cutoff_patterns = [
+        r'cutoff_year\s*=',
+        r'min_year\s*=',
+        r'year\s*>=\s*(?:19[8-9]\d|20\d\d)',   # year >= 198x or later
+        r'published_after\s*=',
+        r'date_from\s*=\s*["\']20',              # date_from = "20xx"
+    ]
+    violations = [p for p in hard_cutoff_patterns if re.search(p, content, re.IGNORECASE)]
+    # Check that not ALL seed queries are pinned to specific recent years
+    year_anchored = len(re.findall(r'\b20[12]\d\b', content))  # count 201x/202x occurrences
+    query_list_match = re.search(r'(?:QUERIES|queries|search_terms)\s*=\s*\[(.+?)\]',
+                                 content, re.DOTALL)
+    all_queries_dated = False
+    if query_list_match and year_anchored > 0:
+        # If every query string in the list contains a year literal, flag it
+        query_block = query_list_match.group(1)
+        query_strings = re.findall(r'"([^"]+)"', query_block)
+        if query_strings and all(re.search(r'\b20[12]\d\b', q) for q in query_strings):
+            all_queries_dated = True
+
+    if violations:
+        _log(FAIL, di,
+             f"Hard date cutoff found in rag_agent.py: {violations[0]}",
+             "Remove the year filter — agents must be able to access historical sources (50+ years)")
+    elif all_queries_dated:
+        _log(WARN, di,
+             "All RAG seed queries appear year-anchored to recent dates -- historical sources may be excluded",
+             "Add at least one query without a year literal (e.g. 'FDA medical device regulatory history')")
+    else:
+        _log(WARN, di,
+             "No hard date cutoff detected -- manual KB audit still required to confirm 50-year coverage",
+             "Run a full RAG ingest and verify at least one pre-1990 source is present in the knowledge base")
+
+
 # ── Live API Tests ─────────────────────────────────────────────────────────────
 
 def test_live_api():
@@ -1455,6 +1502,9 @@ def main():
 
     _section("UN-021 Single-Instance Enforcement")
     test_DI_021_A()
+
+    _section("UN-023 Historical Data Depth")
+    test_DI_023_A()
 
     if args.live or args.full:
         test_live_api()

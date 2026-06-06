@@ -1,5 +1,5 @@
 # DC-004 — Requirements Traceability Matrix (RTM)
-**Document:** DC-004 · Version 1.5 · 2026-06-05  
+**Document:** DC-004 · Version 1.6 · 2026-06-05  
 **Approved by:** Steven Tran
 
 This is the single source of truth for end-to-end coverage. Every user need
@@ -42,6 +42,7 @@ column are open findings requiring immediate remediation.
 | UN-005 | | DI-005-B | Notification only if voice active | `voice_bridge.py` queue guard | `test_DI_005_B` | VERIFIED |
 | UN-006 | Persistent voice session | DI-006-A | Session persists across tabs | `useVoiceSession.js` app-level | `test_DI_006_A` | VERIFIED |
 | UN-006 | | DI-006-B | Status badge in header | `App.jsx` VoiceStatusBadge | `test_DI_006_B` | VERIFIED |
+| UN-022 | Voice conversation quality | DI-022-A | Latency between end of user voice input and start of audible response <= 2 s; streaming sentence-split pipeline ensures first sentence dispatched to TTS before full response is buffered | `voice_bridge.py` `_ask_claude_streaming` + `_SENTENCE_END` sentence-split + `_speak_sentence` called inside token-stream loop | `test_DI_022_A` | PARTIAL |
 | UN-007 | Content generation | DI-007-A | 900–1,200 word articles | `content_agent.py` max_tokens | `test_DI_007_A` | PARTIAL |
 | UN-007 | | DI-007-B | Title from body H1 | `content_agent.py` title_from_body | `test_DI_007_B` | VERIFIED |
 | UN-007 | | DI-007-C | Banned phrases enforced | `content_agent.py` system prompt | `test_DI_007_C` | VERIFIED |
@@ -59,6 +60,7 @@ column are open findings requiring immediate remediation.
 | UN-011 | | DI-011-B | Cited sources + dates | M&A agent system prompt | `test_DI_011_B` | VERIFIED |
 | UN-012 | Regulatory briefings | DI-012-A | FDA + EU MDR + IMDRF coverage | `briefing_agent.py` sources | `test_DI_012_A` | VERIFIED |
 | UN-012 | | DI-012-B | Briefings enter review queue | `briefing_agent.py` submit_for_review | `test_DI_012_B` | VERIFIED |
+| UN-023 | Historical data depth | DI-023-A | No date cutoff blocking >50-year-old sources; KB queries include historically-scoped terms | `rag_agent.py` no hard year filter; seed queries include non-date-restricted terms | `test_DI_023_A` | OPEN |
 | UN-013 | Dashboard | DI-013-A | Agent health (green/yellow/red) | `server.py` /api/dashboard | `test_DI_013_A` | VERIFIED |
 | UN-013 | | DI-013-B | Hourly token timeseries | `server.py` /api/dashboard/timeseries | `test_DI_013_B` | VERIFIED |
 | UN-013 | | DI-013-C | KB growth chart | `server.py` /api/dashboard/knowledge-growth | `test_DI_013_C` | VERIFIED |
@@ -93,15 +95,15 @@ column are open findings requiring immediate remediation.
 
 ---
 
-## Coverage Summary (v1.4)
+## Coverage Summary (v1.5)
 
 | Metric | Count |
 |---|---|
-| Total user needs | 21 |
-| Total design inputs | 63 |
-| Design inputs with VERIFIED tests | 49 |
-| Design inputs with PARTIAL coverage | 12 |
-| Design inputs with OPEN gap | 2 |
+| Total user needs | 23 |
+| Total design inputs | 70 |
+| Design inputs with VERIFIED tests | 60 |
+| Design inputs with PARTIAL coverage | 9 |
+| Design inputs with OPEN gap | 1 |
 | Design inputs with WAIVED status | 0 |
 
 **PARTIAL items** require manual verification currently; automated tests are
