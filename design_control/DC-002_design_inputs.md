@@ -175,6 +175,7 @@ Each entry:
 | DI-015-D | UN-015 | API shall set security headers (CSP, X-Frame-Options, X-Content-Type-Options) | Security header middleware present in `server.py` | P0 | VERIFIED |
 | DI-015-E | UN-015 | File-serving endpoints shall reject path traversal attempts (`../`) | Path traversal check present in file-serving routes | P0 | VERIFIED |
 | DI-015-F | UN-015 | Session authentication token shall be required for all non-health API endpoints | Auth middleware or dependency in server.py guards non-public routes | P0 | PARTIAL |
+| DI-015-G | UN-015 | Every `fetch()` call to a non-exempt `/api/` endpoint in the frontend shall include `authHdr()` in its request headers — GET calls are not exempt | `dc_verify.py` `test_DI_015_G` scans all `.jsx`/`.js` source files for naked fetch calls | P0 | OPEN |
 
 ### UN-016 — Output Labeling & Disclaimer
 

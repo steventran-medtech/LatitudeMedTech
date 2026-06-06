@@ -883,6 +883,38 @@ def test_DI_015_E():
              "Manually verify that file endpoints reject ../ sequences")
 
 
+def test_DI_015_G():
+    """DI-015-G: No naked /api/ GET fetch calls (missing authHdr) across all frontend source files"""
+    di = "DI-015-G"
+    if _skip_if_filtered(di): return
+    # Endpoints exempt from auth per AuthMiddleware
+    EXEMPT = {"/api/auth/token", "/api/version"}
+    naked = []
+    for src_file in sorted(UI_FRONT.glob("**/*.jsx")) + sorted(UI_FRONT.glob("**/*.js")):
+        if "node_modules" in str(src_file):
+            continue
+        content = _read(src_file)
+        # Find all fetch(${API}/api/... calls — look ahead for authHdr() within ~120 chars
+        for m in re.finditer(r'fetch\(`\$\{API\}(/api/[^`"\')\s]+)', content):
+            endpoint_raw = m.group(1)
+            # Strip dynamic path segments to compare against exempt list
+            endpoint_static = re.sub(r'\$\{[^}]+\}', '{id}', endpoint_raw).split("?")[0].rstrip("/")
+            # Check if any exempt prefix matches
+            if any(endpoint_static.startswith(e) for e in EXEMPT):
+                continue
+            # Look for authHdr() within the fetch call's option object (up to 150 chars ahead)
+            window = content[m.start():m.start() + 150]
+            if "authHdr()" not in window:
+                rel = str(src_file.relative_to(UI_FRONT))
+                line_num = content[:m.start()].count("\n") + 1
+                naked.append(f"{rel}:{line_num} — {endpoint_static[:60]}")
+    if not naked:
+        _log(PASS, di, "No naked /api/ fetch calls detected across frontend source tree")
+    else:
+        detail = "; ".join(naked[:5]) + (f" … +{len(naked)-5} more" if len(naked) > 5 else "")
+        _log(FAIL, di, f"{len(naked)} fetch call(s) missing authHdr() in frontend source", detail)
+
+
 # ── UN-016 / Output Labeling ──────────────────────────────────────────────────
 
 def test_DI_016_A():
@@ -1127,6 +1159,70 @@ def test_DI_019_B():
              "; ".join(detail))
     else:
         _log(PASS, di, "No percentage text element or VBScript assignment in start_splash.hta")
+
+
+def test_DI_019_D():
+    """DI-019-D: Electron createSplash() has 5px bottom-edge bar, shimmer animation, and setSplashStatus defined"""
+    di = "DI-019-D"
+    if _skip_if_filtered(di): return
+    f = ATHENA / "electron" / "main.js"
+    if not f.exists():
+        _log(FAIL, di, "electron/main.js not found", str(f))
+        return
+    content = _read(f)
+    has_bar_wrap        = "bar-wrap" in content
+    has_bottom          = "bottom:0" in content
+    has_full_width      = "width:100%" in content
+    has_height_5        = "height:5px" in content
+    has_shimmer         = "shimmer" in content
+    has_set_status_fn   = bool(re.search(r'function setSplashStatus\s*\(', content))
+    has_destroyed_guard = "isDestroyed()" in content
+    checks = [has_bar_wrap, has_bottom, has_full_width, has_height_5,
+              has_shimmer, has_set_status_fn, has_destroyed_guard]
+    if all(checks):
+        _log(PASS, di, "Electron splash: 5px bottom bar, shimmer, setSplashStatus with isDestroyed guard")
+    else:
+        missing = []
+        if not has_bar_wrap:        missing.append("#bar-wrap element")
+        if not has_bottom:          missing.append("bottom:0")
+        if not has_full_width:      missing.append("width:100%")
+        if not has_height_5:        missing.append("height:5px")
+        if not has_shimmer:         missing.append("shimmer animation")
+        if not has_set_status_fn:   missing.append("setSplashStatus() function")
+        if not has_destroyed_guard: missing.append("isDestroyed() guard in setSplashStatus")
+        _log(FAIL, di, f"Electron splash bar spec incomplete: {missing}",
+             "Restore full createSplash() and setSplashStatus() in electron/main.js per CAPA-Splash-001")
+
+
+def test_DI_019_E():
+    """DI-019-E: Electron startup sequence calls setSplashStatus at all four milestones and holds 100% before close"""
+    di = "DI-019-E"
+    if _skip_if_filtered(di): return
+    f = ATHENA / "electron" / "main.js"
+    if not f.exists():
+        _log(FAIL, di, "electron/main.js not found", str(f))
+        return
+    content = _read(f)
+    # Extract the app.whenReady block for scoped checks
+    m = re.search(r'app\.whenReady\(\).*', content, re.DOTALL)
+    body = m.group(0) if m else content
+    has_pct_15  = bool(re.search(r'setSplashStatus\s*\(.*?,\s*15\b', body))
+    has_pct_70  = bool(re.search(r'setSplashStatus\s*\(.*?,\s*70\b', body))
+    has_pct_80  = bool(re.search(r'setSplashStatus\s*\(.*?,\s*80\b', body))
+    has_pct_100 = bool(re.search(r'setSplashStatus\s*\(.*?,\s*100\b', body))
+    has_hold    = bool(re.search(r'setTimeout.*splash\.close|await new Promise.*splash\.close', body, re.DOTALL))
+    checks = [has_pct_15, has_pct_70, has_pct_80, has_pct_100, has_hold]
+    if all(checks):
+        _log(PASS, di, "Electron startup calls setSplashStatus at 15/70/80/100% and holds before close")
+    else:
+        missing = []
+        if not has_pct_15:  missing.append("setSplashStatus(..., 15) backend-start milestone")
+        if not has_pct_70:  missing.append("setSplashStatus(..., 70) backend-ready milestone")
+        if not has_pct_80:  missing.append("setSplashStatus(..., 80) frontend-loading milestone")
+        if not has_pct_100: missing.append("setSplashStatus(..., 100) ready milestone")
+        if not has_hold:    missing.append("setTimeout/Promise hold at 100% before splash.close()")
+        _log(FAIL, di, f"Electron startup milestone sequence incomplete: {missing}",
+             "Restore setSplashStatus() calls in app.whenReady() per CAPA-Splash-001")
 
 
 # ── UN-020 / Document Review & Approval ──────────────────────────────────────
@@ -1487,7 +1583,7 @@ def main():
 
     _section("UN-015/016/017 Security, Labeling & Audit")
     test_DI_015_A(); test_DI_015_B(); test_DI_015_C()
-    test_DI_015_D(); test_DI_015_E()
+    test_DI_015_D(); test_DI_015_E(); test_DI_015_G()
     test_DI_016_A(); test_DI_016_B(); test_DI_016_C()
     test_DI_017_A(); test_DI_017_B(); test_DI_017_C()
 
@@ -1496,6 +1592,7 @@ def main():
 
     _section("UN-019 Startup Experience")
     test_DI_019_A(); test_DI_019_B(); test_DI_019_C()
+    test_DI_019_D(); test_DI_019_E()
 
     _section("UN-020 Document Review & Approval")
     test_DI_020_A(); test_DI_020_B(); test_DI_020_C(); test_DI_020_D(); test_DI_020_E()
