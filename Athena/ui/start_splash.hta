@@ -171,7 +171,7 @@ Sub Window_OnLoad
   stepVal      = 0
   targetVal    = 0
   readyToClose = False
-  timer_id = window.setInterval("Tick",       400)
+  timer_id = window.setInterval("Tick",       200)
   poll_id  = window.setInterval("PollBackend", 800)
 
   ' Click-drag to move the borderless window.
@@ -242,9 +242,9 @@ Sub SetStatus(msg, newTarget)
 End Sub
 
 Sub Tick
-  ' Creep stepVal toward targetVal 1% per tick — never overshoot.
+  ' Creep stepVal toward targetVal 2% per tick (200ms) = ~10%/sec — never overshoot.
   If stepVal < targetVal Then
-    stepVal = stepVal + 1
+    stepVal = stepVal + 2
     If stepVal > targetVal Then stepVal = targetVal
     bar.style.width = stepVal & "%"
     pctEl.innerText = stepVal & "%"
