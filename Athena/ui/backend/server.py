@@ -2223,28 +2223,64 @@ def _pick_greeting() -> str:
     return _random.choice(pool)
 
 def _speak_phrase(text: str):
-    """Speak a greeting or goodbye phrase using Kokoro's voice.
+    """Speak a greeting or goodbye phrase via Kokoro TTS with Windows SAPI fallback.
 
-    Fetches WAV bytes from the Kokoro server (port 8002) and plays them
-    via sounddevice — the same path used by the voice conversation TTS.
-    Server runs in the voice venv so sounddevice/soundfile are available.
+    Retries Kokoro once after 4 s in case it is still loading (the preload gate
+    times out at 30 s but the model can take longer on a cold start).  All failures
+    are logged — the previous bare `except: pass` masked every failure and made
+    voices impossible to diagnose.  Falls back to Windows SAPI so a voice is always
+    heard even when Kokoro is unavailable.
     """
-    import urllib.request, json, io
+    import io, json, time, urllib.request as _urllib
+
+    def _try_kokoro() -> bool:
+        try:
+            import soundfile as sf, sounddevice as sd, numpy as np
+            payload = json.dumps(
+                {"text": text, "voice": os.getenv("VOICE_KOKORO_VOICE", "bf_emma")}
+            ).encode()
+            req = _urllib.Request(
+                "http://127.0.0.1:8002/speak", data=payload,
+                headers={"Content-Type": "application/json"}, method="POST")
+            with _urllib.urlopen(req, timeout=20) as resp:
+                wav = resp.read()
+            data, sr = sf.read(io.BytesIO(wav))
+            sd.play(data.astype(np.float32), sr)
+            sd.wait()
+            return True
+        except Exception as exc:
+            print(f"[voice] _speak_phrase kokoro failed: {exc!r}", flush=True)
+            return False
+
+    # First attempt — immediate
+    if _try_kokoro():
+        time.sleep(0.5)
+        return
+
+    # One retry — Kokoro may still be loading on a cold/slow start
+    print("[voice] _speak_phrase: retrying Kokoro in 4 s…", flush=True)
+    time.sleep(4)
+    if _try_kokoro():
+        time.sleep(0.5)
+        return
+
+    # Windows SAPI fallback — works on any Windows 11 system, no extra packages
+    print("[voice] _speak_phrase: Kokoro unavailable, using Windows SAPI", flush=True)
     try:
-        import soundfile as sf
-        import sounddevice as sd
-        payload = json.dumps({"text": text, "voice": os.getenv("VOICE_KOKORO_VOICE", "bf_emma")}).encode()
-        req = urllib.request.Request("http://127.0.0.1:8002/speak", data=payload,
-                                     headers={"Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            wav = resp.read()
-        data, sr = sf.read(io.BytesIO(wav))
-        import numpy as np
-        sd.play(data.astype(np.float32), sr)
-        sd.wait()
-    except Exception:
-        pass
-    import time; time.sleep(0.5)
+        safe  = text.replace("'", "").replace('"', " ")
+        script = (
+            "Add-Type -AssemblyName System.Speech;"
+            "$s=New-Object System.Speech.Synthesis.SpeechSynthesizer;"
+            f"$s.Rate=0;$s.Speak('{safe}')"
+        )
+        flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        subprocess.run(
+            ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script],
+            timeout=30, creationflags=flags,
+        )
+    except Exception as exc:
+        print(f"[voice] _speak_phrase SAPI failed: {exc!r}", flush=True)
+    time.sleep(0.5)
 
 _session_greeted = False   # plays once per server restart, regardless of tab refreshes
 
