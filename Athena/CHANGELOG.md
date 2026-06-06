@@ -41,6 +41,10 @@ _Changes landed on `main` but not yet stamped into a numbered release go here._
   `test_DI_018_B` added to `dc_verify.py`.
 
 ### Changed
+- **Splash progress bar (C3 — DI-019-A, DI-019-B):** Progress bar repositioned to the full-width
+  bottom edge of the splash window (no side padding). Numeric percentage counter removed. UN-019
+  and DI-019-A/B added to DC-001/002/003/004; `test_DI_019_A` and `test_DI_019_B` added to
+  `dc_verify.py`.
 - **Voice silence duration (C3 — DI-004-E):** `SILENCE_DURATION` reduced from 1.5 s to 0.8 s
   in both `settings.json` and `voice_bridge.py` default. Reduces Athena's post-speech pause
   by ~700 ms. Value is at the DC-006 floor (0.8 s) and remains within the safe range [0.8, 2.0].

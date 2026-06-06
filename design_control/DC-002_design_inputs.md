@@ -190,6 +190,17 @@ Each entry:
 
 ---
 
+## Startup Experience
+
+### UN-019 — Startup Splash Screen
+
+| ID | Source | Requirement Statement | Verification | Priority | Status |
+|---|---|---|---|---|---|
+| DI-019-A | UN-019 | Splash screen progress bar shall be absolutely positioned at the bottom edge of the window spanning its full width, with no side padding | `.bar-wrap` in `start_splash.hta` has `position:absolute; bottom:0; left:0; right:0` | P2 | VERIFIED |
+| DI-019-B | UN-019 | Splash screen shall not display numeric percentage text during startup loading | No `id="pct"` element and no `pctEl.innerText` assignment in `start_splash.hta` | P2 | VERIFIED |
+
+---
+
 ## Design Input Change Protocol
 
 Adding a new DI requires:

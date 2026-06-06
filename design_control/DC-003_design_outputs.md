@@ -216,6 +216,14 @@ Athena/
 
 ---
 
+## DO-019 — Startup Splash Screen
+
+| Design Output | File | Symbol / Route | Implements |
+|---|---|---|---|
+| Startup splash screen | `Athena/ui/start_splash.hta` | `.bar-wrap` absolutely positioned full-width at bottom edge; `#pct` element removed | DI-019-A, DI-019-B |
+
+---
+
 ## DO-018 — Client Lifecycle
 
 | Design Output | File | Symbol / Route | Implements |

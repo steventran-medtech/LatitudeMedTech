@@ -120,6 +120,12 @@ These are the enumerated, controlled user needs for Athena v0.5 (Alpha).
 | UN-016 | Have every AI-generated output automatically labeled with its readiness status and a regulatory disclaimer | P0 |
 | UN-017 | Maintain a searchable audit log of agent outputs and review decisions | P1 |
 
+### Startup Experience
+
+| ID | User Need | Priority |
+|---|---|---|
+| UN-019 | See startup progress displayed cleanly — a full-width progress bar at the window bottom, without a distracting numeric percentage counter | P2 |
+
 ---
 
 ## 6. Priority Definitions
