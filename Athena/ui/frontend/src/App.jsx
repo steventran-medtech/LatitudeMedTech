@@ -760,6 +760,7 @@ function Dashboard({data}){
   },[hourlyDay]);
 
   if(!data) return <div style={{color:C.muted,fontFamily:"Helvetica,sans-serif",fontSize:13}}>Loading dashboard...</div>;
+  if(data.error) return <div style={{...S.card,borderLeft:`3px solid ${C.red}`,color:C.red,fontFamily:F.sans,fontSize:13}}>Dashboard unavailable: {data.error}</div>;
   const t=data.token_report?.totals||{};
   const kb=data.kb_stats||{};
   const today=ts?.today||{}, yest=ts?.yesterday||{};
@@ -833,17 +834,21 @@ function Dashboard({data}){
               color:historyDays===r.days?C.pearl:C.fog}}>{r.label}</button>
         ))}
       </div>
-      {history.length>1&&(
-        <div style={{...S.card,marginBottom:24}}>
-          <span style={S.label}>Activity over time — {HISTORY_RANGES.find(r=>r.days===historyDays)?.label||`${historyDays}d`}</span>
+      <div style={{...S.card,marginBottom:24}}>
+        <span style={S.label}>Activity over time — {HISTORY_RANGES.find(r=>r.days===historyDays)?.label||`${historyDays}d`}</span>
+        {history.length>1 ? (
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:24,marginTop:16}}>
             <Sparkline data={history} valueKey="total_calls"  color={C.blue}  label="API Calls / day"/>
             <Sparkline data={history} valueKey="total_cost"   color={C.warm}  label="Spend (USD) / day"/>
             <Sparkline data={history} valueKey="total_tokens" color={C.teal}  label="Tokens / day"/>
             <Sparkline data={history} valueKey="cache_hits"   color={C.green} label="Cache hits / day"/>
           </div>
-        </div>
-      )}
+        ) : (
+          <div style={{fontFamily:F.sans,fontSize:12,color:C.fog,marginTop:10,lineHeight:1.7}}>
+            Activity charts accumulate daily — check back after {history.length===0?"the first":"a second"} full day of usage.
+          </div>
+        )}
+      </div>
       {/* Knowledge accumulation */}
       {(kbGrowth.length>1||companyKb)&&(
         <div style={{...S.card,marginBottom:24}}>
@@ -1795,34 +1800,58 @@ function FloatingVoiceWidget({ voice, open, onToggle, onFullView, docked, floatP
       style={{
         position:"fixed",
         left:floatPos.x, top:floatPos.y, right:"auto", bottom:"auto",
-        width:172,
+        width: open ? 324 : 172,
         background:"linear-gradient(160deg,#0A2540 0%,#061928 100%)",
         border:`1px solid ${running ? cfg.color+"55" : "rgba(26,111,163,0.25)"}`,
         borderRadius:10, zIndex:1002,
         cursor:"grab",
         boxShadow: running ? `0 4px 20px ${cfg.color}33` : "0 4px 16px rgba(0,0,0,0.4)",
         userSelect:"none",
-        transition:"box-shadow 0.2s, border-color 0.2s",
+        transition:"width 0.2s ease, box-shadow 0.2s, border-color 0.2s",
       }}
     >
       {/* HUD grid */}
       <div style={{position:"absolute", inset:0, opacity:0.03, pointerEvents:"none", borderRadius:10, backgroundImage:`linear-gradient(#1A6FA3 1px,transparent 1px),linear-gradient(90deg,#1A6FA3 1px,transparent 1px)`, backgroundSize:"20px 20px"}}/>
 
-      {/* Header — click toggles panel */}
+      {/* Header — click toggles expanded / compact */}
       <div data-nodrag="1" onClick={onToggle}
         style={{display:"flex", alignItems:"center", gap:7, padding:"9px 10px 7px", borderBottom:"1px solid rgba(26,111,163,0.15)", cursor:"pointer", borderRadius:"10px 10px 0 0"}}
       >
         <div style={{width:8, height:8, borderRadius:"50%", flexShrink:0, background:cfg.color, boxShadow:cfg.pulse?`0 0 8px ${cfg.color}`:"none", animation:cfg.pulse?"athenaPing 1.4s ease-in-out infinite":"none"}}/>
-        <span style={{fontFamily:F.serif, fontSize:11, fontWeight:400, color:"rgba(255,255,255,0.75)", flex:1, letterSpacing:"0.06em"}}>Athena</span>
-        <span style={{fontFamily:F.sans, fontSize:8, fontWeight:700, color:cfg.color, letterSpacing:"0.1em", textTransform:"uppercase"}}>{stateLabel}</span>
+        <span style={{fontFamily:F.serif, fontSize:11, fontWeight:400, color:"rgba(255,255,255,0.75)", flex:1, letterSpacing:"0.06em", overflow:"hidden", whiteSpace:"nowrap"}}>Athena</span>
+        <span style={{fontFamily:F.sans, fontSize:8, fontWeight:700, color:cfg.color, letterSpacing:"0.1em", textTransform:"uppercase", flexShrink:0}}>{stateLabel}</span>
+        <span style={{fontFamily:F.sans, fontSize:9, color:"rgba(255,255,255,0.25)", flexShrink:0, marginLeft:4}}>{open ? "▲" : "▼"}</span>
       </div>
 
-      {/* Last response */}
-      {currentText&&(
+      {/* Compact preview — shown when collapsed and there is text */}
+      {!open && currentText && (
         <div style={{padding:"6px 10px 4px", borderBottom:"1px solid rgba(26,111,163,0.1)"}}>
           <div style={{fontFamily:F.sans, fontSize:9, color:"rgba(224,234,242,0.6)", lineHeight:1.5, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical"}}>
             {currentText.length>80 ? currentText.slice(0,80)+"…" : currentText}
           </div>
+        </div>
+      )}
+
+      {/* Expanded body — full exchange, scrollable */}
+      {open && (
+        <div style={{display:"flex", flexDirection:"column", gap:6, padding:"8px 10px 6px", maxHeight:280, overflowY:"auto"}}>
+          {lastYou && (
+            <div style={{background:"rgba(196,146,42,0.07)", border:"1px solid rgba(196,146,42,0.18)", borderLeft:"2px solid rgba(196,146,42,0.6)", borderRadius:"0 5px 5px 0", padding:"7px 9px"}}>
+              <div style={{fontFamily:F.sans, fontSize:7, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", color:"#C4922A", marginBottom:4}}>You said</div>
+              <div style={{fontFamily:F.sans, fontSize:10, color:"#fff", lineHeight:1.6}}>{lastYou}</div>
+            </div>
+          )}
+          {currentText && (
+            <div style={{background:"rgba(31,122,109,0.07)", border:"1px solid rgba(31,122,109,0.18)", borderLeft:"2px solid rgba(31,122,109,0.6)", borderRadius:"0 5px 5px 0", padding:"7px 9px"}}>
+              <div style={{fontFamily:F.sans, fontSize:7, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", color:"#1F7A6D", marginBottom:4}}>Athena</div>
+              <div style={{fontFamily:F.sans, fontSize:10, color:"#e0eaf2", lineHeight:1.7, fontWeight:300}}>{currentText}</div>
+            </div>
+          )}
+          {!lastYou && !currentText && (
+            <div style={{fontFamily:F.sans, fontSize:9, color:"rgba(255,255,255,0.25)", textAlign:"center", padding:"12px 0"}}>
+              {running ? "Waiting for exchange…" : "Voice assistant offline"}
+            </div>
+          )}
         </div>
       )}
 
@@ -2404,7 +2433,7 @@ export default function App(){
         <div style={S.content}>{pages[active]}</div>
       </div>
 
-      {/* Floating voice widget + expandable panel — visible on all non-Voice tabs */}
+      {/* Floating voice widget — visible on all non-Voice tabs */}
       {active!=="voice"&&(<>
         <FloatingVoiceWidget
           voice={voice}
@@ -2416,12 +2445,6 @@ export default function App(){
           onDock={handleWidgetDock}
           onUndock={handleWidgetUndock}
           onMove={handleWidgetMove}
-        />
-        <AthenaPanel
-          voice={voice}
-          open={athenaOpen}
-          onToggle={()=>setAthenaOpen(o=>!o)}
-          onFullView={()=>{ setActive("voice"); setAthenaOpen(false); }}
         />
       </>)}
 
