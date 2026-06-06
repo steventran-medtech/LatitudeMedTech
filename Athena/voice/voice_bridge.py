@@ -1211,7 +1211,6 @@ def _voice_loop():
 
         _state = VS.AWAKE
         _emit("awake", message="Recording…")
-        _play_chime(True)          # clear 2-tone chime — user hears "I'm listening"
 
         try:
             audio = _record_query()
@@ -1319,7 +1318,6 @@ def _voice_loop():
         if len(history) > _HISTORY_MAX: history = history[-_HISTORY_MAX:]
         _save_history(history)
         _emit("speaking", response=response)   # update UI with full text
-        _play_chime(False)
         _post_response_cooldown(oww)
 
         _state = VS.LISTENING
