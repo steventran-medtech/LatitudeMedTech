@@ -2030,6 +2030,7 @@ export default function App(){
     }
   },[]);
 
+  const [athenaOpen, setAthenaOpen] = useState(false);
   const [exitDialog, setExitDialog] = useState(false);
   const shuttingDownRef = useRef(false);
 
@@ -2140,6 +2141,15 @@ export default function App(){
         </div>
         <div style={S.content}>{pages[active]}</div>
       </div>
+
+      {/* Athena global panel — accessible from every tab */}
+      <AthenaPanel
+        voice={voice}
+        open={athenaOpen}
+        onToggle={()=>setAthenaOpen(o=>!o)}
+        onFullView={()=>{ setActive("voice"); setAthenaOpen(false); }}
+        hidden={active==="voice"}
+      />
 
       {/* About / version + changelog */}
       {aboutOpen&&<AboutModal version={version} onClose={()=>setAboutOpen(false)}/>}

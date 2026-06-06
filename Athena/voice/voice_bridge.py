@@ -76,7 +76,7 @@ CHUNK_SAMPLES_16K = 1280
 SILENCE_THRESHOLD = 0.01
 SILENCE_DURATION  = 1.5   # 0.8 cut off speech mid-sentence → bad transcription → blocked response
 MAX_RECORD_SEC    = 30
-WAKE_THRESHOLD    = 0.5
+WAKE_THRESHOLD    = 0.35   # lowered from 0.5 — custom sklearn model needs lower threshold for good recall
 WHISPER_MODEL     = "tiny.en"    # tiny is 3× faster than base with acceptable accuracy
 
 TTS_BACKEND   = os.getenv("VOICE_TTS_BACKEND",  "kokoro").lower()
@@ -953,6 +953,7 @@ _TTS_SUBS = [
     (re.compile(r'\bMDSAP\b'),              'M D S A P'),
     (re.compile(r'\bUDI\b'),                'U D I'),
     (re.compile(r'\bRAQA\b'),               'R A Q A'),
+    (re.compile(r'\bM&A\b', re.I),          'em en ay'),     # M&A → "em en ay" (before generic & rule)
     (re.compile(r'&'),                      'and'),
     (re.compile(r'\s{2,}'),                 ' '),            # collapse extra spaces
 ]
@@ -1000,13 +1001,14 @@ def _ask_claude_streaming(text: str, history: list, kb_ctx: str = "") -> str:
             for chunk in stream.text_stream:
                 full_text += chunk
                 buffer    += chunk
+                # Emit each token for real-time character streaming in the Voice UI
+                _emit("speaking_word", word=chunk)
                 # Flush buffer to TTS at each sentence boundary
                 if _SENTENCE_END.search(buffer):
                     sentences = _SENTENCE_END.split(buffer)
                     for s in sentences[:-1]:
                         s = s.strip()
                         if s:
-                            # Phase 2A: emit each sentence to UI as it's spoken
                             _emit("speaking_partial", sentence=s)
                             _speak_sentence(s)
                     buffer = sentences[-1]

@@ -193,12 +193,13 @@ _audit("server_start", f"version={APP_VERSION}")
 # ── Voice bridge ──────────────────────────────────────────────────────────────
 sys.path.insert(0, str(ATHENA / "voice"))
 try:
-    from voice_bridge import router as voice_router, voice_websocket_endpoint
+    from voice_bridge import router as voice_router, voice_websocket_endpoint, _notification_queue as _voice_queue
     app.include_router(voice_router)
     VOICE_AVAILABLE = True
     print("[voice] Voice bridge loaded — OWW + Whisper + Kokoro preloading in background")
 except Exception as _ve:
     VOICE_AVAILABLE = False
+    _voice_queue = None
     print(f"[voice] Bridge not loaded: {_ve}")
 
 app.add_middleware(
@@ -314,6 +315,24 @@ async def run_agent(agent_name: str, script: str, args: list = None, context: st
 
     await manager.broadcast({"type": "agent_done", "agent": agent_name, "status": status,
                               "ts": datetime.now().isoformat(), **result_extras})
+
+    # Batch-announce all pending review items via voice (SOC II CC6.6 — user awareness)
+    # Groups multiple pending items into a single sentence rather than individual announcements.
+    if status == "success" and mem and _voice_queue is not None:
+        try:
+            pending = mem.get_pending_reviews()
+            if pending:
+                n = len(pending)
+                if n == 1:
+                    note = f"1 item ready for your review: {pending[0]['title']}"
+                else:
+                    listed = ", ".join(p["title"] for p in pending[:3])
+                    tail   = f", and {n - 3} more" if n > 3 else ""
+                    note   = f"{n} items ready for your review: {listed}{tail}"
+                _voice_queue.append(note)
+        except Exception:
+            pass
+
     return {"status": status, "lines": lines}
 
 
@@ -1838,7 +1857,7 @@ def dashboard_timeseries(day: str = "today"):
     today     = _day_totals("date('now','localtime')")
     yesterday = _day_totals("date('now','localtime','-1 day')")
     today["date"]     = datetime.now().strftime("%Y-%m-%d")
-    yesterday["date"] = (datetime.now() - __import__("datetime").timedelta(days=1)).strftime("%Y-%m-%d")
+    yesterday["date"] = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
 
     # Per-hour breakdown for the selected day, zero-filled across all 24 hours.
     hour_day_expr = "date('now','localtime','-1 day')" if day == "yesterday" else "date('now','localtime')"
