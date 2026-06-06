@@ -398,7 +398,10 @@ def cmd_plan() -> str:
     )
     log.info(f"Plan saved: {out_path}")
     if _mem:
-        _mem.submit_for_review("marketing_agent", "plan", f"30-60-90 Marketing Plan — {CURRENT_DATE}", str(out_path))
+        _dt = datetime.now()
+        _mem.submit_for_review("marketing_agent", "plan",
+                               f"30-60-90 Marketing Plan — {_dt.strftime('%B')} {_dt.day}, {_dt.year}",
+                               str(out_path))
     return result
 
 
@@ -436,7 +439,10 @@ def cmd_brief() -> str:
     )
     log.info(f"Brief saved: {out_path}")
     if _mem:
-        _mem.submit_for_review("marketing_agent", "brief", f"Marketing Brief — {CURRENT_DATE}", str(out_path))
+        _dt = datetime.now()
+        _mem.submit_for_review("marketing_agent", "brief",
+                               f"Marketing Brief — {_dt.strftime('%B')} {_dt.day}, {_dt.year}",
+                               str(out_path))
     return result
 
 

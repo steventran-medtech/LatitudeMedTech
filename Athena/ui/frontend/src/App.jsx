@@ -1626,6 +1626,168 @@ function VoiceStatusBadge({ voice, onNavigate }) {
   );
 }
 
+// ── Floating Voice Widget ─────────────────────────────────────────────────────
+function FloatingVoiceWidget({ voice, open, onToggle, onFullView, docked, floatPos, onDock, onUndock, onMove }) {
+  const { running, state, lastAthena, speakingLines, elapsed, startVoice, stopVoice } = voice;
+  const cfg        = VOICE_BADGE[state] ?? VOICE_BADGE.idle;
+  const stateLabel = state ? state.charAt(0).toUpperCase() + state.slice(1) : "Idle";
+  const fmtE       = (s) => `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+  const currentText = speakingLines.length > 0 ? speakingLines.map(l=>l.text).join(" ") : lastAthena;
+
+  const dragRef       = useRef(null);
+  const draggingRef   = useRef(false);
+  const startMouseRef = useRef({x:0,y:0});
+  const startPosRef   = useRef({x:0,y:0});
+
+  const handleMouseDown = (e) => {
+    if (docked || e.target.closest("[data-nodrag]")) return;
+    e.preventDefault();
+    draggingRef.current   = true;
+    startMouseRef.current = {x:e.clientX, y:e.clientY};
+    startPosRef.current   = {...floatPos};
+    const handleMove = (ev) => {
+      if (!draggingRef.current || !dragRef.current) return;
+      const dx = ev.clientX - startMouseRef.current.x;
+      const dy = ev.clientY - startMouseRef.current.y;
+      dragRef.current.style.left   = (startPosRef.current.x + dx) + "px";
+      dragRef.current.style.top    = (startPosRef.current.y + dy) + "px";
+      dragRef.current.style.right  = "auto";
+      dragRef.current.style.bottom = "auto";
+    };
+    const handleUp = (ev) => {
+      if (!draggingRef.current) return;
+      draggingRef.current = false;
+      const dx = ev.clientX - startMouseRef.current.x;
+      const dy = ev.clientY - startMouseRef.current.y;
+      onMove({
+        x: Math.max(0, Math.min(window.innerWidth  - 176, startPosRef.current.x + dx)),
+        y: Math.max(0, Math.min(window.innerHeight - 110, startPosRef.current.y + dy)),
+      });
+      document.removeEventListener("mousemove", handleMove);
+      document.removeEventListener("mouseup",   handleUp);
+    };
+    document.addEventListener("mousemove", handleMove);
+    document.addEventListener("mouseup",   handleUp);
+  };
+
+  const posStyle = docked
+    ? {right:16, bottom:16, left:"auto", top:"auto"}
+    : {left:floatPos.x, top:floatPos.y, right:"auto", bottom:"auto"};
+
+  return (
+    <div
+      ref={dragRef}
+      onMouseDown={handleMouseDown}
+      style={{
+        position:"fixed", ...posStyle,
+        width:172,
+        background:"linear-gradient(160deg,#0A2540 0%,#061928 100%)",
+        border:`1px solid ${running ? cfg.color+"55" : "rgba(26,111,163,0.25)"}`,
+        borderRadius:10, zIndex:1002,
+        cursor: docked ? "default" : "grab",
+        boxShadow: running ? `0 4px 20px ${cfg.color}33` : "0 4px 16px rgba(0,0,0,0.4)",
+        userSelect:"none",
+        transition:"box-shadow 0.2s, border-color 0.2s",
+      }}
+    >
+      {/* HUD grid */}
+      <div style={{
+        position:"absolute", inset:0, opacity:0.03, pointerEvents:"none", borderRadius:10,
+        backgroundImage:`linear-gradient(#1A6FA3 1px,transparent 1px),linear-gradient(90deg,#1A6FA3 1px,transparent 1px)`,
+        backgroundSize:"20px 20px",
+      }}/>
+
+      {/* Header row — click toggles panel */}
+      <div
+        data-nodrag="1"
+        onClick={onToggle}
+        style={{
+          display:"flex", alignItems:"center", gap:7, padding:"9px 10px 7px",
+          borderBottom:"1px solid rgba(26,111,163,0.15)", cursor:"pointer",
+          borderRadius:"10px 10px 0 0",
+        }}
+      >
+        <div style={{
+          width:8, height:8, borderRadius:"50%", flexShrink:0,
+          background:cfg.color,
+          boxShadow: cfg.pulse?`0 0 8px ${cfg.color}`:"none",
+          animation: cfg.pulse?"athenaPing 1.4s ease-in-out infinite":"none",
+        }}/>
+        <span style={{
+          fontFamily:F.serif, fontSize:11, fontWeight:400,
+          color:"rgba(255,255,255,0.75)", flex:1, letterSpacing:"0.06em",
+        }}>Athena</span>
+        <span style={{
+          fontFamily:F.sans, fontSize:8, fontWeight:700,
+          color:cfg.color, letterSpacing:"0.1em", textTransform:"uppercase",
+        }}>{stateLabel}</span>
+      </div>
+
+      {/* Last response snippet */}
+      {currentText&&(
+        <div style={{padding:"6px 10px 4px", borderBottom:"1px solid rgba(26,111,163,0.1)"}}>
+          <div style={{
+            fontFamily:F.sans, fontSize:9, color:"rgba(224,234,242,0.6)",
+            lineHeight:1.5, overflow:"hidden",
+            display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical",
+          }}>
+            {currentText.length>80 ? currentText.slice(0,80)+"…" : currentText}
+          </div>
+        </div>
+      )}
+
+      {/* Action row */}
+      <div style={{
+        display:"flex", alignItems:"center", justifyContent:"space-between",
+        padding:"5px 8px 7px", gap:6,
+      }}>
+        <div style={{display:"flex", alignItems:"center", gap:5}}>
+          <button
+            data-nodrag="1"
+            onClick={(e)=>{ e.stopPropagation(); running ? stopVoice() : startVoice(); }}
+            style={{
+              fontFamily:F.sans, fontSize:8, fontWeight:700, letterSpacing:"0.08em",
+              padding:"3px 8px", borderRadius:5, textTransform:"uppercase",
+              background: running?"rgba(192,57,43,0.15)":"rgba(26,111,163,0.15)",
+              border:`1px solid ${running?"rgba(192,57,43,0.4)":"rgba(26,111,163,0.35)"}`,
+              color: running?"#C0392B":C.ocean, cursor:"pointer",
+            }}
+          >{running?"Stop":"Start"}</button>
+          {running&&elapsed>0&&(
+            <span style={{fontFamily:F.mono, fontSize:8, color:"rgba(196,146,42,0.7)"}}>
+              {fmtE(elapsed)}
+            </span>
+          )}
+        </div>
+        <div style={{display:"flex", gap:4}}>
+          <button
+            data-nodrag="1"
+            onClick={(e)=>{ e.stopPropagation(); onFullView(); }}
+            title="Full view"
+            style={{
+              width:20, height:20, display:"flex", alignItems:"center", justifyContent:"center",
+              background:"transparent", border:"1px solid rgba(255,255,255,0.1)",
+              borderRadius:4, cursor:"pointer", color:"rgba(255,255,255,0.35)", fontSize:10, padding:0,
+            }}
+          >↗</button>
+          <button
+            data-nodrag="1"
+            onClick={(e)=>{ e.stopPropagation(); docked?onUndock():onDock(); }}
+            title={docked?"Float widget":"Dock to corner"}
+            style={{
+              width:20, height:20, display:"flex", alignItems:"center", justifyContent:"center",
+              background: docked?"rgba(26,111,163,0.2)":"transparent",
+              border:`1px solid ${docked?"rgba(26,111,163,0.45)":"rgba(255,255,255,0.1)"}`,
+              borderRadius:4, cursor:"pointer",
+              color: docked?C.ocean:"rgba(255,255,255,0.35)", fontSize:9, padding:0,
+            }}
+          >📌</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Athena Global Panel ───────────────────────────────────────────────────────
 const PANEL_W = 284;
 
@@ -1653,7 +1815,7 @@ function PanelStateRing({ state, level }) {
   );
 }
 
-function AthenaPanel({ voice, open, onToggle, onFullView, hidden }) {
+function AthenaPanel({ voice, open, onToggle, onFullView }) {
   const { running, state, level, lastYou, lastAthena, speakingLines, elapsed, startVoice, stopVoice } = voice;
   const cfg   = VOICE_BADGE[state] ?? VOICE_BADGE.idle;
   const label = state ? state.charAt(0).toUpperCase() + state.slice(1) : "Idle";
@@ -1662,49 +1824,8 @@ function AthenaPanel({ voice, open, onToggle, onFullView, hidden }) {
     ? speakingLines.map(l=>l.text).join(" ")
     : lastAthena;
 
-  if (hidden) return null;
-
   return (
-    <>
-      {/* Toggle tab — always on-screen */}
-      <button
-        onClick={onToggle}
-        title={open?"Close Athena panel":"Open Athena panel"}
-        style={{
-          position:"fixed",
-          right: open ? PANEL_W : 0,
-          top:"50%",
-          transform:"translateY(-50%)",
-          zIndex:1002,
-          width:22, height:84,
-          background:"linear-gradient(180deg,#0A2540 0%,#061928 100%)",
-          border:`1px solid rgba(26,111,163,0.35)`,
-          borderRight:"none",
-          borderRadius:"6px 0 0 6px",
-          cursor:"pointer",
-          display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-          gap:5, padding:0,
-          transition:"right 0.25s cubic-bezier(0.4,0,0.2,1)",
-          boxShadow:"-2px 0 12px rgba(10,37,64,0.18)",
-        }}
-      >
-        <div style={{
-          width:6, height:6, borderRadius:"50%",
-          background:cfg.color,
-          boxShadow: cfg.pulse?`0 0 6px ${cfg.color}`:"none",
-          animation: cfg.pulse?"athenaPing 1.4s ease-in-out infinite":"none",
-        }}/>
-        <div style={{
-          fontFamily:F.sans, fontSize:7, fontWeight:700, letterSpacing:"0.16em",
-          textTransform:"uppercase", color:"rgba(255,255,255,0.45)",
-          writingMode:"vertical-rl", textOrientation:"mixed", transform:"rotate(180deg)",
-        }}>
-          Athena
-        </div>
-      </button>
-
-      {/* Panel */}
-      <div style={{
+    <div style={{
         position:"fixed",
         right: open ? 0 : -PANEL_W,
         top:0, bottom:0, width:PANEL_W,
@@ -1735,6 +1856,22 @@ function AthenaPanel({ voice, open, onToggle, onFullView, hidden }) {
             pointerEvents:"none",
           }}/>
         ))}
+
+        {/* Close button */}
+        <button
+          onClick={onToggle}
+          title="Close Athena panel"
+          style={{
+            position:"absolute", top:12, right:14,
+            width:22, height:22, display:"flex", alignItems:"center", justifyContent:"center",
+            background:"transparent", border:"1px solid rgba(255,255,255,0.1)",
+            borderRadius:5, cursor:"pointer", color:"rgba(255,255,255,0.35)",
+            fontSize:13, padding:0, zIndex:1,
+            transition:"color 0.12s, border-color 0.12s",
+          }}
+          onMouseEnter={e=>{ e.currentTarget.style.color="rgba(255,255,255,0.65)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.25)"; }}
+          onMouseLeave={e=>{ e.currentTarget.style.color="rgba(255,255,255,0.35)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; }}
+        >×</button>
 
         {/* Header */}
         <div style={{
@@ -1903,8 +2040,7 @@ function AthenaPanel({ voice, open, onToggle, onFullView, hidden }) {
             to   { transform: rotate(360deg); }
           }
         `}</style>
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -2061,6 +2197,16 @@ export default function App(){
   },[]);
 
   const [athenaOpen, setAthenaOpen] = useState(false);
+  const [widgetDocked, setWidgetDocked] = useState(() =>
+    localStorage.getItem("athena_widget_docked") !== "false"
+  );
+  const [widgetPos, setWidgetPos] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("athena_widget_pos") || "null") || {x:window.innerWidth-200, y:80}; }
+    catch { return {x:window.innerWidth-200, y:80}; }
+  });
+  const handleWidgetMove   = (pos) => { setWidgetPos(pos); localStorage.setItem("athena_widget_pos", JSON.stringify(pos)); };
+  const handleWidgetDock   = ()    => { setWidgetDocked(true);  localStorage.setItem("athena_widget_docked","true");  };
+  const handleWidgetUndock = ()    => { setWidgetDocked(false); localStorage.setItem("athena_widget_docked","false"); };
   const [exitDialog, setExitDialog] = useState(false);
   const shuttingDownRef = useRef(false);
 
@@ -2172,14 +2318,26 @@ export default function App(){
         <div style={S.content}>{pages[active]}</div>
       </div>
 
-      {/* Athena global panel — accessible from every tab */}
-      <AthenaPanel
-        voice={voice}
-        open={athenaOpen}
-        onToggle={()=>setAthenaOpen(o=>!o)}
-        onFullView={()=>{ setActive("voice"); setAthenaOpen(false); }}
-        hidden={active==="voice"}
-      />
+      {/* Floating voice widget + expandable panel — visible on all non-Voice tabs */}
+      {active!=="voice"&&(<>
+        <FloatingVoiceWidget
+          voice={voice}
+          open={athenaOpen}
+          onToggle={()=>setAthenaOpen(o=>!o)}
+          onFullView={()=>{ setActive("voice"); setAthenaOpen(false); }}
+          docked={widgetDocked}
+          floatPos={widgetPos}
+          onDock={handleWidgetDock}
+          onUndock={handleWidgetUndock}
+          onMove={handleWidgetMove}
+        />
+        <AthenaPanel
+          voice={voice}
+          open={athenaOpen}
+          onToggle={()=>setAthenaOpen(o=>!o)}
+          onFullView={()=>{ setActive("voice"); setAthenaOpen(false); }}
+        />
+      </>)}
 
       {/* About / version + changelog */}
       {aboutOpen&&<AboutModal version={version} onClose={()=>setAboutOpen(false)}/>}
