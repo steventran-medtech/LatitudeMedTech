@@ -427,17 +427,35 @@ def get_dashboard():
 SESSIONS_FILE = ATHENA / "voice" / "sessions.jsonl"
 
 class SessionLogBody(BaseModel):
+    session_id: str
     started_at: str
     ended_at: str
     duration_secs: int
     queries: int
     device: Optional[str] = ""
+    is_new: bool = True
 
-@app.post("/api/sessions/log")
-async def log_session(body: SessionLogBody):
-    record = body.dict()
+class SessionStartBody(BaseModel):
+    session_id: str
+    started_at: str
+    is_new: bool = True
+    device: Optional[str] = ""
+
+@app.post("/api/sessions/start")
+async def session_start(body: SessionStartBody, request: Request):
+    """Log the moment a voice session begins so partial/crashed sessions are visible."""
+    record = {**body.dict(), "status": "started"}
     with open(SESSIONS_FILE, "a", encoding="utf-8") as f:
         f.write(json.dumps(record) + "\n")
+    _audit("session_start", f"id={body.session_id} new={body.is_new}", request)
+    return {"status": "logged"}
+
+@app.post("/api/sessions/log")
+async def log_session(body: SessionLogBody, request: Request):
+    record = {**body.dict(), "status": "ended"}
+    with open(SESSIONS_FILE, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record) + "\n")
+    _audit("session_end", f"id={body.session_id} dur={body.duration_secs}s q={body.queries}", request)
     return {"status": "logged"}
 
 @app.get("/api/sessions")
@@ -1844,11 +1862,167 @@ def serve_file(folder: str, filename: str):
     mime = {
         ".pdf":  "application/pdf",
         ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         ".md":   "text/plain; charset=utf-8",
         ".txt":  "text/plain; charset=utf-8",
     }.get(suffix, "application/octet-stream")
     return FResponse(content=f.read_bytes(), media_type=mime,
                      headers={"Content-Disposition": f'inline; filename="{filename}"'})
+
+
+# ── Google Drive viewer ───────────────────────────────────────────────────────
+#
+# Config (set in Athena/voice/.env):
+#   GOOGLE_CREDENTIALS_PATH  — absolute path to service account credentials.json
+#                              (default: Athena/credentials.json)
+#   GOOGLE_DRIVE_FOLDER_ID   — ID of the Drive folder shared with the service account
+#   GOOGLE_SHARE_EMAIL       — Google account to share previews with
+#
+# Upload happens once per file; cache stored in Athena/drive_cache.json.
+# Re-opening an unchanged file costs zero — cached Drive file ID returned instantly.
+
+_DRIVE_CACHE_PATH   = ATHENA / "drive_cache.json"
+_GDRIVE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS_PATH", str(ATHENA / "credentials.json"))
+_GDRIVE_FOLDER_ID   = os.getenv("GOOGLE_DRIVE_FOLDER_ID", "")
+_GDRIVE_SHARE_EMAIL = os.getenv("GOOGLE_SHARE_EMAIL", "steven.tran@latitudemedtech.com")
+
+# Local MIME → (upload MIME, target Google MIME)
+_TO_GOOGLE_MIME = {
+    ".docx": ("application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "application/vnd.google-apps.document"),
+    ".pptx": ("application/vnd.openxmlformats-officedocument.presentationml.presentation",
+              "application/vnd.google-apps.presentation"),
+    ".pdf":  ("application/pdf", None),   # keep as PDF; Drive viewer handles it natively
+}
+
+# Embed URL per Google MIME
+_EMBED_URL = {
+    "application/vnd.google-apps.document":     "https://docs.google.com/document/d/{id}/preview",
+    "application/vnd.google-apps.presentation": "https://docs.google.com/presentation/d/{id}/preview",
+    None: "https://drive.google.com/file/d/{id}/preview",
+}
+
+
+def _drive_cache_load() -> dict:
+    try:
+        return json.loads(_DRIVE_CACHE_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _drive_cache_save(cache: dict):
+    try:
+        _DRIVE_CACHE_PATH.write_text(json.dumps(cache, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _build_drive_service():
+    """Return an authenticated Google Drive v3 service, or None if not configured."""
+    creds_path = Path(_GDRIVE_CREDENTIALS)
+    if not creds_path.exists():
+        return None
+    try:
+        from google.oauth2 import service_account
+        from googleapiclient.discovery import build as _gbuild
+        creds = service_account.Credentials.from_service_account_file(
+            str(creds_path),
+            scopes=["https://www.googleapis.com/auth/drive"],
+        )
+        return _gbuild("drive", "v3", credentials=creds, cache_discovery=False)
+    except Exception as exc:
+        print(f"[drive] Could not build service: {exc}")
+        return None
+
+
+@app.get("/api/files/google-view/{folder}/{filename}")
+def google_view(folder: str, filename: str):
+    """
+    Upload a file to Google Drive (once) and return an embed URL for the
+    corresponding Google App viewer.  Subsequent calls for the same unchanged
+    file return the cached URL instantly — no re-upload.
+    """
+    _safe_filename(filename)
+    base = FOLDER_MAP.get(folder)
+    if not base:
+        raise HTTPException(400, "Unknown folder")
+    f = (base / filename).resolve()
+    if not str(f).startswith(str(base.resolve())) or not f.exists():
+        raise HTTPException(404, "Not found")
+
+    suffix = f.suffix.lower()
+    if suffix not in _TO_GOOGLE_MIME:
+        raise HTTPException(400, f"Unsupported type for Google viewer: {suffix}")
+
+    # ── credentials check ────────────────────────────────────────────────────
+    if not Path(_GDRIVE_CREDENTIALS).exists():
+        return JSONResponse(status_code=503, content={
+            "error": "not_configured",
+            "message": "credentials.json not found. Drop it in the Athena root folder "
+                       "and set GOOGLE_DRIVE_FOLDER_ID in voice/.env.",
+        })
+    if not _GDRIVE_FOLDER_ID:
+        return JSONResponse(status_code=503, content={
+            "error": "not_configured",
+            "message": "GOOGLE_DRIVE_FOLDER_ID not set in voice/.env.",
+        })
+
+    # ── cache lookup (skip upload if file unchanged) ─────────────────────────
+    cache_key  = f"{folder}/{filename}"
+    file_mtime = str(f.stat().st_mtime)
+    cache      = _drive_cache_load()
+    entry      = cache.get(cache_key, {})
+
+    if entry.get("mtime") == file_mtime and entry.get("file_id"):
+        google_mime = entry.get("google_mime")
+        embed_url   = _EMBED_URL.get(google_mime, _EMBED_URL[None]).format(id=entry["file_id"])
+        return {"url": embed_url, "file_id": entry["file_id"], "cached": True}
+
+    # ── upload to Drive ───────────────────────────────────────────────────────
+    service = _build_drive_service()
+    if service is None:
+        raise HTTPException(503, "Could not authenticate with Google Drive")
+
+    upload_mime, google_mime = _TO_GOOGLE_MIME[suffix]
+    file_metadata = {"name": filename, "parents": [_GDRIVE_FOLDER_ID]}
+    if google_mime:
+        file_metadata["mimeType"] = google_mime  # convert to native Docs/Slides
+
+    from googleapiclient.http import MediaFileUpload
+    media = MediaFileUpload(str(f), mimetype=upload_mime, resumable=False)
+
+    # Delete the previous Drive copy (avoid accumulating stale versions)
+    if entry.get("file_id"):
+        try:
+            service.files().delete(fileId=entry["file_id"]).execute()
+        except Exception:
+            pass
+
+    uploaded    = service.files().create(
+        body=file_metadata, media_body=media, fields="id,mimeType"
+    ).execute()
+    file_id     = uploaded["id"]
+    actual_mime = uploaded.get("mimeType") or (google_mime or upload_mime)
+
+    # Share with the user so the iframe loads while signed into their account
+    if _GDRIVE_SHARE_EMAIL:
+        try:
+            service.permissions().create(
+                fileId=file_id,
+                body={"type": "user", "role": "reader",
+                      "emailAddress": _GDRIVE_SHARE_EMAIL},
+                sendNotificationEmail=False,
+            ).execute()
+        except Exception as exc:
+            print(f"[drive] Share warning: {exc}")
+
+    cache[cache_key] = {
+        "file_id": file_id, "mtime": file_mtime, "google_mime": actual_mime,
+    }
+    _drive_cache_save(cache)
+
+    embed_url = _EMBED_URL.get(actual_mime, _EMBED_URL[None]).format(id=file_id)
+    return {"url": embed_url, "file_id": file_id, "cached": False}
 
 
 # ── Human Review Queue (Phase 1A) ────────────────────────────────────────────
@@ -1907,6 +2081,54 @@ def review_history():
 def review_reopen(item_id: int):
     if mem: mem.reopen_review(item_id)
     return {"status": "pending", "id": item_id}
+
+
+@app.get("/api/review/{item_id}/summary")
+def review_summary(item_id: int):
+    """Return a concise 2-3 sentence spoken summary of a review item (voice-ready)."""
+    if not mem:
+        return JSONResponse(status_code=404, content={"error": "Memory not available"})
+    row = mem.get_review(item_id)
+    if not row:
+        return JSONResponse(status_code=404, content={"error": "Not found"})
+
+    title     = row.get("title", "untitled")
+    item_type = row.get("item_type", "")
+
+    # Read file content (markdown / text only)
+    raw = ""
+    f   = _resolve_review_file(item_id)
+    if f and f.suffix.lower() in (".md", ".txt"):
+        try:
+            raw = f.read_text(encoding="utf-8", errors="replace")[:2500]
+        except Exception:
+            pass
+
+    if not raw:
+        return {"summary": title, "title": title, "id": item_id}
+
+    try:
+        import anthropic as _ant
+        _key = os.getenv("ANTHROPIC_API_KEY", "")
+        if not _key:
+            raise RuntimeError("no key")
+        _client = _ant.Anthropic(api_key=_key)
+        _resp = _client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=120,
+            system=(
+                "Summarise this document for spoken voice delivery. "
+                "Write two or three sentences of plain prose — no markdown, no bullets, no headings. "
+                "State the key finding, recommendation, or what was produced. Be specific and concise."
+            ),
+            messages=[{"role": "user",
+                       "content": f"Title: {title}\nType: {item_type}\n\n{raw}"}],
+        )
+        summary = _resp.content[0].text.strip()
+    except Exception:
+        summary = title
+
+    return {"summary": summary, "title": title, "id": item_id}
 
 
 def _resolve_review_file(item_id: int):

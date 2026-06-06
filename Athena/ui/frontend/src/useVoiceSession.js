@@ -22,10 +22,12 @@ export function useVoiceSession() {
   const typedYouRef    = useRef("");
   const animCancelRef  = useRef(0);   // increment to cancel in-flight transcript animation
 
-  const wsRef        = useRef(null);
-  const peakRef      = useRef(0);
-  const sessionStart = useRef(null);
-  const queryCount   = useRef(0);
+  const wsRef          = useRef(null);
+  const peakRef        = useRef(0);
+  const sessionStart   = useRef(null);
+  const queryCount     = useRef(0);
+  const sessionIdRef   = useRef(null);   // UUID for the current voice session
+  const sessionIsNew   = useRef(true);   // false if reconnected to an already-running session
 
   // Session elapsed timer
   useEffect(() => {
@@ -48,8 +50,25 @@ export function useVoiceSession() {
       fetch(`${API}/api/voice/status`).then(r => r.json())
         .then(d => {
           if (d.active) {
+            // Voice already running — resume existing session or create new tracking ID
+            const existing = sessionStorage.getItem("athena_session_id");
+            const sid = existing ?? crypto.randomUUID();
+            const isNew = !existing;
+            sessionIdRef.current = sid;
+            sessionIsNew.current = isNew;
+            sessionStorage.setItem("athena_session_id", sid);
             setRunning(true); setState(d.state ?? "idle"); setStatus(d);
             sessionStart.current = Date.now(); queryCount.current = 0;
+            fetch(`${API}/api/sessions/start`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                session_id: sid,
+                started_at: new Date().toISOString(),
+                is_new: isNew,
+                device: d.device ?? "",
+              }),
+            }).catch(() => {});
             return;
           }
           if (!d.models_ready) {
@@ -64,8 +83,23 @@ export function useVoiceSession() {
               fetch(`${API}/api/voice/start`, { method: "POST" })
                 .then(r => r.json()).then(s => {
                   if (s.status === "started" || s.status === "already_running") {
+                    const now = Date.now();
+                    const sid = crypto.randomUUID();
+                    sessionIdRef.current = sid;
+                    sessionIsNew.current = true;
+                    sessionStorage.setItem("athena_session_id", sid);
                     setRunning(true); setState("loading"); setStatus(s);
-                    sessionStart.current = Date.now(); queryCount.current = 0;
+                    sessionStart.current = now; queryCount.current = 0;
+                    fetch(`${API}/api/sessions/start`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        session_id: sid,
+                        started_at: new Date(now).toISOString(),
+                        is_new: true,
+                        device: s.device ?? "",
+                      }),
+                    }).catch(() => {});
                   }
                 }).catch(() => {});
             });
@@ -135,14 +169,31 @@ export function useVoiceSession() {
     fetch(`${API}/api/voice/start${params}`, { method: "POST" })
       .then(r => r.json()).then(d => {
         if (d.status === "started" || d.status === "already_running") {
+          const now = Date.now();
+          const sid = crypto.randomUUID();
+          sessionIdRef.current = sid;
+          sessionIsNew.current = true;
+          sessionStorage.setItem("athena_session_id", sid);
           setRunning(true); setState("loading"); setStatus(d);
-          sessionStart.current = Date.now(); queryCount.current = 0; setElapsed(0);
+          sessionStart.current = now; queryCount.current = 0; setElapsed(0);
+          fetch(`${API}/api/sessions/start`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              session_id: sid,
+              started_at: new Date(now).toISOString(),
+              is_new: true,
+              device: d.device ?? "",
+            }),
+          }).catch(() => {});
         }
       }).catch(() => {});
   };
 
   const stopVoice = () => {
     const start = sessionStart.current;
+    const sid   = sessionIdRef.current;
+    const isNew = sessionIsNew.current;
     fetch(`${API}/api/voice/stop`, { method: "POST" })
       .then(() => {
         setRunning(false); setState("stopped"); setLevel(0);
@@ -152,13 +203,18 @@ export function useVoiceSession() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            session_id:    sid ?? crypto.randomUUID(),
             started_at:    start ? new Date(start).toISOString() : ended,
             ended_at:      ended,
             duration_secs: dur,
             queries:       queryCount.current,
             device:        status?.device ?? "",
+            is_new:        isNew,
           }),
         }).catch(() => {});
+        sessionIdRef.current = null;
+        sessionIsNew.current = true;
+        sessionStorage.removeItem("athena_session_id");
         sessionStart.current = null; queryCount.current = 0; setElapsed(0);
       }).catch(() => {});
   };

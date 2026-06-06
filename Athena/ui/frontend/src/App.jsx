@@ -1627,6 +1627,12 @@ function VoiceStatusBadge({ voice, onNavigate }) {
 }
 
 // ── Floating Voice Widget ─────────────────────────────────────────────────────
+// Docked: slim bar pinned below the app header spanning the content area.
+// Drag the bar (or click ⊞) to detach it as a freely-draggable card.
+// Floating card: drag anywhere; click 📌 to re-dock as the top bar.
+const VOICE_BAR_TOP  = 58; // px offset of sticky app header
+const VOICE_BAR_LEFT = 228; // sidebar width
+
 function FloatingVoiceWidget({ voice, open, onToggle, onFullView, docked, floatPos, onDock, onUndock, onMove }) {
   const { running, state, lastAthena, speakingLines, elapsed, startVoice, stopVoice } = voice;
   const cfg        = VOICE_BADGE[state] ?? VOICE_BADGE.idle;
@@ -1636,21 +1642,19 @@ function FloatingVoiceWidget({ voice, open, onToggle, onFullView, docked, floatP
 
   const dragRef       = useRef(null);
   const draggingRef   = useRef(false);
+  const didMoveRef    = useRef(false);
   const startMouseRef = useRef({x:0,y:0});
   const startPosRef   = useRef({x:0,y:0});
 
-  const handleMouseDown = (e) => {
-    if (docked || e.target.closest("[data-nodrag]")) return;
-    e.preventDefault();
-    draggingRef.current   = true;
-    startMouseRef.current = {x:e.clientX, y:e.clientY};
-    startPosRef.current   = {...floatPos};
+  // Shared drag-tracking helper used by both docked and floating paths.
+  const attachDragListeners = (initPos) => {
     const handleMove = (ev) => {
       if (!draggingRef.current || !dragRef.current) return;
       const dx = ev.clientX - startMouseRef.current.x;
       const dy = ev.clientY - startMouseRef.current.y;
-      dragRef.current.style.left   = (startPosRef.current.x + dx) + "px";
-      dragRef.current.style.top    = (startPosRef.current.y + dy) + "px";
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didMoveRef.current = true;
+      dragRef.current.style.left   = (initPos.x + dx) + "px";
+      dragRef.current.style.top    = (initPos.y + dy) + "px";
       dragRef.current.style.right  = "auto";
       dragRef.current.style.bottom = "auto";
     };
@@ -1660,8 +1664,8 @@ function FloatingVoiceWidget({ voice, open, onToggle, onFullView, docked, floatP
       const dx = ev.clientX - startMouseRef.current.x;
       const dy = ev.clientY - startMouseRef.current.y;
       onMove({
-        x: Math.max(0, Math.min(window.innerWidth  - 176, startPosRef.current.x + dx)),
-        y: Math.max(0, Math.min(window.innerHeight - 110, startPosRef.current.y + dy)),
+        x: Math.max(0, Math.min(window.innerWidth  - 176, initPos.x + dx)),
+        y: Math.max(0, Math.min(window.innerHeight - 110, initPos.y + dy)),
       });
       document.removeEventListener("mousemove", handleMove);
       document.removeEventListener("mouseup",   handleUp);
@@ -1670,117 +1674,152 @@ function FloatingVoiceWidget({ voice, open, onToggle, onFullView, docked, floatP
     document.addEventListener("mouseup",   handleUp);
   };
 
-  const posStyle = docked
-    ? {right:16, bottom:16, left:"auto", top:"auto"}
-    : {left:floatPos.x, top:floatPos.y, right:"auto", bottom:"auto"};
+  const handleMouseDown = (e) => {
+    if (e.target.closest("[data-nodrag]")) return;
+    e.preventDefault();
+    didMoveRef.current    = false;
+    draggingRef.current   = true;
+    startMouseRef.current = {x:e.clientX, y:e.clientY};
 
+    if (docked) {
+      // Detach bar → float card centred on cursor.
+      const initPos = {
+        x: Math.max(0, Math.min(window.innerWidth  - 176, e.clientX - 86)),
+        y: Math.max(0, Math.min(window.innerHeight - 110, e.clientY - 18)),
+      };
+      // Pre-position the DOM node so the card appears under the cursor
+      // before the React re-render from onUndock fires.
+      if (dragRef.current) {
+        dragRef.current.style.left   = initPos.x + "px";
+        dragRef.current.style.top    = initPos.y + "px";
+        dragRef.current.style.right  = "auto";
+        dragRef.current.style.bottom = "auto";
+        dragRef.current.style.width  = "172px";
+      }
+      onUndock(initPos);
+      startPosRef.current = initPos;
+      attachDragListeners(initPos);
+      return;
+    }
+
+    // Floating card drag.
+    startPosRef.current = {...floatPos};
+    attachDragListeners({...floatPos});
+  };
+
+  // Click on the bar (no drag) → toggle AthenaPanel.
+  const handleBarClick = (e) => {
+    if (didMoveRef.current || e.target.closest("[data-nodrag]")) return;
+    onToggle();
+  };
+
+  // ─── Docked: top bar ──────────────────────────────────────────────────────
+  if (docked) {
+    return (
+      <div
+        ref={dragRef}
+        onMouseDown={handleMouseDown}
+        onClick={handleBarClick}
+        title="Drag to detach as floating widget"
+        style={{
+          position:"fixed", top:VOICE_BAR_TOP, left:VOICE_BAR_LEFT, right:0, height:34,
+          background:"linear-gradient(90deg,#0B2642 0%,#071E33 100%)",
+          borderBottom:"1px solid rgba(26,111,163,0.22)",
+          display:"flex", alignItems:"center", padding:"0 14px",
+          zIndex:1002, cursor:"grab", userSelect:"none",
+        }}
+      >
+        {/* State dot */}
+        <div style={{
+          width:7, height:7, borderRadius:"50%", flexShrink:0, marginRight:9,
+          background:cfg.color,
+          boxShadow: cfg.pulse?`0 0 6px ${cfg.color}`:"none",
+          animation: cfg.pulse?"athenaPing 1.4s ease-in-out infinite":"none",
+        }}/>
+        {/* Brand */}
+        <span style={{fontFamily:F.serif, fontSize:11, color:"rgba(255,255,255,0.65)", letterSpacing:"0.06em", flexShrink:0, marginRight:10}}>Athena</span>
+        <div style={{width:1, height:14, background:"rgba(255,255,255,0.1)", marginRight:10, flexShrink:0}}/>
+        {/* State label */}
+        <span style={{fontFamily:F.sans, fontSize:8, fontWeight:700, color:cfg.color, textTransform:"uppercase", letterSpacing:"0.1em", flexShrink:0, marginRight:10}}>{stateLabel}</span>
+        {/* Elapsed */}
+        {running&&elapsed>0&&(
+          <span style={{fontFamily:F.mono, fontSize:8, color:"rgba(196,146,42,0.65)", flexShrink:0, marginRight:10}}>{fmtE(elapsed)}</span>
+        )}
+        {/* Last response — fills remaining space */}
+        {currentText
+          ? <span style={{fontFamily:F.sans, fontSize:9, color:"rgba(224,234,242,0.4)", flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", minWidth:0}}>{currentText}</span>
+          : <div style={{flex:1}}/>
+        }
+        {/* Actions */}
+        <div style={{display:"flex", alignItems:"center", gap:6, marginLeft:12, flexShrink:0}}>
+          <button data-nodrag="1"
+            onClick={(e)=>{ e.stopPropagation(); running ? stopVoice() : startVoice(); }}
+            style={{fontFamily:F.sans, fontSize:8, fontWeight:700, letterSpacing:"0.08em", padding:"3px 8px", borderRadius:4, textTransform:"uppercase", background:running?"rgba(192,57,43,0.15)":"rgba(26,111,163,0.15)", border:`1px solid ${running?"rgba(192,57,43,0.4)":"rgba(26,111,163,0.35)"}`, color:running?"#C0392B":C.ocean, cursor:"pointer"}}
+          >{running?"Stop":"Start"}</button>
+          <button data-nodrag="1" onClick={(e)=>{ e.stopPropagation(); onFullView(); }} title="Full view"
+            style={{width:20, height:20, display:"flex", alignItems:"center", justifyContent:"center", background:"transparent", border:"1px solid rgba(255,255,255,0.1)", borderRadius:4, cursor:"pointer", color:"rgba(255,255,255,0.3)", fontSize:10, padding:0}}
+          >↗</button>
+          <button data-nodrag="1" onClick={(e)=>{ e.stopPropagation(); onUndock(null); }} title="Detach to floating widget"
+            style={{width:20, height:20, display:"flex", alignItems:"center", justifyContent:"center", background:"transparent", border:"1px solid rgba(255,255,255,0.1)", borderRadius:4, cursor:"pointer", color:"rgba(255,255,255,0.3)", fontSize:9, padding:0}}
+          >⊞</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Floating card ────────────────────────────────────────────────────────
   return (
     <div
       ref={dragRef}
       onMouseDown={handleMouseDown}
       style={{
-        position:"fixed", ...posStyle,
+        position:"fixed",
+        left:floatPos.x, top:floatPos.y, right:"auto", bottom:"auto",
         width:172,
         background:"linear-gradient(160deg,#0A2540 0%,#061928 100%)",
         border:`1px solid ${running ? cfg.color+"55" : "rgba(26,111,163,0.25)"}`,
         borderRadius:10, zIndex:1002,
-        cursor: docked ? "default" : "grab",
+        cursor:"grab",
         boxShadow: running ? `0 4px 20px ${cfg.color}33` : "0 4px 16px rgba(0,0,0,0.4)",
         userSelect:"none",
         transition:"box-shadow 0.2s, border-color 0.2s",
       }}
     >
       {/* HUD grid */}
-      <div style={{
-        position:"absolute", inset:0, opacity:0.03, pointerEvents:"none", borderRadius:10,
-        backgroundImage:`linear-gradient(#1A6FA3 1px,transparent 1px),linear-gradient(90deg,#1A6FA3 1px,transparent 1px)`,
-        backgroundSize:"20px 20px",
-      }}/>
+      <div style={{position:"absolute", inset:0, opacity:0.03, pointerEvents:"none", borderRadius:10, backgroundImage:`linear-gradient(#1A6FA3 1px,transparent 1px),linear-gradient(90deg,#1A6FA3 1px,transparent 1px)`, backgroundSize:"20px 20px"}}/>
 
-      {/* Header row — click toggles panel */}
-      <div
-        data-nodrag="1"
-        onClick={onToggle}
-        style={{
-          display:"flex", alignItems:"center", gap:7, padding:"9px 10px 7px",
-          borderBottom:"1px solid rgba(26,111,163,0.15)", cursor:"pointer",
-          borderRadius:"10px 10px 0 0",
-        }}
+      {/* Header — click toggles panel */}
+      <div data-nodrag="1" onClick={onToggle}
+        style={{display:"flex", alignItems:"center", gap:7, padding:"9px 10px 7px", borderBottom:"1px solid rgba(26,111,163,0.15)", cursor:"pointer", borderRadius:"10px 10px 0 0"}}
       >
-        <div style={{
-          width:8, height:8, borderRadius:"50%", flexShrink:0,
-          background:cfg.color,
-          boxShadow: cfg.pulse?`0 0 8px ${cfg.color}`:"none",
-          animation: cfg.pulse?"athenaPing 1.4s ease-in-out infinite":"none",
-        }}/>
-        <span style={{
-          fontFamily:F.serif, fontSize:11, fontWeight:400,
-          color:"rgba(255,255,255,0.75)", flex:1, letterSpacing:"0.06em",
-        }}>Athena</span>
-        <span style={{
-          fontFamily:F.sans, fontSize:8, fontWeight:700,
-          color:cfg.color, letterSpacing:"0.1em", textTransform:"uppercase",
-        }}>{stateLabel}</span>
+        <div style={{width:8, height:8, borderRadius:"50%", flexShrink:0, background:cfg.color, boxShadow:cfg.pulse?`0 0 8px ${cfg.color}`:"none", animation:cfg.pulse?"athenaPing 1.4s ease-in-out infinite":"none"}}/>
+        <span style={{fontFamily:F.serif, fontSize:11, fontWeight:400, color:"rgba(255,255,255,0.75)", flex:1, letterSpacing:"0.06em"}}>Athena</span>
+        <span style={{fontFamily:F.sans, fontSize:8, fontWeight:700, color:cfg.color, letterSpacing:"0.1em", textTransform:"uppercase"}}>{stateLabel}</span>
       </div>
 
-      {/* Last response snippet */}
+      {/* Last response */}
       {currentText&&(
         <div style={{padding:"6px 10px 4px", borderBottom:"1px solid rgba(26,111,163,0.1)"}}>
-          <div style={{
-            fontFamily:F.sans, fontSize:9, color:"rgba(224,234,242,0.6)",
-            lineHeight:1.5, overflow:"hidden",
-            display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical",
-          }}>
+          <div style={{fontFamily:F.sans, fontSize:9, color:"rgba(224,234,242,0.6)", lineHeight:1.5, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical"}}>
             {currentText.length>80 ? currentText.slice(0,80)+"…" : currentText}
           </div>
         </div>
       )}
 
-      {/* Action row */}
-      <div style={{
-        display:"flex", alignItems:"center", justifyContent:"space-between",
-        padding:"5px 8px 7px", gap:6,
-      }}>
+      {/* Actions */}
+      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"5px 8px 7px", gap:6}}>
         <div style={{display:"flex", alignItems:"center", gap:5}}>
-          <button
-            data-nodrag="1"
-            onClick={(e)=>{ e.stopPropagation(); running ? stopVoice() : startVoice(); }}
-            style={{
-              fontFamily:F.sans, fontSize:8, fontWeight:700, letterSpacing:"0.08em",
-              padding:"3px 8px", borderRadius:5, textTransform:"uppercase",
-              background: running?"rgba(192,57,43,0.15)":"rgba(26,111,163,0.15)",
-              border:`1px solid ${running?"rgba(192,57,43,0.4)":"rgba(26,111,163,0.35)"}`,
-              color: running?"#C0392B":C.ocean, cursor:"pointer",
-            }}
+          <button data-nodrag="1" onClick={(e)=>{ e.stopPropagation(); running ? stopVoice() : startVoice(); }}
+            style={{fontFamily:F.sans, fontSize:8, fontWeight:700, letterSpacing:"0.08em", padding:"3px 8px", borderRadius:5, textTransform:"uppercase", background:running?"rgba(192,57,43,0.15)":"rgba(26,111,163,0.15)", border:`1px solid ${running?"rgba(192,57,43,0.4)":"rgba(26,111,163,0.35)"}`, color:running?"#C0392B":C.ocean, cursor:"pointer"}}
           >{running?"Stop":"Start"}</button>
-          {running&&elapsed>0&&(
-            <span style={{fontFamily:F.mono, fontSize:8, color:"rgba(196,146,42,0.7)"}}>
-              {fmtE(elapsed)}
-            </span>
-          )}
+          {running&&elapsed>0&&<span style={{fontFamily:F.mono, fontSize:8, color:"rgba(196,146,42,0.7)"}}>{fmtE(elapsed)}</span>}
         </div>
         <div style={{display:"flex", gap:4}}>
-          <button
-            data-nodrag="1"
-            onClick={(e)=>{ e.stopPropagation(); onFullView(); }}
-            title="Full view"
-            style={{
-              width:20, height:20, display:"flex", alignItems:"center", justifyContent:"center",
-              background:"transparent", border:"1px solid rgba(255,255,255,0.1)",
-              borderRadius:4, cursor:"pointer", color:"rgba(255,255,255,0.35)", fontSize:10, padding:0,
-            }}
+          <button data-nodrag="1" onClick={(e)=>{ e.stopPropagation(); onFullView(); }} title="Full view"
+            style={{width:20, height:20, display:"flex", alignItems:"center", justifyContent:"center", background:"transparent", border:"1px solid rgba(255,255,255,0.1)", borderRadius:4, cursor:"pointer", color:"rgba(255,255,255,0.35)", fontSize:10, padding:0}}
           >↗</button>
-          <button
-            data-nodrag="1"
-            onClick={(e)=>{ e.stopPropagation(); docked?onUndock():onDock(); }}
-            title={docked?"Float widget":"Dock to corner"}
-            style={{
-              width:20, height:20, display:"flex", alignItems:"center", justifyContent:"center",
-              background: docked?"rgba(26,111,163,0.2)":"transparent",
-              border:`1px solid ${docked?"rgba(26,111,163,0.45)":"rgba(255,255,255,0.1)"}`,
-              borderRadius:4, cursor:"pointer",
-              color: docked?C.ocean:"rgba(255,255,255,0.35)", fontSize:9, padding:0,
-            }}
+          <button data-nodrag="1" onClick={(e)=>{ e.stopPropagation(); onDock(); }} title="Dock back to top bar"
+            style={{width:20, height:20, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(26,111,163,0.2)", border:"1px solid rgba(26,111,163,0.45)", borderRadius:4, cursor:"pointer", color:C.ocean, fontSize:9, padding:0}}
           >📌</button>
         </div>
       </div>
@@ -2204,9 +2243,13 @@ export default function App(){
     try { return JSON.parse(localStorage.getItem("athena_widget_pos") || "null") || {x:window.innerWidth-200, y:80}; }
     catch { return {x:window.innerWidth-200, y:80}; }
   });
-  const handleWidgetMove   = (pos) => { setWidgetPos(pos); localStorage.setItem("athena_widget_pos", JSON.stringify(pos)); };
-  const handleWidgetDock   = ()    => { setWidgetDocked(true);  localStorage.setItem("athena_widget_docked","true");  };
-  const handleWidgetUndock = ()    => { setWidgetDocked(false); localStorage.setItem("athena_widget_docked","false"); };
+  const handleWidgetMove   = (pos)      => { setWidgetPos(pos); localStorage.setItem("athena_widget_pos", JSON.stringify(pos)); };
+  const handleWidgetDock   = ()         => { setWidgetDocked(true);  localStorage.setItem("athena_widget_docked","true");  };
+  const handleWidgetUndock = (pos=null) => {
+    setWidgetDocked(false);
+    localStorage.setItem("athena_widget_docked","false");
+    if (pos) { setWidgetPos(pos); localStorage.setItem("athena_widget_pos", JSON.stringify(pos)); }
+  };
   const [exitDialog, setExitDialog] = useState(false);
   const shuttingDownRef = useRef(false);
 
