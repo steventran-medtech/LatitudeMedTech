@@ -401,20 +401,26 @@ export default function ReviewView() {
 
   const act = async (id, action) => {
     setActing(p => ({ ...p, [id]: true }));
-    await fetch(`${API}/api/review/${id}/${action}`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notes: notes[id] || "" }),
-    });
-    setActing(p => ({ ...p, [id]: false }));
-    load();
+    try {
+      await fetch(`${API}/api/review/${id}/${action}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: notes[id] || "" }),
+      });
+    } finally {
+      setActing(p => ({ ...p, [id]: false }));
+      load();
+    }
   };
 
   const reopen = async (id) => {
     setReopening(p => ({ ...p, [id]: true }));
-    await fetch(`${API}/api/review/${id}/reopen`, { method: "POST" });
-    setReopening(p => ({ ...p, [id]: false }));
-    load();
-    loadHistory();
+    try {
+      await fetch(`${API}/api/review/${id}/reopen`, { method: "POST" });
+    } finally {
+      setReopening(p => ({ ...p, [id]: false }));
+      load();
+      loadHistory();
+    }
   };
 
   const C = { navy:"#0A2540", ocean:"#1A6FA3", teal:"#1F7A6D", red:"#C0392B",
