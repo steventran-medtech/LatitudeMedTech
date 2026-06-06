@@ -329,11 +329,11 @@ async def run_agent(agent_name: str, script: str, args: list = None, context: st
             if new_items:
                 n = len(new_items)
                 if n == 1:
-                    note = f"1 item ready for your review: {new_items[0]['title']}"
+                    note = f"Your {new_items[0]['title']} is ready for your review."
                 else:
                     listed = ", ".join(p["title"] for p in new_items[:3])
                     tail   = f", and {n - 3} more" if n > 3 else ""
-                    note   = f"{n} items ready for your review: {listed}{tail}"
+                    note   = f"{n} deliverables ready for your review: {listed}{tail}."
                 _voice_queue.append(note)
                 _announced_review_ids.update(p["id"] for p in new_items)
         except Exception:
@@ -1998,6 +1998,92 @@ async def review_edit(item_id: int, req: ReviewEditRequest):
                 "ext": f.suffix.lower().lstrip("."), "content": new_content}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.post("/api/documents/edit")
+async def edit_document_voice(request: Request, background_tasks: BackgroundTasks):
+    """
+    AI-edit any document by folder + filename + natural-language instruction.
+    Intended for voice agent commands ("add a section on X to the Y report").
+
+    Body: { "folder": str, "filename": str, "instruction": str }
+
+    MD  → read → Claude Sonnet edit → write back in-place.
+    DOCX→ extract paragraph text → Claude Sonnet edit → regenerate branded DOCX
+          in-place via the existing generate_docx pipeline.
+
+    WebSocket events:
+      { type: "doc_edit_progress", filename, folder, message }
+      { type: "doc_edit_done",     filename, folder, status: "done"|"error", message? }
+    """
+    body        = await request.json()
+    folder      = body.get("folder", "documents")
+    filename    = body.get("filename", "")
+    instruction = body.get("instruction", "")
+
+    if not filename or not instruction.strip():
+        raise HTTPException(400, "filename and instruction are required")
+
+    _safe_filename(filename)
+    base = FOLDER_MAP.get(folder)
+    if not base:
+        raise HTTPException(400, f"Unknown folder: {folder}")
+    f = (base / filename).resolve()
+    if not str(f).startswith(str(base.resolve())) or not f.exists():
+        raise HTTPException(404, "Document not found")
+
+    async def _run():
+        await manager.broadcast(json.dumps({
+            "type": "doc_edit_progress",
+            "filename": filename, "folder": folder,
+            "message": f"Editing \"{filename}\"…",
+        }))
+        try:
+            suffix = f.suffix.lower()
+
+            if suffix == ".md":
+                original      = f.read_text(encoding="utf-8", errors="replace")
+                fm, body_text = _split_frontmatter(original)
+                revised       = await asyncio.to_thread(_ai_edit_document, body_text, instruction)
+                f.write_text((fm + "\n" + revised) if fm else revised, encoding="utf-8")
+
+            elif suffix == ".docx":
+                def _extract(path):
+                    from docx import Document as _Doc
+                    doc, parts = _Doc(str(path)), []
+                    for p in doc.paragraphs:
+                        if not p.text.strip():
+                            continue
+                        s = p.style.name if p.style else ""
+                        if   "Heading 1" in s: parts.append(f"# {p.text}")
+                        elif "Heading 2" in s: parts.append(f"## {p.text}")
+                        elif "Heading 3" in s: parts.append(f"### {p.text}")
+                        else:                  parts.append(p.text)
+                    return "\n\n".join(parts)
+
+                doc_md     = await asyncio.to_thread(_extract, f)
+                revised_md = await asyncio.to_thread(_ai_edit_document, doc_md, instruction)
+                title      = re.sub(r"^\d{4}[-_]\d{2}[-_]\d{2}[-_]?", "", f.stem).replace("_", " ").title()
+                new_path   = await asyncio.to_thread(generate_docx, title, revised_md, "article")
+                f.write_bytes(new_path.read_bytes())
+                new_path.unlink(missing_ok=True)
+
+            else:
+                raise ValueError(f"Unsupported type for editing: {suffix}")
+
+            await manager.broadcast(json.dumps({
+                "type": "doc_edit_done",
+                "filename": filename, "folder": folder, "status": "done",
+            }))
+        except Exception as exc:
+            await manager.broadcast(json.dumps({
+                "type": "doc_edit_done",
+                "filename": filename, "folder": folder,
+                "status": "error", "message": str(exc),
+            }))
+
+    background_tasks.add_task(_run)
+    return {"status": "started", "filename": filename, "folder": folder}
 
 
 @app.get("/api/dashboard/knowledge-growth")

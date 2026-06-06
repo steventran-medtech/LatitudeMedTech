@@ -149,7 +149,7 @@
   </div>
 
 <script language="VBScript">
-Dim bar, statusEl, pctEl, stepVal, targetVal, timer_id, poll_id, waited, readyToClose
+Dim bar, statusEl, pctEl, stepVal, targetVal, timer_id, poll_id, abort_id, waited, readyToClose
 Dim BACKEND, FRONTEND, MAX_WAIT
 Dim dragging, dragLastX, dragLastY
 BACKEND  = "http://127.0.0.1:8000/"
@@ -173,6 +173,7 @@ Sub Window_OnLoad
   readyToClose = False
   timer_id = window.setInterval("Tick",       200)
   poll_id  = window.setInterval("PollBackend", 800)
+  abort_id = window.setInterval("PollAbort",   300)
   ' Pin splash above Chrome as soon as the HTA window is ready.
   window.setTimeout "MakeTopmost", 400
 
@@ -310,6 +311,19 @@ Sub PollChromeReady
     SetStatus "Welcome back. Athena is ready.", 100
     window.clearInterval poll_id   ' stop polling — Tick keeps running
     readyToClose = True            ' Tick will close once stepVal reaches 100
+  End If
+End Sub
+
+Sub PollAbort
+  ' Existing instance — user chose not to restart. Stop all animation and
+  ' close immediately so the splash doesn't linger behind the existing window.
+  Dim fso
+  Set fso = CreateObject("Scripting.FileSystemObject")
+  If fso.FileExists("C:\Users\huann\LatitudeMedTech\Athena\ui\.athena_abort") Then
+    window.clearInterval abort_id
+    window.clearInterval poll_id
+    window.clearInterval timer_id
+    window.close()
   End If
 End Sub
 

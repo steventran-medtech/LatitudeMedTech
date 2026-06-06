@@ -501,7 +501,7 @@ def _present_review_item(item: dict) -> str:
 
     summary = _get_item_summary(item["id"])
 
-    count_str = f"Item {idx} of {total}" if total > 1 else "One item"
+    count_str = f"Deliverable {idx} of {total}" if total > 1 else "One deliverable"
     text = f"{count_str}: {title}."
     if summary and summary.strip().lower() != title.strip().lower():
         text += f" {summary}"
@@ -513,14 +513,14 @@ def _start_voice_review() -> str:
     """Kick off a review session and return the spoken introduction + first item."""
     items = _fetch_pending_for_review()
     if not items:
-        return "No items are waiting for your review right now."
+        return "No deliverables are waiting for your review right now."
     _review_session["active"]            = True
     _review_session["items"]             = items
     _review_session["index"]             = 0
     _review_session["awaiting_response"] = True
     n      = len(items)
     plural = "s" if n > 1 else ""
-    intro  = f"You have {n} item{plural} waiting for review."
+    intro  = f"You have {n} deliverable{plural} waiting for review."
     return f"{intro} {_present_review_item(items[0])}"
 
 
@@ -529,7 +529,7 @@ def _advance_review() -> str:
     _review_session["index"] += 1
     if _review_session["index"] >= len(_review_session["items"]):
         _review_session.update(active=False, items=[], index=0, awaiting_response=False)
-        return "All items reviewed."
+        return "All deliverables reviewed."
     _review_session["awaiting_response"] = True
     return _present_review_item(_review_session["items"][_review_session["index"]])
 
