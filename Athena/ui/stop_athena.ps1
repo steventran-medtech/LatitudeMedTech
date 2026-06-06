@@ -10,6 +10,7 @@ if (Test-Path $flagFile) { Remove-Item $flagFile -Force -ErrorAction SilentlyCon
 # 1. Kill whatever holds the service ports.
 $port8000 = Stop-Port 8000
 $port3000 = Stop-Port 3000
+Stop-Port 8002 | Out-Null   # Kokoro TTS sidecar — orphaned if server died without clean stop
 
 # 2. Belt-and-braces: kill any Athena backend/frontend identified by command
 #    line, in case they crashed without holding the port. Scoped to this repo
