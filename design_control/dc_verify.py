@@ -276,7 +276,7 @@ def test_DI_004_D():
 
 
 def test_DI_004_E():
-    """DI-004-E: SILENCE_DURATION in voice_bridge.py is within safe range [0.8, 2.0]"""
+    """DI-004-E: SILENCE_DURATION default = 0.8s in voice_bridge.py and settings.json"""
     di = "DI-004-E"
     if _skip_if_filtered(di): return
     f = VOICE / "voice_bridge.py"
@@ -284,23 +284,30 @@ def test_DI_004_E():
         _log(SKIP, di, "voice_bridge.py not found")
         return
     content = _read(f)
-    # SILENCE_DURATION may be config-loaded; extract default value from get(..., default)
     m = re.search(r'SILENCE_DURATION\s*=\s*float\s*\(\s*[^)]*?,\s*([0-9.]+)\s*\)', content)
     if not m:
-        # Try bare assignment
         m = re.search(r'SILENCE_DURATION\s*=\s*([0-9.]+)', content)
     if not m:
         _log(WARN, di, "SILENCE_DURATION constant not found in voice_bridge.py")
         return
     val = float(m.group(1))
-    if val == 1.5:
-        _log(PASS, di, f"SILENCE_DURATION default = {val} (target value)")
+    # Also check settings.json
+    settings_path = ATHENA / "settings.json"
+    settings_val  = None
+    try:
+        import json as _json
+        cfg = _json.loads(settings_path.read_text(encoding="utf-8"))
+        settings_val = float(cfg.get("voice", {}).get("silence_duration", -1))
+    except Exception:
+        pass
+    if val == 0.8 and (settings_val is None or settings_val == 0.8):
+        _log(PASS, di, f"SILENCE_DURATION = {val} (target 0.8s; settings.json = {settings_val})")
     elif 0.8 <= val <= 2.0:
-        _log(WARN, di, f"SILENCE_DURATION default = {val} (safe but not optimal — target is 1.5)",
-             "Per CAPA-Voice-001, 1.5s prevents mid-sentence cut-off without adding latency")
+        _log(WARN, di, f"SILENCE_DURATION = {val} (safe range but target is 0.8s)",
+             "Update default in voice_bridge.py and silence_duration in settings.json to 0.8")
     else:
         _log(FAIL, di, f"SILENCE_DURATION default = {val} is outside safe range [0.8, 2.0]",
-             "Values < 0.8 cut off speech; > 2.0 cause unacceptable latency. Restore to 1.5.")
+             "Values < 0.8 cut off speech; values > 2.0 cause unacceptable response latency")
 
 
 # ── UN-005 / Task Notifications ────────────────────────────────────────────────
@@ -888,6 +895,65 @@ def test_DI_017_C():
         _log(WARN, di, "Individual review item route not confirmed — DI-017-C PARTIAL")
 
 
+# ── UN-018 / Client Lifecycle ─────────────────────────────────────────────────
+
+def test_DI_018_A():
+    """DI-018-A: create_client wraps add_client in try/except and returns error JSON on failure"""
+    di = "DI-018-A"
+    if _skip_if_filtered(di): return
+    f = UI_BACK / "server.py"
+    if not f.exists():
+        _log(FAIL, di, "server.py not found")
+        return
+    content = _read(f)
+    # Extract the full create_client function body (up to the next top-level @app decorator)
+    m = re.search(r'def create_client\b(.+?)(?=\n@app\.|\nclass |\Z)', content, re.DOTALL)
+    body = m.group(0) if m else ""
+    has_route   = '@app.post("/api/clients")' in content
+    has_try     = "try:" in body
+    has_except  = bool(re.search(r'except\s+Exception', body))
+    has_errjson = bool(re.search(r'JSONResponse.*status_code=500|status_code=500.*JSONResponse', body))
+    if has_route and has_try and has_except and has_errjson:
+        _log(PASS, di, "create_client has try/except with 500 JSONResponse error path")
+    elif has_route and has_try and has_except:
+        _log(WARN, di, "create_client has try/except but 500 JSONResponse not confirmed",
+             "Ensure except block returns JSONResponse(status_code=500, content={\"error\": str(exc)})")
+    elif has_route:
+        _log(FAIL, di, "create_client found but no try/except error handling",
+             "DB exceptions will surface as unhandled 500; UI shows generic 'Failed to create client'")
+    else:
+        _log(FAIL, di, "POST /api/clients route not found in server.py")
+
+
+def test_DI_018_B():
+    """DI-018-B: IntakeForm in ClientsView.jsx validates name, email, and program_tier"""
+    di = "DI-018-B"
+    if _skip_if_filtered(di): return
+    f = UI_FRONT / "ClientsView.jsx"
+    if not f.exists():
+        _log(FAIL, di, "ClientsView.jsx not found")
+        return
+    content = _read(f)
+    has_name_check  = bool(re.search(r'form\.name|name.*trim|name.*Required', content))
+    has_email_check = bool(re.search(r'form\.email|email.*trim|email.*Required', content))
+    has_tier_check  = bool(re.search(r'program_tier.*trim|program_tier.*Required', content))
+    has_field_errs  = "fieldErrs" in content or "field_errs" in content or "errors" in content
+    checks = [has_name_check, has_email_check, has_tier_check, has_field_errs]
+    if all(checks):
+        _log(PASS, di, "IntakeForm validates name, email, program_tier with per-field error state")
+    elif sum(checks) >= 2:
+        missing = []
+        if not has_name_check:  missing.append("name")
+        if not has_email_check: missing.append("email")
+        if not has_tier_check:  missing.append("program_tier")
+        if not has_field_errs:  missing.append("field error state")
+        _log(WARN, di, f"Partial required-field validation — missing: {missing}",
+             "All three fields (name, email, program_tier) must be validated before submit")
+    else:
+        _log(FAIL, di, "Required-field validation not found in IntakeForm",
+             "Add validate() that checks name/email/program_tier and sets per-field error state")
+
+
 # ── Live API Tests ─────────────────────────────────────────────────────────────
 
 def test_live_api():
@@ -1037,6 +1103,9 @@ def main():
     test_DI_015_D(); test_DI_015_E()
     test_DI_016_A(); test_DI_016_B(); test_DI_016_C()
     test_DI_017_A(); test_DI_017_B(); test_DI_017_C()
+
+    _section("UN-018 Client Lifecycle")
+    test_DI_018_A(); test_DI_018_B()
 
     if args.live or args.full:
         test_live_api()

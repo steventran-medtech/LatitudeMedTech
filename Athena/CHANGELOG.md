@@ -27,6 +27,25 @@ record of what changed between each version. Keep them in lock-step — see
 
 _Changes landed on `main` but not yet stamped into a numbered release go here._
 
+### Fixed
+- **Client creation (C1 — DI-018-A):** `POST /api/clients` now wraps `mem.add_client()` in
+  try/except and returns `{"error": "<message>"}` with HTTP 500 on database failure. Frontend
+  now checks `res.ok` and surfaces the actual server error instead of the generic
+  "Failed to create client." message.
+
+### Added
+- **Client intake validation (C2 — DI-018-B):** IntakeForm in `ClientsView.jsx` enforces
+  required fields (Full Name, Email, Program/Tier) before submission. Each missing field
+  highlights with a red border and inline error message; errors clear per-field as the user
+  types. UN-018 and DI-018-A/B added to DC-001/002/003/004; `test_DI_018_A` and
+  `test_DI_018_B` added to `dc_verify.py`.
+
+### Changed
+- **Voice silence duration (C3 — DI-004-E):** `SILENCE_DURATION` reduced from 1.5 s to 0.8 s
+  in both `settings.json` and `voice_bridge.py` default. Reduces Athena's post-speech pause
+  by ~700 ms. Value is at the DC-006 floor (0.8 s) and remains within the safe range [0.8, 2.0].
+  DI-004-E requirement statement and `test_DI_004_E` updated accordingly.
+
 ---
 
 ## [0.5.0] — 2026-06-05 · "Torrey Pines"

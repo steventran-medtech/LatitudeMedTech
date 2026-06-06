@@ -89,7 +89,7 @@ except Exception:
 TARGET_RATE       = 16000
 CHUNK_SAMPLES_16K = 1280
 SILENCE_THRESHOLD       = float(_voice_cfg.get("silence_threshold", 0.01))
-SILENCE_DURATION        = float(_voice_cfg.get("silence_duration",  1.5))  # CAPA-Voice-001: 1.5s optimal
+SILENCE_DURATION        = float(_voice_cfg.get("silence_duration",  0.8))
 # Fixed threshold during query recording — not affected by the wake-word
 # auto-tuner, which can drift SILENCE_THRESHOLD up in noisy rooms.
 QUERY_SILENCE_THRESHOLD = 0.012
@@ -268,10 +268,11 @@ def _load_agent_context(name: str) -> str:
 _AGENT_TOOL_SCHEMA = {
     "name": "trigger_agent",
     "description": (
-        "Trigger one of Athena's background agents when Steven explicitly asks for a "
-        "task to be run. Only call this tool when the user is making a clear request "
-        "to execute a task — NOT for questions you can answer conversationally. "
-        "When in doubt, do NOT call this tool and answer directly instead."
+        "Trigger one of Athena's background agents when Steven asks to run, produce, "
+        "compile, or research something. Call this tool when the request is for "
+        "a deliverable or research output — NOT for pure factual questions. "
+        "When in doubt and a task dispatch seems plausible, call this tool rather "
+        "than promising the output conversationally without dispatching it."
     ),
     "input_schema": {
         "type": "object",
@@ -325,15 +326,18 @@ _CLASSIFY_SYSTEM = (
     "You are the intent classifier for Athena, a voice assistant for Latitude MedTech LLC. "
     "Steven Tran (CEO) is speaking to you. Your only job is to decide whether his request "
     "should trigger a background agent, or whether you should answer conversationally.\n\n"
-    "TRIGGER an agent only when Steven explicitly asks to RUN a task: "
-    "'generate', 'draft', 'write', 'run', 'start', 'give me my [X]', 'what's the pipeline', "
-    "'outreach for [person]', 'brief for [client]', etc.\n\n"
+    "TRIGGER an agent when Steven asks to RUN, PRODUCE, or COMPILE output — any of: "
+    "'generate', 'draft', 'write', 'run', 'start', 'compile', 'research', 'prepare', "
+    "'pull', 'give me my [X]', 'what's the pipeline', 'deal analysis', 'M&A analysis', "
+    "'M&A brief', 'deal brief', 'acquisition analysis', 'market analysis', "
+    "'outreach for [person]', 'brief for [client]', 'run the [agent name]', etc. "
+    "When in doubt and the request could plausibly trigger an agent, CALL THE TOOL — "
+    "it is better to dispatch an agent than to promise one verbally without dispatching it.\n\n"
     "DO NOT trigger an agent for:\n"
-    "- Questions you can answer directly ('What is ISO 13485?', 'How long does a 510k take?')\n"
-    "- Ambiguous requests where you're unsure\n"
-    "- Conversational follow-ups to previous answers\n\n"
+    "- Pure factual questions you can answer in one sentence ('What is ISO 13485?', 'How long does a 510k take?')\n"
+    "- Conversational follow-ups that are clearly just asking for clarification\n\n"
     "If you call trigger_agent, the 'confirmation' field is what Athena will speak aloud. "
-    "Keep it to one short sentence, British English, no markdown."
+    "Keep it to two short sentences, British English, no markdown."
 )
 
 

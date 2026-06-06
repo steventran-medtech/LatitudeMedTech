@@ -99,24 +99,40 @@ function IntakeForm({ onCreated, onCancel }) {
     program_tier: "", regulatory_challenge: "", timeline: "",
     budget_range: "", notes: "", status: "prospect",
   });
-  const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState("");
+  const [saving, setSaving]   = useState(false);
+  const [error, setError]     = useState("");
+  const [fieldErrs, setFErrs] = useState({});
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k, v) => {
+    setForm(f => ({ ...f, [k]: v }));
+    if (fieldErrs[k]) setFErrs(e => ({ ...e, [k]: "" }));
+  };
+
+  const REQUIRED = { name: "Full Name", email: "Email", program_tier: "Program / Tier" };
+
+  const validate = () => {
+    const errs = {};
+    if (!form.name.trim())         errs.name         = "Required";
+    if (!form.email.trim())        errs.email        = "Required";
+    if (!form.program_tier.trim()) errs.program_tier = "Required";
+    setFErrs(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim()) { setError("Client name is required."); return; }
+    if (!validate()) { setError("Please fill in all required fields."); return; }
     setSaving(true); setError("");
     try {
-      const res = await fetch(`${API}/api/clients`, {
+      const res  = await fetch(`${API}/api/clients`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
       const data = await res.json();
+      if (!res.ok) { setError(data.error || data.detail || "Failed to create client."); return; }
       if (data.client_id) onCreated(data.client_id);
-      else setError("Failed to create client.");
+      else setError("Failed to create client — no ID returned.");
     } catch {
       setError("Connection error — is Athena running?");
     } finally {
@@ -124,16 +140,25 @@ function IntakeForm({ onCreated, onCancel }) {
     }
   };
 
-  const field = (label, key, type="text", opts={}) => (
+  const errStyle = { borderColor: C.red };
+
+  const field = (label, key, type="text", opts={}, required=false) => (
     <div style={{ marginBottom: 14 }}>
-      <label style={S.label}>{label}</label>
+      <label style={S.label}>
+        {label}{required && <span style={{ color: C.red, marginLeft: 2 }}>*</span>}
+      </label>
       <input
         type={type}
         value={form[key]}
         onChange={e => set(key, e.target.value)}
-        style={S.input}
+        style={{ ...S.input, ...(fieldErrs[key] ? errStyle : {}) }}
         {...opts}
       />
+      {fieldErrs[key] && (
+        <div style={{ color: C.red, fontFamily: F.sans, fontSize: 10, marginTop: 3 }}>
+          {fieldErrs[key]}
+        </div>
+      )}
     </div>
   );
 
@@ -143,17 +168,24 @@ function IntakeForm({ onCreated, onCancel }) {
         <div style={{ ...S.h3, marginBottom: 20 }}>New Client Intake</div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px" }}>
-          {field("Full Name *", "name", "text", { placeholder: "Jane Smith", autoFocus: true })}
+          {field("Full Name", "name", "text", { placeholder: "Jane Smith", autoFocus: true }, true)}
           {field("Organization", "org", "text", { placeholder: "Acme MedTech Inc." })}
           {field("Role / Title", "role", "text", { placeholder: "Director of Regulatory Affairs" })}
-          {field("Email", "email", "email", { placeholder: "jane@acmemedtech.com" })}
+          {field("Email", "email", "email", { placeholder: "jane@acmemedtech.com" }, true)}
           {field("Phone", "phone", "tel", { placeholder: "+1 (858) 555-0100" })}
           <div style={{ marginBottom: 14 }}>
-            <label style={S.label}>Program / Tier</label>
+            <label style={S.label}>
+              Program / Tier<span style={{ color: C.red, marginLeft: 2 }}>*</span>
+            </label>
             <select value={form.program_tier} onChange={e => set("program_tier", e.target.value)}
-              style={{ ...S.input, height: 36 }}>
+              style={{ ...S.input, height: 36, ...(fieldErrs.program_tier ? errStyle : {}) }}>
               {PROGRAM_TIERS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
+            {fieldErrs.program_tier && (
+              <div style={{ color: C.red, fontFamily: F.sans, fontSize: 10, marginTop: 3 }}>
+                {fieldErrs.program_tier}
+              </div>
+            )}
           </div>
         </div>
 
