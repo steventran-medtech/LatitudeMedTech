@@ -270,6 +270,7 @@ _AGENT_TOOL_SCHEMA = {
                     "marketing_scorecard", # Marketing pipeline KPI scorecard
                     "marketing_outreach",  # Personalised outreach copy for a specific target
                     "deck",                # Build a consulting PPTX slide deck on a topic
+                    "rename_titles",       # Bulk-correct document titles across all folders
                 ],
                 "description": "The agent to trigger.",
             },
@@ -364,7 +365,8 @@ def _trigger_agent(agent_id: str, override: str = "") -> bool:
         "marketing_events":   ("/api/agents/marketing",  lambda _: _marketing_payload("events")),
         "marketing_scorecard":("/api/agents/marketing",  lambda _: _marketing_payload("scorecard")),
         "marketing_outreach": ("/api/agents/marketing",  lambda t: _marketing_payload("outreach", t)),
-        "deck":               ("/api/decks/generate",    lambda o: json.dumps({"topic": o or "Strategic Overview", "deck_type": "strategy"}).encode()),
+        "deck":               ("/api/decks/generate",         lambda o: json.dumps({"topic": o or "Strategic Overview", "deck_type": "strategy"}).encode()),
+        "rename_titles":      ("/api/documents/rename-titles", lambda o: json.dumps({"scope": o or "all"}).encode()),
     }
     route = ROUTE_MAP.get(agent_id)
     if not route:
@@ -403,6 +405,7 @@ _AGENT_LABELS = {
     "marketing_scorecard":"Marketing Scorecard",
     "marketing_outreach": "Outreach Copy",
     "deck":               "Deck Builder",
+    "rename_titles":      "Title Correction",
 }
 
 _AGENT_ETA = {
@@ -419,6 +422,7 @@ _AGENT_ETA = {
     "marketing_scorecard": "about two minutes",
     "marketing_outreach":  "about a minute",
     "deck":                "three to five minutes",
+    "rename_titles":       "under a minute",
 }
 
 _AGENT_ETA_SECONDS = {
@@ -440,6 +444,134 @@ _AGENT_ETA_SECONDS = {
 # Queue of short spoken notifications Athena delivers between listening turns.
 # Populated by the /api/voice/notify endpoint; drained in _voice_loop.
 _notification_queue: deque = deque()
+
+# ── Voice review session ──────────────────────────────────────────────────────
+# Tracks an active conversational review — Steven can say "review items" and
+# Athena walks through each pending item, reads a summary, and accepts
+# "approve", "reject [reason]", "skip", "repeat", or "cancel".
+_review_session: dict = {
+    "active":            False,  # True while a review walk-through is in progress
+    "items":             [],     # list of pending review item dicts from the API
+    "index":             0,      # which item is currently being presented
+    "awaiting_response": False,  # when True the voice loop skips wake-word detection
+}
+
+
+def _fetch_pending_for_review() -> list:
+    """Return pending review items from the backend (empty list on error)."""
+    try:
+        with urllib.request.urlopen(f"{BACKEND_URL}/api/review/pending", timeout=5) as r:
+            return json.loads(r.read().decode()).get("items", [])
+    except Exception:
+        return []
+
+
+def _get_item_summary(item_id: int) -> str:
+    """Fetch the voice-ready summary for a review item (empty string on error)."""
+    try:
+        with urllib.request.urlopen(
+                f"{BACKEND_URL}/api/review/{item_id}/summary", timeout=12) as r:
+            return json.loads(r.read().decode()).get("summary", "")
+    except Exception:
+        return ""
+
+
+def _act_on_review(item_id: int, decision: str, notes: str = "") -> bool:
+    """POST approve or reject for item_id. Returns True on success."""
+    try:
+        payload = json.dumps({"notes": notes}).encode()
+        req = urllib.request.Request(
+            f"{BACKEND_URL}/api/review/{item_id}/{decision}",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=5):
+            pass
+        return True
+    except Exception:
+        return False
+
+
+def _present_review_item(item: dict) -> str:
+    """Build the spoken announcement for the current review item (title + summary + prompt)."""
+    idx   = _review_session["index"] + 1
+    total = len(_review_session["items"])
+    title = item["title"]
+
+    summary = _get_item_summary(item["id"])
+
+    count_str = f"Item {idx} of {total}" if total > 1 else "One item"
+    text = f"{count_str}: {title}."
+    if summary and summary.strip().lower() != title.strip().lower():
+        text += f" {summary}"
+    text += " Approve, reject, or skip?"
+    return text
+
+
+def _start_voice_review() -> str:
+    """Kick off a review session and return the spoken introduction + first item."""
+    items = _fetch_pending_for_review()
+    if not items:
+        return "No items are waiting for your review right now."
+    _review_session["active"]            = True
+    _review_session["items"]             = items
+    _review_session["index"]             = 0
+    _review_session["awaiting_response"] = True
+    n      = len(items)
+    plural = "s" if n > 1 else ""
+    intro  = f"You have {n} item{plural} waiting for review."
+    return f"{intro} {_present_review_item(items[0])}"
+
+
+def _advance_review() -> str:
+    """Move to the next item; close the session and return a closing phrase if done."""
+    _review_session["index"] += 1
+    if _review_session["index"] >= len(_review_session["items"]):
+        _review_session.update(active=False, items=[], index=0, awaiting_response=False)
+        return "All items reviewed."
+    _review_session["awaiting_response"] = True
+    return _present_review_item(_review_session["items"][_review_session["index"]])
+
+
+def _handle_review_response(text: str) -> str:
+    """
+    Parse the user's spoken response during a review session and return the reply
+    that Athena should speak.  Side-effects: calls approve/reject endpoint and
+    advances (or closes) the session.
+    """
+    t    = text.lower().strip()
+    item = _review_session["items"][_review_session["index"]]
+    iid  = item["id"]
+
+    if any(w in t for w in ("approve", "approved", "looks good", "good", "yes",
+                             "accept", "okay", "ok", "confirm")):
+        _act_on_review(iid, "approve")
+        return "Approved. " + _advance_review()
+
+    if any(w in t for w in ("reject", "rejected", "no", "decline",
+                             "revise", "revision", "send back")):
+        notes = text if len(text) > 6 else ""
+        _act_on_review(iid, "reject", notes)
+        return "Rejected. " + _advance_review()
+
+    if any(w in t for w in ("skip", "next", "later", "pass", "come back")):
+        return "Skipping. " + _advance_review()
+
+    if any(w in t for w in ("repeat", "again", "what was that",
+                             "say that again", "read it again")):
+        _review_session["awaiting_response"] = True
+        return _present_review_item(item)
+
+    if any(w in t for w in ("cancel", "stop", "exit", "quit",
+                             "never mind", "nevermind", "done reviewing")):
+        _review_session.update(active=False, items=[], index=0, awaiting_response=False)
+        return "Exiting review."
+
+    # Unclear input — ask again without advancing
+    _review_session["awaiting_response"] = True
+    return "I didn't catch that. Say approve, reject, skip, or cancel."
+
 
 # ── Kokoro persistent server ──────────────────────────────────────────────────
 
@@ -1191,60 +1323,68 @@ def _voice_loop():
 
     while _active:
         # Deliver queued agent-completion notifications before the next listen cycle.
-        if _notification_queue:
-            while _notification_queue and _active:
-                note = _notification_queue.popleft()
-                _state = VS.SPEAKING
-                _emit("speaking", response=note)
-                for s in _split_sentences(note):
-                    _emit("speaking_partial", sentence=s)
-                    _speak_sentence(s)
-                _post_response_cooldown(oww)
-            if not _active:
-                break
-            _state = VS.LISTENING
-            _emit("listening", message=f"Say '{WAKE_PHRASE.title()}' to activate")
-
-        wake_detected, wake_score = _listen_for_wake(oww)
-        if not wake_detected or not _active:
+        # ── Drain notification queue ──────────────────────────────────────────
+        while _notification_queue and _active:
+            note = _notification_queue.popleft()
+            _state = VS.SPEAKING
+            _emit("speaking", response=note)
+            for s in _split_sentences(note):
+                _emit("speaking_partial", sentence=s)
+                _speak_sentence(s)
+            _post_response_cooldown(oww)
+        if not _active:
             break
 
-        _state = VS.AWAKE
-        _emit("awake", message="Recording…")
+        # ── Wake-word phase ───────────────────────────────────────────────────
+        # LISTENING is emitted exactly once per cycle, right here, before the
+        # blocking wake-word call.  Every processing branch below just uses
+        # `continue` to return here — no redundant state-flipping.
+        if _review_session.get("awaiting_response"):
+            # Review session: skip wake-word detection and record directly.
+            _review_session["awaiting_response"] = False
+            wake_score = 1.0
+        else:
+            _state = VS.LISTENING
+            _emit("listening", message=f"Say '{WAKE_PHRASE.title()}' to activate")
+            wake_detected, wake_score = _listen_for_wake(oww)
+            if not wake_detected or not _active:
+                break
 
+        _state = VS.AWAKE
+        _emit("awake", message=(
+            "Listening for review response…"
+            if _review_session.get("active") else "Recording…"
+        ))
+
+        # ── Record ────────────────────────────────────────────────────────────
         try:
             audio = _record_query()
         except Exception as e:
-            # Audio device hiccup during recording — log and keep listening.
             _emit("info", message=f"Recording error (retrying): {e}")
-            _state = VS.LISTENING
-            _emit("listening", message=f"Say '{WAKE_PHRASE.title()}' to activate")
             time.sleep(0.5)
-            continue
+            continue   # → top of loop → LISTENING emit → wake-word
 
+        # ── Transcribe ────────────────────────────────────────────────────────
         stt_t0 = time.time()
         try:
             text, confident, avg_logprob = _transcribe(whisper, audio)
         except Exception as e:
             _emit("info", message=f"Transcription error (retrying): {e}")
-            _state = VS.LISTENING
-            _emit("listening", message=f"Say '{WAKE_PHRASE.title()}' to activate")
-            continue
+            continue   # → top of loop → LISTENING emit → wake-word
         stt_ms = (time.time() - stt_t0) * 1000
 
         empty = not bool(text)
         _track_query(0, empty=empty, stt_logprob=avg_logprob,
                      wake_score=wake_score, transcript=text, stt_ms=stt_ms)
 
-        # Save audio clip for ML training when enabled
         if text:
             _save_audio_sample(audio, text, avg_logprob)
 
         if not text:
-            _state = VS.LISTENING
-            _emit("listening", message="No speech detected — listening again")
-            continue
+            _emit("info", message="No speech detected")
+            continue   # → top of loop → LISTENING emit → wake-word
 
+        # ── Process ───────────────────────────────────────────────────────────
         # Always run LLM correction — Whisper can be confident but still wrong
         # on domain-specific terms (e.g. "part of FDA 483s" → "report of FDA 483s").
         # Falls back to raw text if the correction call fails.
@@ -1256,6 +1396,47 @@ def _voice_loop():
             else:
                 tag = "" if confident else "  [low conf]"
                 _emit("transcript", text=f"{text}{tag}")
+
+            # ── Voice review session ───────────────────────────────────────────
+            # Intercept before Haiku so review commands never burn tokens on
+            # intent classification and responses arrive without API latency.
+            _t = text.lower()
+
+            if _review_session.get("active"):
+                # We're mid-review — parse approve / reject / skip / cancel / repeat.
+                _rv_reply = _handle_review_response(text)
+                _state = VS.SPEAKING
+                _emit("speaking", response=_rv_reply)
+                for s in _split_sentences(_rv_reply):
+                    _emit("speaking_partial", sentence=s)
+                    _speak_sentence(s)
+                history.append({"role": "user",      "content": text})
+                history.append({"role": "assistant", "content": _rv_reply})
+                if len(history) > _HISTORY_MAX: history = history[-_HISTORY_MAX:]
+                _save_history(history)
+                _post_response_cooldown(oww)
+                continue   # → top of loop → LISTENING emit → wake-word
+
+            _REVIEW_TRIGGERS = (
+                "review item", "review my item", "what's waiting",
+                "items waiting", "items to review", "pending review",
+                "review queue", "start review", "review mode",
+                "what do i need to review",
+            )
+            if any(p in _t for p in _REVIEW_TRIGGERS):
+                _rv_reply = _start_voice_review()
+                _state = VS.SPEAKING
+                _emit("speaking", response=_rv_reply)
+                for s in _split_sentences(_rv_reply):
+                    _emit("speaking_partial", sentence=s)
+                    _speak_sentence(s)
+                history.append({"role": "user",      "content": text})
+                history.append({"role": "assistant", "content": _rv_reply})
+                if len(history) > _HISTORY_MAX: history = history[-_HISTORY_MAX:]
+                _save_history(history)
+                _post_response_cooldown(oww)
+                continue   # → top of loop → LISTENING emit → wake-word
+            # ── End review handling ────────────────────────────────────────────
 
             # ── Intent classification: LLM-driven, not regex ──────────────────
             # Haiku+tool_use decides whether to dispatch an agent or fall through
@@ -1276,7 +1457,6 @@ def _voice_loop():
                 _emit("thinking", query=text, agent=agent_id)
                 _state = VS.SPEAKING
                 _emit("speaking", response=confirm, agent=agent_id)
-                # Speak sentence by sentence so UI builds up progressively
                 for s in _split_sentences(confirm):
                     _emit("speaking_partial", sentence=s)
                     _speak_sentence(s)
@@ -1285,9 +1465,7 @@ def _voice_loop():
                 if len(history) > _HISTORY_MAX: history = history[-_HISTORY_MAX:]
                 _save_history(history)
                 _post_response_cooldown(oww)
-                _state = VS.LISTENING
-                _emit("listening", message=f"Say '{WAKE_PHRASE.title()}' to activate")
-                continue
+                continue   # → top of loop → LISTENING emit → wake-word
 
             # ── Conversational query: KB grounding + streaming Claude → TTS ───
             kb_ctx = ""
@@ -1299,9 +1477,7 @@ def _voice_loop():
             _emit("thinking", query=text)
         except Exception as e:
             print(f"[voice] Request handling error (retrying): {e}")
-            _state = VS.LISTENING
-            _emit("listening", message=f"Say '{WAKE_PHRASE.title()}' to activate")
-            continue
+            continue   # → top of loop → LISTENING emit → wake-word
 
         # Streaming: Claude text streams → sentence TTS plays progressively
         # First audio arrives in ~1.2s instead of 4-6s (CAPA-Voice-001)
@@ -1319,9 +1495,7 @@ def _voice_loop():
         _save_history(history)
         _emit("speaking", response=response)   # update UI with full text
         _post_response_cooldown(oww)
-
-        _state = VS.LISTENING
-        _emit("listening", message=f"Say '{WAKE_PHRASE.title()}' to activate")
+        # → top of loop → LISTENING emit → wake-word
 
     _state = VS.STOPPED
     _emit("level", level=0.0)
