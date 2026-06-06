@@ -79,6 +79,7 @@ These are the enumerated, controlled user needs for Athena v0.5 (Alpha).
 | UN-001 | Generate a client preparation brief for an upcoming coaching session, starting from only the client's name or LinkedIn URL | P0 |
 | UN-002 | Review every AI-generated output before it is delivered, acted upon, or stored as final — and be able to approve, reject, or request edits | P0 |
 | UN-003 | Maintain a persistent knowledge base of domain documents and prior interactions that agents can search | P1 |
+| UN-018 | Capture and manage the full lifecycle of coaching clients — intake, program assignment, engagement tracking, and SOW generation — through a structured form with validated required fields | P0 |
 
 ### Voice Interface
 

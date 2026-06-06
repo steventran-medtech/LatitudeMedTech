@@ -213,3 +213,14 @@ Athena/
 | Voice session log | `Athena/voice/sessions.jsonl` | Written by `voice_bridge.py` per session | DI-017-A |
 | Athena session log | `Athena/ui/logs/athena_sessions.jsonl` | Written by `stop_athena.ps1` on shutdown | DI-017-B |
 | Review item retrieval | `ui/backend/server.py` | `GET /api/review/{item_id}` | DI-017-C |
+
+---
+
+## DO-018 — Client Lifecycle
+
+| Design Output | File | Symbol / Route | Implements |
+|---|---|---|---|
+| Client CRUD API | `ui/backend/server.py` | `POST /api/clients` with try/except + error JSON | DI-018-A |
+| Client DB methods | `agents/memory.py` | `Memory.add_client()`, `Memory.get_clients()`, `Memory.update_client()`, `Memory.delete_client()` | DI-018-A |
+| Client intake form | `ui/frontend/src/ClientsView.jsx` | `IntakeForm` — required-field validation for `name`, `email`, `program_tier`; per-field red-border + inline error | DI-018-B |
+| Engagement API | `ui/backend/server.py` | `GET/POST /api/clients/{id}/engagements`, `PUT /api/engagements/{id}` | DI-018-A |

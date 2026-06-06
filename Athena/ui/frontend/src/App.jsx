@@ -1143,19 +1143,22 @@ const FOLDER_LABELS={
   documents:"Word Doc", ma_intelligence:"M&A Intel", consulting:"Consulting",
   marketing:"Marketing", briefings:"Briefing", content:"Article Draft",
   iso13485:"ISO 13485", iso14971:"ISO 14971", briefs:"Coach Brief",
+  sow:"Statement of Work", regulatory:"Regulatory Assessment",
 };
 const FOLDER_COLORS={
   documents:C.slate, ma_intelligence:"#1A6FA3", consulting:"#7B3FA6",
   marketing:"#5B7FA6", briefings:"#1F7A6D", content:"#C4922A",
+  sow:"#4A7C59", regulatory:"#8B4A8B",
   iso13485:"#1F7A6D", iso14971:"#1A6FA3", briefs:"#1F7A6D",
 };
 
-function DocumentsView(){
+function DocumentsView({refreshToken=0}){
   const [docs,setDocs]=useState([]);
   const [viewing,setViewing]=useState(null);
   const ms=useMultiSelect();
   const load=()=>{fetch(`${API}/api/documents`).then(r=>r.json()).then(d=>setDocs(d.documents||[])).catch(()=>{});};
   useEffect(()=>{load();},[]);
+  useEffect(()=>{if(refreshToken>0)load();},[refreshToken]);
   const openDoc=(filename,folder)=>{fetch(`${API}/api/documents/open/${encodeURIComponent(filename)}?folder=${folder||"documents"}`).catch(()=>{});};
   const deleteDoc=async(filename,folder)=>{
     await fetch(`${API}/api/files/delete`,{method:"POST",headers:{"Content-Type":"application/json",...authHdr()},body:JSON.stringify({filename,folder:folder||"documents"})});
@@ -1641,9 +1644,10 @@ function VoiceStatusBadge({ voice, onNavigate }) {
 // Floating card: drag anywhere; click 📌 to re-dock as the top bar.
 const VOICE_BAR_TOP  = 58; // px offset of sticky app header
 const VOICE_BAR_LEFT = 228; // sidebar width
+const VOICE_BAR_H    = 34; // px height of the docked voice bar
 
 function FloatingVoiceWidget({ voice, open, onToggle, onFullView, docked, floatPos, onDock, onUndock, onMove }) {
-  const { running, state, lastAthena, speakingLines, elapsed, startVoice, stopVoice } = voice;
+  const { running, state, lastAthena, lastYou, speakingLines, elapsed, startVoice, stopVoice } = voice;
   const cfg        = VOICE_BADGE[state] ?? VOICE_BADGE.idle;
   const stateLabel = state ? state.charAt(0).toUpperCase() + state.slice(1) : "Idle";
   const fmtE       = (s) => `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
@@ -1716,10 +1720,17 @@ function FloatingVoiceWidget({ voice, open, onToggle, onFullView, docked, floatP
     attachDragListeners({...floatPos});
   };
 
-  // Click on the bar (no drag) → toggle AthenaPanel.
+  // Click on the docked bar (no drag) → undock as expanded floating card.
+  // Click on the floating card header → toggle expanded/compact.
   const handleBarClick = (e) => {
     if (didMoveRef.current || e.target.closest("[data-nodrag]")) return;
-    onToggle();
+    if (docked) {
+      const pos = { x: Math.max(0, window.innerWidth - 344), y: 80 };
+      onUndock(pos);
+      if (!open) onToggle();
+    } else {
+      onToggle();
+    }
   };
 
   // ─── Docked: top bar ──────────────────────────────────────────────────────
@@ -2097,6 +2108,8 @@ export default function App(){
   const [data,setData]=useState(null);
   const [logs,setLogs]=useState([]);
   const [pendingReview,setPendingReview]=useState(0);
+  const [reviewRefreshToken,setReviewRefreshToken]=useState(0);
+  const [docRefreshToken,setDocRefreshToken]=useState(0);
   const [wsReady,setWsReady]=useState(false);
   const [runningAgents,setRunningAgents]=useState(new Set());
   const [toasts,setToasts]=useState([]);
@@ -2157,14 +2170,17 @@ export default function App(){
             const label=AGENT_DISPLAY[msg.agent]||msg.agent;
             const finalStatus=msg.status==="awaiting_review"?"awaiting_review":msg.status==="success"?"done":"failed";
             const ok=msg.status==="success"||msg.status==="awaiting_review";
-            // Enhanced toast for deck_agent: include title and slide count if available
+            const hasDeliverables=(msg.review_added>0)||msg.status==="awaiting_review";
+            // Toast wording: name the deliverables, not just the agent
             let toastMsg;
             if(msg.status==="awaiting_review"){
-              toastMsg=`${label} awaiting your review`;
+              toastMsg=`${label} deliverables awaiting your review`;
             } else if(ok && msg.agent==="deck_agent" && msg.title){
               toastMsg=`Deck ready: ${msg.title}${msg.slide_count?` (${msg.slide_count} slides)`:""}`;
+            } else if(ok && hasDeliverables){
+              toastMsg=`${label} deliverables ready for your review`;
             } else if(ok){
-              toastMsg=`${label} ready for review`;
+              toastMsg=`${label} complete`;
             } else {
               toastMsg=`${label} failed`;
             }
@@ -2178,13 +2194,22 @@ export default function App(){
             ));
             // Auto-remove completed tasks after 10 minutes
             setTimeout(()=>setTaskQueue(prev=>prev.filter(t=>!(t.agentId===msg.agent&&t.doneAt===doneAt))),10*60*1000);
-            // Spoken notification if Athena is live
-            if(voiceRunningRef.current&&ok){
+            // Refresh review queue immediately when new deliverables appear
+            if(ok&&hasDeliverables){
+              setReviewRefreshToken(t=>t+1);
+              setPendingReview(n=>n+(msg.review_added||0));
+            }
+            // Spoken notification if Athena is live and there are deliverables
+            if(voiceRunningRef.current&&ok&&hasDeliverables){
               fetch(`${API}/api/voice/notify`,{
                 method:"POST",headers:{"Content-Type":"application/json",...authHdr()},
-                body:JSON.stringify({text:`Your ${label} is ready for review.`}),
+                body:JSON.stringify({text:`Your ${label} deliverables are ready for your review.`}),
               }).catch(()=>{});
             }
+          }
+          if(msg.type==="doc_shipped"){
+            // Approved document shipped — refresh Documents hub to show it
+            setDocRefreshToken(t=>t+1);
           }
 
           setLogs(prev=>{
@@ -2307,9 +2332,9 @@ export default function App(){
     clients:  <ClientsView runningAgents={runningAgents}/>,
     marketing:<MarketingView runningAgents={runningAgents}/>,
     decks:    <DeckView runningAgents={runningAgents}/>,
-    documents:<DocumentsView/>,
+    documents:<DocumentsView refreshToken={docRefreshToken}/>,
     iso:      <ISOView runningAgents={runningAgents}/>,
-    review:   <ReviewView/>,
+    review:   <ReviewView reviewRefreshToken={reviewRefreshToken}/>,
     agents:   <AgentsView logs={logs} onRun={runAgent} runningAgents={runningAgents}/>,
     hr:       <HRView runningAgents={runningAgents}/>,
     tokens:   <TokenView data={data}/>,

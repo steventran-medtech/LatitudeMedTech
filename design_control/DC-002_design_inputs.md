@@ -56,7 +56,7 @@ Each entry:
 | DI-004-B | UN-004 | System shall transcribe voice queries via Whisper and log confidence score | Whisper model loads at startup; `[low conf]` tag written to log on low-confidence result | P0 | VERIFIED |
 | DI-004-C | UN-004 | First TTS audio byte shall be produced within 2 seconds of query completion | Streaming sentence-split pipeline; first sentence dispatched to Kokoro before full response | P0 | PARTIAL |
 | DI-004-D | UN-004 | Voice bridge shall classify query intent and route to the correct agent via `tool_use` | `voice_bridge.py` contains tool-use dispatch logic | P0 | VERIFIED |
-| DI-004-E | UN-004 | SILENCE_DURATION shall be set to 1.5 s (prevents mid-sentence cutoff at 0.8 s, avoids latency at 2.0 s) | `SILENCE_DURATION` constant in `voice_bridge.py` equals 1.5 | P0 | VERIFIED |
+| DI-004-E | UN-004 | SILENCE_DURATION shall be 0.8 s (optimized for responsiveness while remaining above the 0.8 s floor that prevents mid-sentence cutoff) | `SILENCE_DURATION` default in `voice_bridge.py` equals 0.8 and `silence_duration` in `settings.json` equals 0.8 | P0 | VERIFIED |
 
 ### UN-005 — Task Completion Notifications
 
@@ -176,6 +176,17 @@ Each entry:
 | DI-017-A | UN-017 | Voice session exchanges shall be logged to `voice/sessions.jsonl` | File exists and grows after a voice session | P1 | VERIFIED |
 | DI-017-B | UN-017 | Full Athena session metadata shall be appended to `ui/logs/athena_sessions.jsonl` on shutdown | File exists; entry written by `stop_athena.ps1` | P1 | VERIFIED |
 | DI-017-C | UN-017 | All agent outputs submitted to review shall be retrievable by review ID | `GET /api/review/{id}` returns the stored output | P1 | VERIFIED |
+
+---
+
+## Client Lifecycle
+
+### UN-018 — Client Lifecycle Management
+
+| ID | Source | Requirement Statement | Verification | Priority | Status |
+|---|---|---|---|---|---|
+| DI-018-A | UN-018 | `POST /api/clients` shall return `{"status": "created", "client_id": <int>}` on success; database errors shall return a 500 JSON response with an `"error"` key containing the exception message | `server.py` `create_client` wraps `mem.add_client()` in try/except and returns error details on exception | P0 | VERIFIED |
+| DI-018-B | UN-018 | Client intake form shall require Full Name, Email, and Program/Tier before submission; fields shall be highlighted with a red border and inline error message if left empty on submit | `ClientsView.jsx` `IntakeForm` validates `name`, `email`, and `program_tier`; per-field error state shown on failed submit | P0 | VERIFIED |
 
 ---
 

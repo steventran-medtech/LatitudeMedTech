@@ -37,7 +37,7 @@ column are open findings requiring immediate remediation.
 | UN-004 | | DI-004-B | Whisper STT + confidence log | `voice_bridge.py` whisper | `test_DI_004_B` | VERIFIED |
 | UN-004 | | DI-004-C | First audio ≤ 2s | Kokoro streaming pipeline | `test_DI_004_C` | PARTIAL |
 | UN-004 | | DI-004-D | Intent routing via tool_use | `voice_bridge.py` dispatch | `test_DI_004_D` | VERIFIED |
-| UN-004 | | DI-004-E | SILENCE_DURATION = 1.5s | `voice_bridge.py` constant | `test_DI_004_E` | VERIFIED |
+| UN-004 | | DI-004-E | SILENCE_DURATION = 0.8s (C3 change — responsiveness) | `voice_bridge.py` constant + `settings.json` | `test_DI_004_E` | VERIFIED |
 | UN-005 | Task notifications | DI-005-A | Notify endpoint exists | `server.py` POST /api/voice/notify | `test_DI_005_A` | VERIFIED |
 | UN-005 | | DI-005-B | Notification only if voice active | `voice_bridge.py` queue guard | `test_DI_005_B` | VERIFIED |
 | UN-006 | Persistent voice session | DI-006-A | Session persists across tabs | `useVoiceSession.js` app-level | `test_DI_006_A` | VERIFIED |
@@ -76,16 +76,18 @@ column are open findings requiring immediate remediation.
 | UN-017 | Audit log | DI-017-A | Voice sessions logged | `voice/sessions.jsonl` | `test_DI_017_A` | VERIFIED |
 | UN-017 | | DI-017-B | Athena sessions logged | `ui/logs/athena_sessions.jsonl` pattern | `test_DI_017_B` | VERIFIED |
 | UN-017 | | DI-017-C | Review items retrievable by ID | `server.py` GET /api/review/{id} | `test_DI_017_C` | VERIFIED |
+| UN-018 | Client lifecycle | DI-018-A | Client creation returns ID; db errors return 500 JSON | `server.py` create_client | `test_DI_018_A` | VERIFIED |
+| UN-018 | | DI-018-B | Intake form required-field validation (name, email, tier) | `ClientsView.jsx` IntakeForm | `test_DI_018_B` | VERIFIED |
 
 ---
 
-## Coverage Summary (v1.0)
+## Coverage Summary (v1.1)
 
 | Metric | Count |
 |---|---|
-| Total user needs | 17 |
-| Total design inputs | 52 |
-| Design inputs with VERIFIED tests | 38 |
+| Total user needs | 18 |
+| Total design inputs | 54 |
+| Design inputs with VERIFIED tests | 40 |
 | Design inputs with PARTIAL coverage | 12 |
 | Design inputs with OPEN gap | 2 |
 | Design inputs with WAIVED status | 0 |
