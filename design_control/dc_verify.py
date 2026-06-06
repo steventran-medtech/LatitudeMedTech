@@ -641,6 +641,103 @@ def test_DI_013_C():
         _log(FAIL, di, "/api/dashboard/knowledge-growth missing from server.py")
 
 
+def test_DI_013_D():
+    """DI-013-D: loadData() in App.jsx fetches /api/dashboard with authHdr()"""
+    di = "DI-013-D"
+    if _skip_if_filtered(di): return
+    app = UI_FRONT / "App.jsx"
+    if not app.exists():
+        _log(FAIL, di, "App.jsx not found", str(app))
+        return
+    content = _read(app)
+    # Extract the loadData useCallback body
+    m = re.search(
+        r'const loadData\s*=\s*useCallback\s*\(\s*\(\s*\)\s*=>\s*\{(.+?)\}\s*,\s*\[\s*\]',
+        content, re.DOTALL
+    )
+    body = m.group(1) if m else ""
+    has_dashboard_fetch = "/api/dashboard" in body
+    has_auth            = "authHdr()" in body
+    if has_dashboard_fetch and has_auth:
+        _log(PASS, di, "loadData() fetches /api/dashboard with authHdr()")
+    elif has_dashboard_fetch:
+        _log(FAIL, di,
+             "loadData() fetches /api/dashboard but authHdr() is absent",
+             "Add { headers: authHdr() } to the fetch() call inside loadData in App.jsx")
+    else:
+        _log(FAIL, di,
+             "loadData useCallback or /api/dashboard fetch not found in App.jsx",
+             "Restore loadData as useCallback fetching /api/dashboard with authHdr()")
+
+
+def test_DI_013_E():
+    """DI-013-E: All Dashboard sub-fetches in App.jsx include authHdr()"""
+    di = "DI-013-E"
+    if _skip_if_filtered(di): return
+    app = UI_FRONT / "App.jsx"
+    if not app.exists():
+        _log(FAIL, di, "App.jsx not found", str(app))
+        return
+    content = _read(app)
+    # These six endpoints must each appear in a fetch() that also includes authHdr().
+    # Sub-fetches are one-liners, so we check that the endpoint and authHdr() appear
+    # on the same source line (handles template-literal form `${API}/api/...`).
+    sub_endpoints = [
+        "/api/dashboard/history",
+        "/api/dashboard/knowledge-growth",
+        "/api/dashboard/timeseries",
+        "/api/hr/skills",
+        "/api/sessions",
+        "/api/decks",
+    ]
+    lines = content.splitlines()
+    missing_auth = []
+    for ep in sub_endpoints:
+        found = any(ep in line and "authHdr()" in line for line in lines)
+        if not found:
+            missing_auth.append(ep)
+    if not missing_auth:
+        _log(PASS, di, f"All {len(sub_endpoints)} Dashboard sub-fetches include authHdr()")
+    else:
+        _log(FAIL, di,
+             f"{len(missing_auth)} Dashboard sub-fetch(es) missing authHdr(): {missing_auth}",
+             "Add { headers: authHdr() } to each of the listed fetch() calls in App.jsx")
+
+
+def test_DI_013_F():
+    """DI-013-F: loadData() called after setToken() in auth effect — no standalone race useEffect"""
+    di = "DI-013-F"
+    if _skip_if_filtered(di): return
+    app = UI_FRONT / "App.jsx"
+    if not app.exists():
+        _log(FAIL, di, "App.jsx not found", str(app))
+        return
+    content = _read(app)
+    # Bad pattern: separate useEffect(() => { loadData(); }, [loadData])
+    # which fires before the auth token effect, causing a 401 race condition
+    race_pattern = re.compile(
+        r'useEffect\s*\(\s*\(\s*\)\s*=>\s*\{\s*loadData\s*\(\s*\)\s*;?\s*\}\s*,\s*\[\s*loadData\s*\]\s*\)'
+    )
+    has_race = bool(race_pattern.search(content))
+    # Good pattern: setToken(...) followed by loadData() inside the same effect body
+    sequenced_pattern = re.compile(
+        r'setToken\s*\([^)]*\)\s*;\s*loadData\s*\(\s*\)',
+        re.DOTALL
+    )
+    has_sequenced = bool(sequenced_pattern.search(content))
+
+    if has_race:
+        _log(FAIL, di,
+             "Standalone useEffect([loadData]) found — race condition: loadData fires before auth token is set",
+             "Remove the standalone useEffect; call loadData() inside the auth-token useEffect after setToken()")
+    elif has_sequenced:
+        _log(PASS, di, "loadData() invoked after setToken() inside auth-token useEffect — no race")
+    else:
+        _log(WARN, di,
+             "Sequenced setToken→loadData pattern not confirmed; manual review recommended",
+             "Verify that loadData() is called only after setToken() completes in the auth useEffect")
+
+
 # ── UN-014 / Learning & Skills ────────────────────────────────────────────────
 
 def test_DI_014_A():
@@ -979,6 +1076,38 @@ def test_DI_019_A():
              "Set .bar-wrap { position:absolute; bottom:0; left:0; right:0; } in start_splash.hta")
 
 
+def test_DI_019_C():
+    """DI-019-C: Splash bar advances through real loading stages; closes only after bar visually reaches 100%"""
+    di = "DI-019-C"
+    if _skip_if_filtered(di): return
+    f = ATHENA / "ui" / "start_splash.hta"
+    if not f.exists():
+        _log(FAIL, di, "start_splash.hta not found", str(f))
+        return
+    content = _read(f)
+    # .athena_ready flag check that drives targetVal to 100
+    has_ready_flag   = ".athena_ready" in content
+    has_target_100   = bool(re.search(r'SetStatus\s+.*,\s*100\b|targetVal\s*=\s*100', content))
+    # readyToClose flag gates close until bar is visually done
+    has_ready_close  = "readyToClose" in content
+    # window.close() is only called after stepVal reaches 100
+    has_gated_close  = bool(re.search(
+        r'readyToClose.*stepVal|stepVal.*readyToClose|If readyToClose.*stepVal\s*>=\s*100',
+        content, re.DOTALL | re.IGNORECASE
+    ))
+    checks = [has_ready_flag, has_target_100, has_ready_close, has_gated_close]
+    if all(checks):
+        _log(PASS, di, "Splash bar advances to 100% on .athena_ready and closes only after bar completes")
+    else:
+        missing = []
+        if not has_ready_flag:  missing.append(".athena_ready flag-file check missing")
+        if not has_target_100:  missing.append("targetVal = 100 not set on ready")
+        if not has_ready_close: missing.append("readyToClose flag missing")
+        if not has_gated_close: missing.append("window.close() not gated on readyToClose + stepVal >= 100")
+        _log(FAIL, di, f"Progress-to-ready behavior incomplete: {'; '.join(missing)}",
+             "Restore PollChromeReady, readyToClose = True, and the Tick close-gate in start_splash.hta")
+
+
 def test_DI_019_B():
     """DI-019-B: Splash screen has no numeric percentage text element or VBScript assignment"""
     di = "DI-019-B"
@@ -998,6 +1127,170 @@ def test_DI_019_B():
              "; ".join(detail))
     else:
         _log(PASS, di, "No percentage text element or VBScript assignment in start_splash.hta")
+
+
+# ── UN-020 / Document Review & Approval ──────────────────────────────────────
+
+def test_DI_020_A():
+    """DI-020-A: Every reviewable agent calls submit_for_review()"""
+    di = "DI-020-A"
+    if _skip_if_filtered(di): return
+    REQUIRED_AGENTS = [
+        ("briefing_agent.py",              AGENTS / "briefing_agent.py"),
+        ("marketing_agent.py",             AGENTS / "marketing_agent.py"),
+        ("content_agent.py",               AGENTS / "content_agent.py"),
+        ("sow_agent.py",                   AGENTS / "sow_agent.py"),
+        ("regulatory_strategy_agent.py",   AGENTS / "regulatory_strategy_agent.py"),
+        ("iso_coach_agent.py",             AGENTS / "iso_coach_agent.py"),
+        ("ma_intelligence_agent.py",       AGENTS / "ma_intelligence_agent.py"),
+        ("rag_agent.py",                   AGENTS / "rag_agent.py"),
+    ]
+    missing = []
+    for name, path in REQUIRED_AGENTS:
+        if not path.exists() or not _grep(path, r"submit_for_review\("):
+            missing.append(name)
+    if not missing:
+        _log(PASS, di, f"All {len(REQUIRED_AGENTS)} reviewable agents call submit_for_review()")
+    else:
+        _log(FAIL, di, f"Agents missing submit_for_review() call: {missing}",
+             "Add mem.submit_for_review(agent, item_type, title, file_path) to each agent's output path")
+
+
+def test_DI_020_B():
+    """DI-020-B: ReviewView.jsx load() fetches pending items with authHdr()"""
+    di = "DI-020-B"
+    if _skip_if_filtered(di): return
+    f = UI_FRONT / "ReviewView.jsx"
+    if not f.exists():
+        _log(FAIL, di, "ReviewView.jsx not found")
+        return
+    content = _read(f)
+    m = re.search(r'const load\s*=\s*\(\s*\).*?(?=\n\s{0,2}const |\n\s{0,2}function |\Z)', content, re.DOTALL)
+    body = m.group(0) if m else ""
+    has_pending_fetch = "/api/review/pending" in body
+    has_auth          = "authHdr()" in body
+    if has_pending_fetch and has_auth:
+        _log(PASS, di, "load() fetches /api/review/pending with authHdr()")
+    elif has_pending_fetch:
+        _log(FAIL, di, "load() fetches /api/review/pending but authHdr() is absent",
+             "Add { headers: authHdr() } to the fetch call in ReviewView.jsx load()")
+    else:
+        _log(FAIL, di, "load() function or /api/review/pending fetch not found in ReviewView.jsx")
+
+
+def test_DI_020_C():
+    """DI-020-C: ReviewView.jsx loadHistory() fetches history with authHdr()"""
+    di = "DI-020-C"
+    if _skip_if_filtered(di): return
+    f = UI_FRONT / "ReviewView.jsx"
+    if not f.exists():
+        _log(FAIL, di, "ReviewView.jsx not found")
+        return
+    content = _read(f)
+    m = re.search(r'const loadHistory\s*=\s*\(\s*\).*?(?=\n\s{0,2}const |\n\s{0,2}function |\Z)', content, re.DOTALL)
+    body = m.group(0) if m else ""
+    has_history_fetch = "/api/review/history" in body
+    has_auth          = "authHdr()" in body
+    if has_history_fetch and has_auth:
+        _log(PASS, di, "loadHistory() fetches /api/review/history with authHdr()")
+    elif has_history_fetch:
+        _log(FAIL, di, "loadHistory() fetches /api/review/history but authHdr() is absent",
+             "Add { headers: authHdr() } to the fetch call in ReviewView.jsx loadHistory()")
+    else:
+        _log(FAIL, di, "loadHistory() function or /api/review/history fetch not found in ReviewView.jsx")
+
+
+def test_DI_020_D():
+    """DI-020-D: ReviewView.jsx auto-reloads queue when reviewRefreshToken increments"""
+    di = "DI-020-D"
+    if _skip_if_filtered(di): return
+    f = UI_FRONT / "ReviewView.jsx"
+    if not f.exists():
+        _log(FAIL, di, "ReviewView.jsx not found")
+        return
+    content = _read(f)
+    has_token_prop    = "reviewRefreshToken" in content
+    has_useeffect     = bool(re.search(r'useEffect\s*\(.*?reviewRefreshToken', content, re.DOTALL))
+    has_load_in_effect = bool(re.search(r'useEffect\s*\(.*?load\s*\(\s*\).*?reviewRefreshToken', content, re.DOTALL))
+    if has_token_prop and has_load_in_effect:
+        _log(PASS, di, "ReviewView re-fetches queue in useEffect keyed on reviewRefreshToken")
+    elif has_token_prop and has_useeffect:
+        _log(WARN, di, "reviewRefreshToken useEffect present but load() call not confirmed inside it",
+             "Ensure load() is called inside the useEffect([reviewRefreshToken]) hook body")
+    else:
+        _log(FAIL, di, "reviewRefreshToken auto-refresh pattern not found in ReviewView.jsx",
+             "Add useEffect(() => { if (reviewRefreshToken > 0) load(); }, [reviewRefreshToken])")
+
+
+def test_DI_020_E():
+    """DI-020-E: ReviewViewer fetches content inline with authHdr() on all viewer GET calls"""
+    di = "DI-020-E"
+    if _skip_if_filtered(di): return
+    f = UI_FRONT / "ReviewView.jsx"
+    if not f.exists():
+        _log(FAIL, di, "ReviewView.jsx not found")
+        return
+    content = _read(f)
+    has_viewer_component = "ReviewViewer" in content
+    has_inline_render    = bool(re.search(r'renderMarkdown|inline.*render|setContent|content.*render', content, re.IGNORECASE))
+    # Extract loadContent function body to check auth on both viewer GET calls
+    m = re.search(r'const loadContent\s*=.*?(?=\n\s{0,4}const |\n\s{0,4}function |\Z)', content, re.DOTALL)
+    body = m.group(0) if m else ""
+    has_content_fetch_auth   = bool(re.search(r"/api/review/.*?/content.*authHdr|authHdr.*api/review/.*?/content", body))
+    has_googleview_fetch_auth = bool(re.search(r"/api/review/.*?/google-view.*authHdr|authHdr.*api/review/.*?/google-view", body))
+    all_ok = has_viewer_component and has_content_fetch_auth and has_googleview_fetch_auth and has_inline_render
+    if all_ok:
+        _log(PASS, di, "ReviewViewer fetches /content and /google-view with authHdr(); renders inline")
+    else:
+        missing = []
+        if not has_viewer_component:        missing.append("ReviewViewer component")
+        if not has_content_fetch_auth:      missing.append("/content fetch missing authHdr()")
+        if not has_googleview_fetch_auth:   missing.append("/google-view fetch missing authHdr()")
+        if not has_inline_render:           missing.append("inline render")
+        _log(FAIL, di, f"Viewer auth or render gap: {missing}",
+             "Add {{ headers: authHdr() }} to all fetch calls inside loadContent in ReviewView.jsx")
+
+
+# ── UN-021 / Single-Instance Enforcement ─────────────────────────────────────
+
+def test_DI_021_A():
+    """DI-021-A: Test-AthenaRunning defined in athena_lib.ps1 and called as a guard in start_athena.ps1"""
+    di = "DI-021-A"
+    if _skip_if_filtered(di): return
+
+    ui_dir  = ATHENA / "ui"
+    lib     = ui_dir / "athena_lib.ps1"
+    startup = ui_dir / "start_athena.ps1"
+
+    # 1 — athena_lib.ps1 must define Test-AthenaRunning using Get-NetTCPConnection
+    if not lib.exists():
+        _log(FAIL, di, "athena_lib.ps1 not found",
+             "Restore athena_lib.ps1 — it defines Test-AthenaRunning and other shared launcher helpers")
+        return
+    lib_content = _read(lib)
+    has_fn_def    = "function Test-AthenaRunning" in lib_content
+    has_port_chk  = "Get-NetTCPConnection" in lib_content and "8000" in lib_content
+
+    # 2 — start_athena.ps1 must call the guard before starting services
+    if not startup.exists():
+        _log(FAIL, di, "start_athena.ps1 not found",
+             "Restore the startup script — it houses the single-instance guard call")
+        return
+    start_content = _read(startup)
+    has_guard_call = "Test-AthenaRunning" in start_content
+    # The guard must have an exit path that does NOT start a new backend
+    has_exit_path  = bool(re.search(r'exit\s+0|exit\s+1|\$abortFile', start_content))
+
+    if has_fn_def and has_port_chk and has_guard_call and has_exit_path:
+        _log(PASS, di, "Single-instance guard verified: Test-AthenaRunning (port 8000 check) called in start_athena.ps1")
+    else:
+        missing = []
+        if not has_fn_def:    missing.append("function Test-AthenaRunning missing from athena_lib.ps1")
+        if not has_port_chk:  missing.append("Get-NetTCPConnection port 8000 check missing from athena_lib.ps1")
+        if not has_guard_call: missing.append("Test-AthenaRunning not called in start_athena.ps1")
+        if not has_exit_path:  missing.append("no exit/abort path found in start_athena.ps1 guard block")
+        _log(FAIL, di, f"Single-instance guard incomplete: {'; '.join(missing)}",
+             "Restore Test-AthenaRunning in athena_lib.ps1 and the guard block in start_athena.ps1")
 
 
 # ── Live API Tests ─────────────────────────────────────────────────────────────
@@ -1142,6 +1435,7 @@ def main():
 
     _section("UN-013/014 Dashboard & Learning")
     test_DI_013_A(); test_DI_013_B(); test_DI_013_C()
+    test_DI_013_D(); test_DI_013_E(); test_DI_013_F()
     test_DI_014_A(); test_DI_014_B()
 
     _section("UN-015/016/017 Security, Labeling & Audit")
@@ -1154,7 +1448,13 @@ def main():
     test_DI_018_A(); test_DI_018_B()
 
     _section("UN-019 Startup Experience")
-    test_DI_019_A(); test_DI_019_B()
+    test_DI_019_A(); test_DI_019_B(); test_DI_019_C()
+
+    _section("UN-020 Document Review & Approval")
+    test_DI_020_A(); test_DI_020_B(); test_DI_020_C(); test_DI_020_D(); test_DI_020_E()
+
+    _section("UN-021 Single-Instance Enforcement")
+    test_DI_021_A()
 
     if args.live or args.full:
         test_live_api()

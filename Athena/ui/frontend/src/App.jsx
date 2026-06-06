@@ -742,21 +742,21 @@ function Dashboard({data}){
   const [sessions,setSessions]=useState([]);
   const [recentDecks,setRecentDecks]=useState([]);
   useEffect(()=>{
-    fetch(`${API}/api/dashboard/history?days=${historyDays}`).then(r=>r.json()).then(d=>setHistory(d.daily||[])).catch(()=>{});
+    fetch(`${API}/api/dashboard/history?days=${historyDays}`,{headers:authHdr()}).then(r=>r.json()).then(d=>setHistory(d.daily||[])).catch(()=>{});
   },[historyDays]);
   useEffect(()=>{
-    fetch(`${API}/api/dashboard/knowledge-growth?days=90`).then(r=>r.json()).then(d=>{setKbGrowth(d.daily||[]);setKbTotal(d.total||0);}).catch(()=>{});
-    fetch(`${API}/api/hr/skills`).then(r=>r.json()).then(d=>{
+    fetch(`${API}/api/dashboard/knowledge-growth?days=90`,{headers:authHdr()}).then(r=>r.json()).then(d=>{setKbGrowth(d.daily||[]);setKbTotal(d.total||0);}).catch(()=>{});
+    fetch(`${API}/api/hr/skills`,{headers:authHdr()}).then(r=>r.json()).then(d=>{
       const skills=Object.values(d.skills||{});
       const totalChunks=skills.reduce((acc,s)=>acc+(s.total_chunks||0),0);
       const domains=new Set(skills.flatMap(s=>s.domains||[]));
       setCompanyKb({totalChunks,domains:domains.size});
     }).catch(()=>{});
-    fetch(`${API}/api/sessions?limit=15`).then(r=>r.json()).then(d=>setSessions(d.sessions||[])).catch(()=>{});
-    fetch(`${API}/api/decks`).then(r=>r.json()).then(d=>setRecentDecks((d.decks||[]).slice(0,5))).catch(()=>{});
+    fetch(`${API}/api/sessions?limit=15`,{headers:authHdr()}).then(r=>r.json()).then(d=>setSessions(d.sessions||[])).catch(()=>{});
+    fetch(`${API}/api/decks`,{headers:authHdr()}).then(r=>r.json()).then(d=>setRecentDecks((d.decks||[]).slice(0,5))).catch(()=>{});
   },[]);
   useEffect(()=>{
-    fetch(`${API}/api/dashboard/timeseries?day=${hourlyDay}`).then(r=>r.json()).then(setTs).catch(()=>{});
+    fetch(`${API}/api/dashboard/timeseries?day=${hourlyDay}`,{headers:authHdr()}).then(r=>r.json()).then(setTs).catch(()=>{});
   },[hourlyDay]);
 
   if(!data) return <div style={{color:C.muted,fontFamily:"Helvetica,sans-serif",fontSize:13}}>Loading dashboard...</div>;
@@ -2256,17 +2256,17 @@ export default function App(){
   },[addToast]);
 
   const loadData=useCallback(()=>{
-    fetch(`${API}/api/dashboard`).then(r=>r.json()).then(setData).catch(()=>{});
+    fetch(`${API}/api/dashboard`,{headers:authHdr()}).then(r=>r.json()).then(setData).catch(()=>{});
   },[]);
 
-  useEffect(()=>{loadData();},[loadData]);
-
-  // SOC II CC6.6 — fetch session token first; all mutating requests need it
+  // SOC II CC6.6 — fetch session token first; all mutating requests need it.
+  // loadData is deferred until after setToken() so the dashboard fetch carries
+  // a valid X-Athena-Key header and is not rejected with 401.
   useEffect(()=>{
     fetch(`${API}/api/auth/token`)
       .then(r=>r.json())
-      .then(d=>{ if(d.token) setToken(d.token); })
-      .catch(()=>{});
+      .then(d=>{ if(d.token) setToken(d.token); loadData(); })
+      .catch(()=>{ loadData(); });
   },[]);
 
   // Load app version once (for the sidebar badge + About panel)

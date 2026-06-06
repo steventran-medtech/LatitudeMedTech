@@ -1,5 +1,5 @@
 # DC-002 — Design Inputs
-**Document:** DC-002 · Version 1.0 · 2026-06-05  
+**Document:** DC-002 · Version 1.5 · 2026-06-05  
 **Approved by:** Steven Tran
 
 Design inputs are specific, verifiable requirements derived from the user
@@ -72,6 +72,12 @@ Each entry:
 | DI-006-A | UN-006 | Voice session WebSocket shall persist when the user navigates between tabs | `useVoiceSession.js` is app-level (not tab-level); session state stored in App.jsx | P1 | VERIFIED |
 | DI-006-B | UN-006 | `VoiceStatusBadge` shall appear in the header on all tabs showing live voice state | Header component contains VoiceStatusBadge with live state prop | P1 | VERIFIED |
 
+### UN-022 — Voice Conversation Quality
+
+| ID | Source | Requirement Statement | Verification | Priority | Status |
+|---|---|---|---|---|---|
+| DI-022-A | UN-022 | Latency between completion of user's voice input and commencement of audible agent response shall be ≤ 2 seconds (see also DI-004-C for TTS pipeline timing) | Live timing measurement with voice stack running; static: `voice_bridge.py` contains `_ask_claude_streaming` using a streaming LLM call, `_split_sentences` / `_SENTENCE_END` for sentence-boundary detection, and `_speak_sentence` called inside the token-stream loop — not after full response is buffered | P0 | PARTIAL |
+
 ---
 
 ## Content & Marketing
@@ -138,6 +144,9 @@ Each entry:
 | DI-013-A | UN-013 | Dashboard shall display agent health status (green/yellow/red) for all registered agents | `GET /api/dashboard` returns health entries for each agent | P1 | VERIFIED |
 | DI-013-B | UN-013 | Dashboard shall display hourly token spend timeseries for today and yesterday | `GET /api/dashboard/timeseries` returns hourly buckets for both days | P1 | VERIFIED |
 | DI-013-C | UN-013 | Dashboard shall display cumulative knowledge base growth over time | `GET /api/dashboard/knowledge-growth` returns daily + cumulative KB item counts | P1 | VERIFIED |
+| DI-013-D | UN-013 | `loadData()` in App.jsx shall call `/api/dashboard` with `authHdr()` so the request is not rejected as Unauthorized | `App.jsx` `loadData` useCallback body includes `authHdr()` in the `/api/dashboard` fetch | P0 | VERIFIED |
+| DI-013-E | UN-013 | All six Dashboard sub-fetches (history, timeseries, knowledge-growth, skills, sessions, decks) shall include `authHdr()` in their request headers | All six `fetch()` calls inside the `Dashboard` component include `{ headers: authHdr() }` | P1 | VERIFIED |
+| DI-013-F | UN-013 | `loadData()` shall be called after `setToken()` completes — not in a parallel `useEffect` — to eliminate the startup race condition that causes a 401 on first load | `loadData()` is invoked inside the auth-token `useEffect` after `setToken()`, with no standalone `useEffect([loadData])` present | P1 | VERIFIED |
 
 ### UN-014 — Learning & Skills
 
@@ -198,6 +207,31 @@ Each entry:
 |---|---|---|---|---|---|
 | DI-019-A | UN-019 | Splash screen progress bar shall be absolutely positioned at the bottom edge of the window spanning its full width, with no side padding | `.bar-wrap` in `start_splash.hta` has `position:absolute; bottom:0; left:0; right:0` | P2 | VERIFIED |
 | DI-019-B | UN-019 | Splash screen shall not display numeric percentage text during startup loading | No `id="pct"` element and no `pctEl.innerText` assignment in `start_splash.hta` | P2 | VERIFIED |
+| DI-019-C | UN-019 | The splash screen progress bar shall advance through discrete stages tied to actual application loading state — the bar target shall not reach 100% until the `.athena_ready` flag file is detected, and the splash shall close automatically only after the bar has visually reached 100% | `start_splash.hta` contains a `PollChromeReady` (or equivalent) routine that sets `targetVal = 100` only after detecting `.athena_ready`; a `readyToClose` flag triggers `window.close()` only after `stepVal >= 100` | P0 | VERIFIED |
+
+---
+
+## Document Review & Approval
+
+### UN-020 — AI-Generated Document Availability for Review and Approval
+
+| ID | Source | Requirement Statement | Verification | Priority | Status |
+|---|---|---|---|---|---|
+| DI-020-A | UN-020 | Every agent that produces a reviewable output shall call `submit_for_review()`, and the resulting entry shall appear in the review queue DB within the same agent run | `review_queue` table contains an entry with matching `agent` name and `status = 'pending'` after a representative agent run | P0 | VERIFIED |
+| DI-020-B | UN-020 | The review queue UI shall fetch pending items using authenticated requests — `authHdr()` shall be present on the `GET /api/review/pending` fetch call in `ReviewView.jsx` | `ReviewView.jsx` `load()` function contains `authHdr()` in the fetch options | P0 | VERIFIED |
+| DI-020-C | UN-020 | The review history UI shall fetch reviewed items using authenticated requests — `authHdr()` shall be present on the `GET /api/review/history` fetch call in `ReviewView.jsx` | `ReviewView.jsx` `loadHistory()` function contains `authHdr()` in the fetch options | P0 | VERIFIED |
+| DI-020-D | UN-020 | The review queue shall automatically reload when the application receives an `agent_done` WebSocket event with `review_added > 0`, without requiring a manual page refresh | `ReviewView.jsx` contains a `useEffect` that calls `load()` when `reviewRefreshToken` is greater than 0 | P0 | VERIFIED |
+| DI-020-E | UN-020 | Document content shall be viewable inline within the review queue — a viewer component shall fetch and render the document without navigating away from the Review tab | `ReviewView.jsx` contains a viewer component (`ReviewViewer`) that fetches `/api/review/{id}/content` and renders output inline | P1 | VERIFIED |
+
+---
+
+## Operations & Monitoring (continued)
+
+### UN-021 — Single-Instance Enforcement
+
+| ID | Source | Requirement Statement | Verification | Priority | Status |
+|---|---|---|---|---|---|
+| DI-021-A | UN-021 | The Athena startup script shall detect whether another Athena instance is already running in the same Windows session by testing whether port 8000 is bound (`Get-NetTCPConnection`) or whether the recorded Chrome PID is still alive; if a running instance is found it shall either bring the existing instance to the foreground and exit cleanly without starting any new services, or stop the existing instance completely before starting a new one — at no point shall two complete Athena instances (backend + frontend + Chrome) be running simultaneously | `athena_lib.ps1` defines `Test-AthenaRunning` using `Get-NetTCPConnection -LocalPort 8000`; `start_athena.ps1` calls `Test-AthenaRunning` before starting any services and either exits without launching or runs `stop_athena.ps1` before proceeding | P0 | VERIFIED |
 
 ---
 
