@@ -2249,13 +2249,11 @@ def _pick_greeting() -> str:
     return _random.choice(pool)
 
 def _speak_phrase(text: str):
-    """Speak a greeting or goodbye phrase via Kokoro TTS with Windows SAPI fallback.
+    """Speak a goodbye phrase via Kokoro TTS with Windows SAPI fallback.
 
-    Retries Kokoro once after 4 s in case it is still loading (the preload gate
-    times out at 30 s but the model can take longer on a cold start).  All failures
-    are logged — the previous bare `except: pass` masked every failure and made
-    voices impossible to diagnose.  Falls back to Windows SAPI so a voice is always
-    heard even when Kokoro is unavailable.
+    Synchronous — blocks until TTS completes (needed for the shutdown flow).
+    For the startup greeting use _speak_phrase_greeting (non-blocking, longer wait).
+    Retries Kokoro once after 4 s then falls back to Windows SAPI.
     """
     import io, json, time, urllib.request as _urllib
 
@@ -2278,19 +2276,16 @@ def _speak_phrase(text: str):
             print(f"[voice] _speak_phrase kokoro failed: {exc!r}", flush=True)
             return False
 
-    # First attempt — immediate
     if _try_kokoro():
         time.sleep(0.5)
         return
 
-    # One retry — Kokoro may still be loading on a cold/slow start
     print("[voice] _speak_phrase: retrying Kokoro in 4 s…", flush=True)
     time.sleep(4)
     if _try_kokoro():
         time.sleep(0.5)
         return
 
-    # Windows SAPI fallback — works on any Windows 11 system, no extra packages
     print("[voice] _speak_phrase: Kokoro unavailable, using Windows SAPI", flush=True)
     try:
         safe  = text.replace("'", "").replace('"', " ")
@@ -2302,11 +2297,63 @@ def _speak_phrase(text: str):
         flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         subprocess.run(
             ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script],
-            timeout=30, creationflags=flags,
+            timeout=30, creationflags=flags, stdin=subprocess.DEVNULL,
         )
     except Exception as exc:
         print(f"[voice] _speak_phrase SAPI failed: {exc!r}", flush=True)
     time.sleep(0.5)
+
+
+def _speak_phrase_greeting(text: str):
+    """Greeting TTS: waits up to 150 s for Kokoro to finish its model load.
+
+    Cold-start Kokoro takes 60–90 s to load; this function polls every 3 s so
+    the greeting plays via the high-quality Kokoro voice once it is ready.
+    Falls back to Windows SAPI if Kokoro never comes up within the window.
+    Runs in a background executor so the greet endpoint returns immediately.
+    """
+    import io, json, time, urllib.request as _urllib
+
+    deadline = time.monotonic() + 150
+    while time.monotonic() < deadline:
+        try:
+            import soundfile as sf, sounddevice as sd, numpy as np
+            payload = json.dumps(
+                {"text": text, "voice": os.getenv("VOICE_KOKORO_VOICE", "bf_emma")}
+            ).encode()
+            req = _urllib.Request(
+                "http://127.0.0.1:8002/speak", data=payload,
+                headers={"Content-Type": "application/json"}, method="POST")
+            with _urllib.urlopen(req, timeout=20) as resp:
+                wav = resp.read()
+            data, sr = sf.read(io.BytesIO(wav))
+            sd.play(data.astype(np.float32), sr)
+            sd.wait()
+            print("[voice] greeting: played via Kokoro", flush=True)
+            return
+        except Exception as exc:
+            remaining = deadline - time.monotonic()
+            print(f"[voice] greeting: Kokoro not ready ({exc!r}), {remaining:.0f}s remaining…", flush=True)
+            if remaining > 3:
+                time.sleep(3)
+
+    # Kokoro never came up — SAPI fallback
+    print("[voice] greeting: Kokoro timed out after 150 s, using Windows SAPI", flush=True)
+    try:
+        safe = text.replace("'", "").replace('"', " ")
+        script = (
+            "Add-Type -AssemblyName System.Speech;"
+            "$s=New-Object System.Speech.Synthesis.SpeechSynthesizer;"
+            f"$s.Rate=0;$s.Speak('{safe}')"
+        )
+        flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        subprocess.run(
+            ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script],
+            timeout=30, creationflags=flags, stdin=subprocess.DEVNULL,
+        )
+    except Exception as exc:
+        print(f"[voice] greeting SAPI failed: {exc!r}", flush=True)
+
 
 _session_greeted = False   # plays once per server restart, regardless of tab refreshes
 
@@ -2315,14 +2362,19 @@ async def greet():
     """
     Play the startup greeting exactly once per server session.
     React StrictMode and tab refreshes call this multiple times — the flag prevents repeats.
+
+    Fires TTS in a background executor so the HTTP response returns immediately —
+    Kokoro cold-start takes 60–90 s and we must not hold the frontend.
     """
     global _session_greeted
     if _session_greeted:
         return {"phrase": "", "skipped": True}
     _session_greeted = True
     phrase = _pick_greeting()
-    # Await TTS completion so the caller knows it's safe to open the mic
-    await asyncio.get_event_loop().run_in_executor(None, _speak_phrase, phrase)
+    # Non-blocking: greeting waits for Kokoro in the background.
+    asyncio.ensure_future(asyncio.get_event_loop().run_in_executor(
+        None, _speak_phrase_greeting, phrase
+    ))
     return {"phrase": phrase}
 
 @app.post("/api/shutdown")

@@ -632,6 +632,7 @@ _kokoro_proc = None
 def _start_kokoro_server():
     global _kokoro_proc
     if not KOKORO_PYTHON.exists() or not KOKORO_SERVER.exists():
+        print(f"[voice] Kokoro not found — skipping (py={KOKORO_PYTHON.exists()}, srv={KOKORO_SERVER.exists()})", flush=True)
         return False
     # Already running?
     try:
@@ -641,22 +642,27 @@ def _start_kokoro_server():
         pass
 
     env = {**os.environ, "HF_HUB_DISABLE_SYMLINKS_WARNING": "1"}
+    _t0 = time.monotonic()
     _kokoro_proc = subprocess.Popen(
         [str(KOKORO_PYTHON), str(KOKORO_SERVER), str(KOKORO_PORT)],
         env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
-    # Wait up to 30 s for model to load
+    # Wait up to 30 s — cold start takes 60–90 s so models_ready will fire
+    # before Kokoro is ready; _speak_phrase_greeting handles that separately.
     for _ in range(60):
         time.sleep(0.5)
         try:
             with urllib.request.urlopen(f"http://127.0.0.1:{KOKORO_PORT}/health", timeout=1):
+                print(f"[voice] Kokoro ready in {time.monotonic()-_t0:.1f}s", flush=True)
                 return True
         except Exception:
             pass
         if _kokoro_proc.poll() is not None:
-            return False  # crashed
+            print(f"[voice] Kokoro exited early (rc={_kokoro_proc.returncode})", flush=True)
+            return False
+    print("[voice] Kokoro health-check timed out after 30 s — still loading in background", flush=True)
     return False
 
 def _stop_kokoro_server():
