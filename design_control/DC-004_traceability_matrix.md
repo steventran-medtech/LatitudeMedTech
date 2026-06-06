@@ -1,5 +1,5 @@
 # DC-004 — Requirements Traceability Matrix (RTM)
-**Document:** DC-004 · Version 1.6 · 2026-06-05  
+**Document:** DC-004 · Version 1.7 · 2026-06-06  
 **Approved by:** Steven Tran
 
 This is the single source of truth for end-to-end coverage. Every user need
@@ -75,7 +75,7 @@ column are open findings requiring immediate remediation.
 | UN-015 | | DI-015-D | Security headers | `server.py` middleware | `test_DI_015_D` | VERIFIED |
 | UN-015 | | DI-015-E | Path traversal protection | `server.py` file routes | `test_DI_015_E` | VERIFIED |
 | UN-015 | | DI-015-F | Session auth on all routes | `server.py` auth dependency | `test_DI_015_F` | PARTIAL |
-| UN-015 | | DI-015-G | authHdr() on every frontend /api/ fetch | All `.jsx`/`.js` source files | `test_DI_015_G` | OPEN |
+| UN-015 | | DI-015-G | authHdr() on every frontend /api/ fetch | All `.jsx`/`.js` source files | `test_DI_015_G` | VERIFIED |
 | UN-016 | Output labeling | DI-016-A | Disclaimer on all outputs | `orchestrator.py` DISCLAIMER | `test_DI_016_A` | VERIFIED |
 | UN-016 | | DI-016-B | Readiness label on all outputs | `orchestrator.py` LABEL | `test_DI_016_B` | VERIFIED |
 | UN-016 | | DI-016-C | Label is permitted value | `orchestrator.py` label value | `test_DI_016_C` | VERIFIED |
@@ -96,15 +96,15 @@ column are open findings requiring immediate remediation.
 
 ---
 
-## Coverage Summary (v1.6)
+## Coverage Summary (v1.7)
 
 | Metric | Count |
 |---|---|
 | Total user needs | 23 |
 | Total design inputs | 70 |
-| Design inputs with VERIFIED tests | 60 |
+| Design inputs with VERIFIED tests | 61 |
 | Design inputs with PARTIAL coverage | 9 |
-| Design inputs with OPEN gap | 1 |
+| Design inputs with OPEN gap | 0 |
 | Design inputs with WAIVED status | 0 |
 
 **PARTIAL items** require manual verification currently; automated tests are

@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { authHdr } from "./api.js";
 
 const API = "http://localhost:8000";
 const F   = { sans: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" };
@@ -37,7 +38,7 @@ export default function FileViewer({ folder, filename, onClose }) {
     if (!filename || !folder) return;
     setStatus("loading"); setEmbedUrl(""); setErrorMsg(""); setNeedsAuth(false);
 
-    fetch(`${API}/api/files/google-view/${folder}/${encodeURIComponent(filename)}`)
+    fetch(`${API}/api/files/google-view/${folder}/${encodeURIComponent(filename)}`, { headers: authHdr() })
       .then(r => r.json())
       .then(data => {
         if (data.error === "not_configured") {
@@ -56,7 +57,7 @@ export default function FileViewer({ folder, filename, onClose }) {
   const connectDrive = async () => {
     setConnecting(true);
     try {
-      const res = await fetch(`${API}/api/google/auth`, { method: "POST" });
+      const res = await fetch(`${API}/api/google/auth`, { method: "POST", headers: authHdr() });
       const data = await res.json();
       if (data.ok) {
         // Re-attempt the view now that we have a token

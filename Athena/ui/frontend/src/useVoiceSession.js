@@ -42,13 +42,13 @@ export function useVoiceSession() {
 
   // Initial load: fetch devices + auto-start voice
   useEffect(() => {
-    fetch(`${API}/api/voice/devices`).then(r => r.json())
+    fetch(`${API}/api/voice/devices`, { headers: authHdr() }).then(r => r.json())
       .then(d => setDevices(d.devices ?? [])).catch(() => {});
 
     // Poll until models_ready before greeting or starting voice — guarantees
     // Athena never opens in a loading state regardless of startup script timing.
     const pollReady = (attempt) => {
-      fetch(`${API}/api/voice/status`).then(r => r.json())
+      fetch(`${API}/api/voice/status`, { headers: authHdr() }).then(r => r.json())
         .then(d => {
           if (d.active) {
             // Voice already running — resume existing session or create new tracking ID
@@ -191,6 +191,11 @@ export function useVoiceSession() {
       }).catch(() => {});
   };
 
+  const triggerListen = () => {
+    fetch(`${API}/api/voice/listen`, { method: "POST", headers: authHdr() })
+      .catch(() => {});
+  };
+
   const stopVoice = () => {
     const start = sessionStart.current;
     const sid   = sessionIdRef.current;
@@ -224,6 +229,6 @@ export function useVoiceSession() {
     running, state, level, query, lastYou, lastAthena, speakingLines,
     streamingText, typedYou,
     log, status, devices, selDev, setSelDev, elapsed, peakRef,
-    startVoice, stopVoice,
+    startVoice, stopVoice, triggerListen,
   };
 }

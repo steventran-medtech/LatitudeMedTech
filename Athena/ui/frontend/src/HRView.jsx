@@ -210,10 +210,10 @@ export default function HRView({ runningAgents }) {
   const fallbacksRef         = useRef({});
 
   const load = () => {
-    fetch(`${API}/api/hr/health`).then(r => r.json()).then(d => setHealth(d.agents || [])).catch(() => {});
-    fetch(`${API}/api/hr/learning?days=7`).then(r => r.json()).then(d => setLearning(d.stats || [])).catch(() => {});
-    fetch(`${API}/api/hr/skills`).then(r => r.json()).then(d => setSkills(d.skills || {})).catch(() => {});
-    fetch(`${API}/api/dashboard/knowledge-growth?days=90`).then(r => r.json()).then(d => setGrowth(d.daily || [])).catch(() => {});
+    fetch(`${API}/api/hr/health`, { headers: authHdr() }).then(r => r.json()).then(d => setHealth(d.agents || [])).catch(() => {});
+    fetch(`${API}/api/hr/learning?days=7`, { headers: authHdr() }).then(r => r.json()).then(d => setLearning(d.stats || [])).catch(() => {});
+    fetch(`${API}/api/hr/skills`, { headers: authHdr() }).then(r => r.json()).then(d => setSkills(d.skills || {})).catch(() => {});
+    fetch(`${API}/api/dashboard/knowledge-growth?days=90`, { headers: authHdr() }).then(r => r.json()).then(d => setGrowth(d.daily || [])).catch(() => {});
     setLast(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
   };
 

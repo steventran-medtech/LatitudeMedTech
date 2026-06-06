@@ -541,7 +541,7 @@ async function bulkDelete(items) {
   // items: [{folder, filename}, ...]
   const res  = await fetch(`${API}/api/files/delete-bulk`, {
     method: "POST",
-    headers: {"Content-Type":"application/json"},
+    headers: {"Content-Type":"application/json", ...authHdr()},
     body: JSON.stringify({items}),
   });
   return res.json();
@@ -951,10 +951,10 @@ function BriefingView(){
   const ms = useMultiSelect();
 
   const load=()=>{
-    fetch(`${API}/api/briefings`).then(r=>r.json()).then(d=>{setBriefings(d.briefings||[]);if(d.briefings?.[0])setSelected(d.briefings[0].filename);}).catch(()=>{});
+    fetch(`${API}/api/briefings`,{headers:authHdr()}).then(r=>r.json()).then(d=>{setBriefings(d.briefings||[]);if(d.briefings?.[0])setSelected(d.briefings[0].filename);}).catch(()=>{});
   };
   useEffect(()=>{load();},[]);
-  useEffect(()=>{if(!selected)return;fetch(`${API}/api/briefings/${selected}`).then(r=>r.json()).then(d=>setContent(d.content||"")).catch(()=>{});},[selected]);
+  useEffect(()=>{if(!selected)return;fetch(`${API}/api/briefings/${selected}`,{headers:authHdr()}).then(r=>r.json()).then(d=>setContent(d.content||"")).catch(()=>{});},[selected]);
 
   const deleteFile=async(filename)=>{
     await fetch(`${API}/api/files/delete`,{method:"POST",headers:{"Content-Type":"application/json",...authHdr()},body:JSON.stringify({filename,folder:"briefings"})});
@@ -1001,9 +1001,9 @@ function ContentView({onGenerate}){
   const [viewingDoc,setViewingDoc]=useState(null);  // {folder, filename} for FileViewer
   const ms = useMultiSelect();
 
-  const load=()=>{fetch(`${API}/api/drafts`).then(r=>r.json()).then(d=>{setDrafts(d.drafts||[]);if(d.drafts?.[0]&&!selected)setSelected(d.drafts[0].filename);}).catch(()=>{});};
+  const load=()=>{fetch(`${API}/api/drafts`,{headers:authHdr()}).then(r=>r.json()).then(d=>{setDrafts(d.drafts||[]);if(d.drafts?.[0]&&!selected)setSelected(d.drafts[0].filename);}).catch(()=>{});};
   useEffect(()=>{load();},[]);
-  useEffect(()=>{if(!selected)return;fetch(`${API}/api/drafts/${selected}`).then(r=>r.json()).then(d=>setContent(d.content||"")).catch(()=>{});},[selected]);
+  useEffect(()=>{if(!selected)return;fetch(`${API}/api/drafts/${selected}`,{headers:authHdr()}).then(r=>r.json()).then(d=>setContent(d.content||"")).catch(()=>{});},[selected]);
 
   const deleteFile=async(filename)=>{
     await fetch(`${API}/api/files/delete`,{method:"POST",headers:{"Content-Type":"application/json",...authHdr()},body:JSON.stringify({filename,folder:"content/drafts"})});
@@ -1031,7 +1031,7 @@ function ContentView({onGenerate}){
         if(openInApp){
           setViewingDoc({folder:"documents",filename:data.filename});
         } else {
-          await fetch(`${API}/api/documents/open/${data.filename}`);
+          await fetch(`${API}/api/documents/open/${data.filename}`,{headers:authHdr()});
         }
       }
     }catch{setGenStatus("Error generating document");}
@@ -1076,9 +1076,9 @@ function CoachingView({onGenerate}){
   const [editing,setEditing]=useState(false);
   const ms = useMultiSelect();
 
-  const load=()=>{fetch(`${API}/api/coaching/briefs`).then(r=>r.json()).then(d=>{setBriefs(d.briefs||[]);}).catch(()=>{});};
+  const load=()=>{fetch(`${API}/api/coaching/briefs`,{headers:authHdr()}).then(r=>r.json()).then(d=>{setBriefs(d.briefs||[]);}).catch(()=>{});};
   useEffect(()=>{load();},[]);
-  useEffect(()=>{if(!selected)return;fetch(`${API}/api/coaching/briefs/${selected}`).then(r=>r.json()).then(d=>setContent(d.content||"")).catch(()=>{});},[selected]);
+  useEffect(()=>{if(!selected)return;fetch(`${API}/api/coaching/briefs/${selected}`,{headers:authHdr()}).then(r=>r.json()).then(d=>setContent(d.content||"")).catch(()=>{});},[selected]);
 
   const runBrief=()=>{
     if(!client.trim())return;
@@ -1106,7 +1106,7 @@ function CoachingView({onGenerate}){
     try{
       const res=await fetch(`${API}/api/documents/generate`,{method:"POST",headers:{"Content-Type":"application/json",...authHdr()},body:JSON.stringify({title:`Discovery Call Brief — ${client||selected}`,content,doc_type:"brief"})});
       const data=await res.json();
-      if(data.path){setStatus(`Saved: ${data.filename}`);await fetch(`${API}/api/documents/open/${data.filename}`);}
+      if(data.path){setStatus(`Saved: ${data.filename}`);await fetch(`${API}/api/documents/open/${data.filename}`,{headers:authHdr()});}
     }catch{setStatus("Error");}
   };
 
@@ -1161,10 +1161,10 @@ function DocumentsView({refreshToken=0}){
   const [docs,setDocs]=useState([]);
   const [viewing,setViewing]=useState(null);
   const ms=useMultiSelect();
-  const load=()=>{fetch(`${API}/api/documents`).then(r=>r.json()).then(d=>setDocs(d.documents||[])).catch(()=>{});};
+  const load=()=>{fetch(`${API}/api/documents`,{headers:authHdr()}).then(r=>r.json()).then(d=>setDocs(d.documents||[])).catch(()=>{});};
   useEffect(()=>{load();},[]);
   useEffect(()=>{if(refreshToken>0)load();},[refreshToken]);
-  const openDoc=(filename,folder)=>{fetch(`${API}/api/documents/open/${encodeURIComponent(filename)}?folder=${folder||"documents"}`).catch(()=>{});};
+  const openDoc=(filename,folder)=>{fetch(`${API}/api/documents/open/${encodeURIComponent(filename)}?folder=${folder||"documents"}`,{headers:authHdr()}).catch(()=>{});};
   const deleteDoc=async(filename,folder)=>{
     await fetch(`${API}/api/files/delete`,{method:"POST",headers:{"Content-Type":"application/json",...authHdr()},body:JSON.stringify({filename,folder:folder||"documents"})});
     ms.clear(); load();
@@ -2276,7 +2276,7 @@ export default function App(){
 
   // Poll review queue count every 30s so badge stays current
   useEffect(()=>{
-    const poll=()=>fetch(`${API}/api/review/pending`).then(r=>r.json())
+    const poll=()=>fetch(`${API}/api/review/pending`,{headers:authHdr()}).then(r=>r.json())
       .then(d=>setPendingReview(d.stats?.pending||0)).catch(()=>{});
     poll();
     const t=setInterval(poll,30000);
