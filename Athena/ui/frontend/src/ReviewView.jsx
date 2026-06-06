@@ -353,7 +353,7 @@ function friendlyDate(iso) {
   return d.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
 }
 
-export default function ReviewView() {
+export default function ReviewView({ reviewRefreshToken = 0 }) {
   const [items,  setItems]  = useState([]);
   const [stats,  setStats]  = useState({});
   const [notes,  setNotes]  = useState({});
@@ -379,6 +379,8 @@ export default function ReviewView() {
 
   useEffect(() => { load(); }, []);
   useEffect(() => { if (tab === "history") loadHistory(); }, [tab]);
+  // Reload queue whenever a new agent delivers review items (token increments on agent_done).
+  useEffect(() => { if (reviewRefreshToken > 0) load(); }, [reviewRefreshToken]);
 
   const runEdit = async (id, instruction) => {
     setEdits(p => ({ ...p, [id]: { status: "editing", msg: "" } }));
