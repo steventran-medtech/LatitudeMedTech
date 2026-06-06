@@ -1,29 +1,29 @@
 # Latitude MedTech — Master Skills & Knowledge Profile
-**Generated:** 2026-06-05 12:08 by `skills_profile.py`
+**Generated:** 2026-06-05 22:19 by `skills_profile.py`
 
 Firm-wide index of every agent's skill catalog and accumulated knowledge. Per-agent detail lives in `Athena/knowledge_base/skills/<agent>.md`.
 
 ## Firm Totals
 - **Agents profiled:** 11
-- **Total knowledge items accumulated:** 77
-- **Total chunks indexed:** 77
-- **Domains covered (16):** AI / ML, AI Safety, Biotech Industry, Content Strategy, Deal News, FDA QMS, Global Regulatory, M&A Deals, Management Research, MedTech Industry, MedTech QA/RA, Medical Literature 50yr, Quality Management, Six Sigma / Lean, deal_news, methodology
+- **Total knowledge items accumulated:** 397
+- **Total chunks indexed:** 397
+- **Domains covered (34):** AI / ML, AI Applications, AI Industry, AI Research History, AI Safety, AI Technology, Biotech Industry, Consulting History 50yr, Content Strategy, Conversational AI, Deal News, EU MDR Regulatory, FDA QMS, FDA Recalls, Global Regulatory, Health Policy, Health Policy History, Journalism History 50yr, M&A Deals, ML Research, Management History 50yr, Management Research, MedTech Industry, MedTech QA/RA, Media Evolution 50yr, Medical Literature 50yr, Org Behavior History, PE/Rollup History 50yr, Quality History 50yr, Quality Management, Six Sigma / Lean, Technology History 50yr, deal_news, methodology
 
 ## Accumulation by Agent
 
 | Agent | Tier | Items | Chunks | Last activity |
 |---|---|--:|--:|---|
-| Management Consulting Agent (`consulting`) | Senior Manager | 8 | 8 | 2026-06-05 10:10 |
-| M&A Intelligence Agent (`ma_intelligence`) | Senior Manager | 12 | 12 | 2026-06-05 10:16 |
-| FDA Agent (`fda`) | Manager | 1 | 1 | 2026-06-05 10:14 |
-| EU MDR Agent (`eu_mdr`) | Manager | 0 | 0 | Never |
-| ISO Coach Agent (`iso`) | Manager | 12 | 12 | 2026-06-05 11:19 |
-| Coaching Brief Agent (`coaching`) | Manager | 10 | 10 | 2026-06-05 10:13 |
-| Content Agent (`content`) | Manager | 10 | 10 | 2026-06-05 10:12 |
-| Briefing Agent (`briefing`) | Senior Associate | 14 | 14 | 2026-06-05 10:53 |
-| RAG Ingestion Agent (`rag`) | Senior Associate | 10 | 10 | 2026-06-05 10:14 |
-| HR / L&D Manager Agent (`hr`) | Business Function | 0 | 0 | Never |
-| Voice Assistant (Athena) (`voice_bridge`) | Associate | 0 | 0 | Never |
+| Management Consulting Agent (`consulting`) | Senior Manager | 31 | 31 | 2026-06-05 21:34 |
+| M&A Intelligence Agent (`ma_intelligence`) | Senior Manager | 45 | 45 | 2026-06-05 21:34 |
+| FDA Agent (`fda`) | Manager | 36 | 36 | 2026-06-05 21:32 |
+| EU MDR Agent (`eu_mdr`) | Manager | 20 | 20 | 2026-06-05 21:34 |
+| ISO Coach Agent (`iso`) | Manager | 43 | 43 | 2026-06-05 21:31 |
+| Coaching Brief Agent (`coaching`) | Manager | 31 | 31 | 2026-06-05 21:32 |
+| Content Agent (`content`) | Manager | 40 | 40 | 2026-06-05 21:30 |
+| Briefing Agent (`briefing`) | Senior Associate | 46 | 46 | 2026-06-05 21:31 |
+| RAG Ingestion Agent (`rag`) | Senior Associate | 40 | 40 | 2026-06-05 21:33 |
+| HR / L&D Manager Agent (`hr`) | Business Function | 20 | 20 | 2026-06-05 21:35 |
+| Voice Assistant (Athena) (`voice_bridge`) | Associate | 45 | 45 | 2026-06-05 21:34 |
 
 ## Skill Coverage by Agent
 
