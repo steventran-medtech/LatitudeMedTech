@@ -138,6 +138,20 @@ $session.frontend_up  = $frontendUp
 $session.models_ready = ($modelElapsed -lt $modelTimeout)
 $session.model_load_s = [math]::Round($modelElapsed, 1)
 
+# ── Signal the splash BEFORE opening Chrome ───────────────────────────────
+# Writing the flag now lets the splash finish its 95→100% countdown and
+# close cleanly. Chrome is opened only after the splash is gone so the two
+# windows never appear on screen at the same time.
+$session.launch_ok    = $true
+$session.ready_at     = (Get-Date).ToString("o")
+$session.startup_secs = [math]::Round(((Get-Date) - $sessionStart).TotalSeconds, 1)
+$session | ConvertTo-Json -Compress | Out-File $SESSION_STATE -Encoding utf8
+New-Item -Path $flagFile -ItemType File -Force | Out-Null
+
+# Splash runs at 5%/sec; from ~95% to 100% + 300ms close = ~1.3s.
+# 2.5s gives comfortable headroom on slower machines.
+Start-Sleep -Milliseconds 2500
+
 # ── Open Chrome ────────────────────────────────────────────────────────────
 $chrome = @(
     "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
@@ -179,22 +193,9 @@ while ($elapsed -lt $maxWait) {
         $chromePid = ($mine | Select-Object -First 1).ProcessId
         $chromePid | Out-File $CHROME_PID_FILE -Encoding ascii
         $session.chrome_pid = $chromePid
+        $session | ConvertTo-Json -Compress | Out-File $SESSION_STATE -Encoding utf8
         break
     }
     Start-Sleep -Milliseconds 400
     $elapsed += 0.4
 }
-
-# Give Chrome's window one more second to render its first frame,
-# then signal the splash — no more, no less.
-Start-Sleep -Seconds 1
-
-# Finalize the session state: launch reached the ready point. stop_athena.ps1
-# reads this to compute the overall session duration and emit the QA/debug record.
-$session.launch_ok      = $true
-$session.ready_at       = (Get-Date).ToString("o")
-$session.startup_secs   = [math]::Round(((Get-Date) - $sessionStart).TotalSeconds, 1)
-$session | ConvertTo-Json -Compress | Out-File $SESSION_STATE -Encoding utf8
-
-# Write flag: HTA sees this and closes within 500ms
-New-Item -Path $flagFile -ItemType File -Force | Out-Null
