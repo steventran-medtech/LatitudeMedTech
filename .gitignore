@@ -94,3 +94,7 @@ Athena/knowledge_base/learning/
 # Tavily web-search cache (ephemeral, not source-controlled)
 Athena/knowledge_base/FDA/tavily_*.json
 Athena/knowledge_base/General/tavily_*.json
+
+# Google Drive integration — credentials and upload cache (never commit)
+Athena/credentials.json
+Athena/drive_cache.json

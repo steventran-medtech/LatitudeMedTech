@@ -387,6 +387,7 @@ def main():
     log.info("=" * 44)
 
     index = load_index()
+    docs_before = len(index["documents"])
     index = ingest_static_docs(index)
     index = ingest_rss(index)
     index = ingest_tavily(index)
@@ -394,6 +395,36 @@ def main():
     save_index(index)
     print_summary(index)
     log.info("RAG ingestion complete.")
+
+    # Submit an ingestion summary to the review queue so Athena can read it back.
+    try:
+        from memory import Memory as _Mem
+        _dt       = datetime.now()
+        new_docs  = len(index["documents"]) - docs_before
+        total     = len(index["documents"])
+        cats: dict = {}
+        for _d in index["documents"].values():
+            _c = _d.get("category", "General")
+            cats[_c] = cats.get(_c, 0) + 1
+        cat_line  = ", ".join(f"{v} {k}" for k, v in sorted(cats.items()))
+        _date_h   = f"{_dt.strftime('%B')} {_dt.day}, {_dt.year}"
+        title     = (f"RAG Ingestion — {new_docs} new doc{'s' if new_docs != 1 else ''} "
+                     f"({cat_line}), {_date_h}")
+
+        summary_path = LOG_DIR / f"rag_summary_{_dt.strftime('%Y%m%d_%H%M%S')}.md"
+        summary_path.write_text(
+            f"# {title}\n\n"
+            f"**Run completed:** {_date_h} at {_dt.strftime('%I:%M %p')}\n"
+            f"**Total KB documents:** {total}\n"
+            f"**New this run:** {new_docs}\n\n"
+            "## By Category\n\n" +
+            "\n".join(f"- **{k}**: {v} document{'s' if v != 1 else ''}" for k, v in sorted(cats.items())),
+            encoding="utf-8",
+        )
+        _Mem().submit_for_review("rag_agent", "ingestion_summary", title, str(summary_path))
+        log.info(f"  Ingestion summary queued for review: {title}")
+    except Exception as _e:
+        log.warning(f"  Could not submit ingestion summary for review: {_e}")
 
 
 if __name__ == "__main__":
