@@ -173,6 +173,8 @@ Sub Window_OnLoad
   readyToClose = False
   timer_id = window.setInterval("Tick",       200)
   poll_id  = window.setInterval("PollBackend", 800)
+  ' Pin splash above Chrome as soon as the HTA window is ready.
+  window.setTimeout "MakeTopmost", 400
 
   ' Click-drag to move the borderless window.
   dragging = False
@@ -309,6 +311,30 @@ Sub PollChromeReady
     window.clearInterval poll_id   ' stop polling — Tick keeps running
     readyToClose = True            ' Tick will close once stepVal reaches 100
   End If
+End Sub
+
+Sub MakeTopmost
+  ' Call SetWindowPos(HWND_TOPMOST) on this mshta process so the splash
+  ' floats above Chrome during the final 95→100% countdown.
+  On Error Resume Next
+  Dim fso, wsh, f, ts
+  Set fso = CreateObject("Scripting.FileSystemObject")
+  Set wsh = CreateObject("WScript.Shell")
+  f = fso.GetSpecialFolder(2) & "\~ath_top.ps1"
+  Set ts = fso.CreateTextFile(f, True)
+  ts.WriteLine "Add-Type -TypeDefinition @'"
+  ts.WriteLine "using System;using System.Runtime.InteropServices;"
+  ts.WriteLine "public class AU{"
+  ts.WriteLine "  [DllImport(""user32.dll"")]"
+  ts.WriteLine "  public static extern bool SetWindowPos(IntPtr h,IntPtr i,int x,int y,int cx,int cy,uint f);"
+  ts.WriteLine "}"
+  ts.WriteLine "'@"
+  ts.WriteLine "$p=Get-Process mshta 2>$null|Sort-Object StartTime -Descending|Select-Object -First 1"
+  ts.WriteLine "if($p -and $p.MainWindowHandle -ne 0){"
+  ts.WriteLine "  [AU]::SetWindowPos($p.MainWindowHandle,[IntPtr](-1),0,0,0,0,3)"
+  ts.WriteLine "}"
+  ts.Close
+  wsh.Run "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File """ & f & """", 0, False
 End Sub
 </script>
 </body>
