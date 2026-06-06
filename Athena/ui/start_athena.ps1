@@ -21,7 +21,27 @@ foreach ($f in @($flagFile, $errFile)) { if (Test-Path $f) { Remove-Item $f -For
 if (Test-AthenaRunning) {
     $choice = Show-DuplicateWarning
     if ($choice -ne 'Yes') {
-        Show-ExistingAthena
+        $shown = Show-ExistingAthena
+        if (-not $shown) {
+            # Chrome was not running (closed or crashed) — reopen it to the existing backend.
+            $chrome = @(
+                "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+                "$env:ProgramFiles(x86)\Google\Chrome\Application\chrome.exe",
+                "$env:LocalAppData\Google\Chrome\Application\chrome.exe"
+            ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+            if ($chrome) {
+                Start-Process $chrome -ArgumentList @(
+                    "--start-maximized",
+                    "--user-data-dir=$CHROME_PROFILE",
+                    "--no-first-run",
+                    "--no-default-browser-check",
+                    "--hide-crash-restore-bubble",
+                    "http://localhost:3000"
+                )
+            } else {
+                Start-Process "http://localhost:3000"
+            }
+        }
         New-Item -Path $flagFile -ItemType File -Force | Out-Null   # release the splash
         exit 0
     }
