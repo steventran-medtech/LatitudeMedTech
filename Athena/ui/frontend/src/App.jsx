@@ -96,7 +96,7 @@ function _loadNavOrder() {
   return NAV_ITEMS.map(n => n.id);
 }
 
-function Sidebar({active,setActive,runningAgents,pendingReview,version,onAbout,taskQueue,navOrder,onReorder}){
+function Sidebar({active,setActive,runningAgents,pendingReview,version,onAbout,taskQueue,navOrder,onReorder,topOffset=0}){
   const numRunning    = runningAgents?.size || 0;
   const orderedItems  = navOrder.map(id => NAV_ITEMS.find(n => n.id === id)).filter(Boolean);
   const [dragId,     setDragId]     = useState(null);
@@ -111,7 +111,7 @@ function Sidebar({active,setActive,runningAgents,pendingReview,version,onAbout,t
     setDragId(null); setDragOverId(null);
   };
   return(
-    <div style={S.sidebar}>
+    <div style={{...S.sidebar, top:topOffset}}>
       {/* Wordmark */}
       <div style={{padding:"28px 22px 22px",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
         <div style={{fontFamily:F.sans,fontSize:10,letterSpacing:"0.22em",color:"rgba(255,255,255,0.45)",fontWeight:600,textTransform:"uppercase",marginBottom:6}}>Latitude MedTech</div>
@@ -2258,10 +2258,10 @@ export default function App(){
   return(
     <div style={S.app}>
       <Toaster toasts={toasts}/>
-      <Sidebar active={active} setActive={setActive} runningAgents={runningAgents} pendingReview={pendingReview} version={version} onAbout={()=>setAboutOpen(true)} taskQueue={taskQueue} navOrder={navOrder} onReorder={handleReorder}/>
-      <div style={S.main}>
+      <Sidebar active={active} setActive={setActive} runningAgents={runningAgents} pendingReview={pendingReview} version={version} onAbout={()=>setAboutOpen(true)} taskQueue={taskQueue} navOrder={navOrder} onReorder={handleReorder} topOffset={active!=="voice"&&widgetDocked?VOICE_BAR_H:0}/>
+      <div style={{...S.main, marginTop:active!=="voice"&&widgetDocked?VOICE_BAR_H:0}}>
         {/* Top bar */}
-        <div style={S.header}>
+        <div style={{...S.header, top:active!=="voice"&&widgetDocked?VOICE_BAR_H:0}}>
           <div>
             <div style={{fontFamily:F.sans,fontSize:14,color:C.ink,fontWeight:600,letterSpacing:"-0.01em"}}>
               {NAV.find(n=>n.id===active)?.label}
