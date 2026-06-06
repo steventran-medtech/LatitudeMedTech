@@ -158,6 +158,53 @@ class Memory:
             thread_id   TEXT
         );
         CREATE INDEX IF NOT EXISTS idx_review_status ON review_queue(status, timestamp);
+
+        -- Phase 2C: Client lifecycle
+        CREATE TABLE IF NOT EXISTS clients (
+            id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at           TEXT    NOT NULL,
+            name                 TEXT    NOT NULL,
+            org                  TEXT,
+            role                 TEXT,
+            email                TEXT,
+            phone                TEXT,
+            program_tier         TEXT,
+            regulatory_challenge TEXT,
+            timeline             TEXT,
+            budget_range         TEXT,
+            status               TEXT    DEFAULT 'prospect',
+            source_target_id     INTEGER,
+            notes                TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS engagements (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at  TEXT    NOT NULL,
+            client_id   INTEGER NOT NULL REFERENCES clients(id),
+            title       TEXT    NOT NULL,
+            description TEXT,
+            sow_path    TEXT,
+            status      TEXT    DEFAULT 'scoping',
+            start_date  TEXT,
+            end_date    TEXT,
+            value_usd   REAL,
+            notes       TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_engagements_client ON engagements(client_id);
+
+        -- Phase 2C: Expert annotation knowledge base
+        CREATE TABLE IF NOT EXISTS kb_annotations (
+            id                INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at        TEXT    NOT NULL,
+            review_item_id    INTEGER,
+            decision          TEXT    NOT NULL,
+            agent             TEXT,
+            item_type         TEXT,
+            title             TEXT,
+            notes             TEXT,
+            regulatory_domain TEXT,
+            annotation_path   TEXT
+        );
         """)
         # Migration: add thread_id to review_queue on DBs created before LangGraph
         # orchestration (Phase 1A). Links a queue item to its paused workflow thread.
@@ -654,6 +701,120 @@ class Memory:
                 )""", names * 4
         ).fetchone()
         return row["ts"] if row and row["ts"] else None
+
+    # ── Clients (Phase 2C) ────────────────────────────────────────────────────
+
+    def add_client(self, name: str, org: str = None, role: str = None,
+                   email: str = None, phone: str = None, program_tier: str = None,
+                   regulatory_challenge: str = None, timeline: str = None,
+                   budget_range: str = None, status: str = 'prospect',
+                   source_target_id: int = None, notes: str = None) -> int:
+        cur = self.conn.execute(
+            """INSERT INTO clients
+               (created_at,name,org,role,email,phone,program_tier,
+                regulatory_challenge,timeline,budget_range,status,source_target_id,notes)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (datetime.now().isoformat(), name, org, role, email, phone, program_tier,
+             regulatory_challenge, timeline, budget_range, status, source_target_id, notes)
+        )
+        self.conn.commit()
+        return cur.lastrowid
+
+    def get_clients(self, status: str = None) -> list:
+        q = "SELECT * FROM clients"
+        p = []
+        if status:
+            q += " WHERE status=?"; p.append(status)
+        q += " ORDER BY created_at DESC"
+        return [dict(r) for r in self.conn.execute(q, p).fetchall()]
+
+    def get_client(self, client_id: int) -> dict:
+        row = self.conn.execute("SELECT * FROM clients WHERE id=?", (client_id,)).fetchone()
+        return dict(row) if row else None
+
+    def update_client(self, client_id: int, **fields) -> bool:
+        allowed = {'name', 'org', 'role', 'email', 'phone', 'program_tier',
+                   'regulatory_challenge', 'timeline', 'budget_range', 'status', 'notes'}
+        sets, vals = [], []
+        for k, v in fields.items():
+            if k in allowed:
+                sets.append(f"{k}=?"); vals.append(v)
+        if not sets:
+            return False
+        vals.append(client_id)
+        self.conn.execute(f"UPDATE clients SET {','.join(sets)} WHERE id=?", vals)
+        self.conn.commit()
+        return True
+
+    def delete_client(self, client_id: int):
+        self.conn.execute("DELETE FROM engagements WHERE client_id=?", (client_id,))
+        self.conn.execute("DELETE FROM clients WHERE id=?", (client_id,))
+        self.conn.commit()
+
+    # ── Engagements (Phase 2C) ────────────────────────────────────────────────
+
+    def add_engagement(self, client_id: int, title: str, description: str = None,
+                       sow_path: str = None, status: str = 'scoping',
+                       start_date: str = None, end_date: str = None,
+                       value_usd: float = None, notes: str = None) -> int:
+        cur = self.conn.execute(
+            """INSERT INTO engagements
+               (created_at,client_id,title,description,sow_path,status,
+                start_date,end_date,value_usd,notes)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            (datetime.now().isoformat(), client_id, title, description, sow_path,
+             status, start_date, end_date, value_usd, notes)
+        )
+        self.conn.commit()
+        return cur.lastrowid
+
+    def get_engagements(self, client_id: int) -> list:
+        rows = self.conn.execute(
+            "SELECT * FROM engagements WHERE client_id=? ORDER BY created_at DESC",
+            (client_id,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def update_engagement(self, engagement_id: int, **fields) -> bool:
+        allowed = {'title', 'description', 'sow_path', 'status', 'start_date',
+                   'end_date', 'value_usd', 'notes'}
+        sets, vals = [], []
+        for k, v in fields.items():
+            if k in allowed:
+                sets.append(f"{k}=?"); vals.append(v)
+        if not sets:
+            return False
+        vals.append(engagement_id)
+        self.conn.execute(f"UPDATE engagements SET {','.join(sets)} WHERE id=?", vals)
+        self.conn.commit()
+        return True
+
+    # ── Expert annotations (Phase 2C) ─────────────────────────────────────────
+
+    def save_annotation(self, review_item_id: int, decision: str, agent: str,
+                        item_type: str, title: str, notes: str,
+                        annotation_path: str = None,
+                        regulatory_domain: str = None) -> int:
+        """Persist Steven's review decision as a KB annotation for future agent grounding."""
+        cur = self.conn.execute(
+            """INSERT INTO kb_annotations
+               (created_at,review_item_id,decision,agent,item_type,title,
+                notes,regulatory_domain,annotation_path)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (datetime.now().isoformat(), review_item_id, decision, agent,
+             item_type, title, notes, regulatory_domain, annotation_path)
+        )
+        self.conn.commit()
+        return cur.lastrowid
+
+    def get_annotations(self, decision: str = None, limit: int = 50) -> list:
+        q = "SELECT * FROM kb_annotations"
+        p = []
+        if decision:
+            q += " WHERE decision=?"; p.append(decision)
+        q += " ORDER BY created_at DESC LIMIT ?"
+        p.append(limit)
+        return [dict(r) for r in self.conn.execute(q, p).fetchall()]
 
     # ── Context summary (used by voice assistant) ─────────────────────────────
 

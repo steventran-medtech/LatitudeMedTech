@@ -2115,7 +2115,9 @@ async def _resume_workflow(item_id: int, decision: str, notes: str):
 async def review_approve(item_id: int, request: Request):
     body  = await request.json()
     notes = body.get("notes", "")
-    if mem: mem.approve_review(item_id, notes)
+    if mem:
+        mem.approve_review(item_id, notes)
+        _save_review_annotation(item_id, "approved", notes)
     await _resume_workflow(item_id, "approved", notes)
     return {"status": "approved", "id": item_id}
 
@@ -2123,9 +2125,79 @@ async def review_approve(item_id: int, request: Request):
 async def review_reject(item_id: int, request: Request):
     body  = await request.json()
     notes = body.get("notes", "")
-    if mem: mem.reject_review(item_id, notes)
+    if mem:
+        mem.reject_review(item_id, notes)
+        _save_review_annotation(item_id, "rejected", notes)
     await _resume_workflow(item_id, "rejected", notes)
     return {"status": "rejected", "id": item_id}
+
+
+def _save_review_annotation(item_id: int, decision: str, notes: str):
+    """Persist Steven's review decision as a KB annotation for agent grounding."""
+    if not mem or not notes.strip():
+        return
+    try:
+        item = mem.get_review(item_id)
+        if not item:
+            return
+        # Infer regulatory domain from agent/item_type
+        domain_map = {
+            "regulatory_strategy_agent": "Regulatory",
+            "sow_agent":                 "Consulting",
+            "coaching_brief":            "Coaching",
+            "briefing_agent":            "Briefing",
+            "deck_agent":                "Consulting",
+            "rag_agent":                 "Regulatory",
+        }
+        domain = domain_map.get(item.get("agent", ""), "General")
+
+        # Write annotation to KB Annotations dir so it's indexed on next KB load
+        ann_dir = ATHENA / "knowledge_base" / "Annotations"
+        ann_dir.mkdir(parents=True, exist_ok=True)
+        import hashlib as _hl
+        ann_id   = _hl.md5(f"{item_id}{decision}".encode()).hexdigest()[:10]
+        ann_file = ann_dir / f"annotation_{ann_id}.json"
+        ann_data = {
+            "doc_id":    f"annotation_{ann_id}",
+            "doc_name":  f"Steven review: {item.get('title', 'Unknown')}",
+            "category":  "Annotations",
+            "source":    "steven_review",
+            "ingested_at": datetime.now().isoformat(),
+            "chunk_count": 1,
+            "chunks": [{
+                "id":        f"annotation_{ann_id}_chunk_0",
+                "doc_id":    f"annotation_{ann_id}",
+                "doc_name":  f"Steven review: {item.get('title', '')}",
+                "category":  "Annotations",
+                "chunk_num": 0,
+                "text": (
+                    f"Steven Tran review decision: {decision.upper()}\n"
+                    f"Item: {item.get('title', '')}\n"
+                    f"Agent: {item.get('agent', '')}\n"
+                    f"Type: {item.get('item_type', '')}\n"
+                    f"Review notes: {notes}\n"
+                    f"Domain: {domain}"
+                ),
+                "word_count": len(notes.split()) + 20,
+            }],
+        }
+        ann_file.write_text(
+            __import__('json').dumps(ann_data, indent=2, ensure_ascii=False),
+            encoding="utf-8"
+        )
+        mem.save_annotation(
+            review_item_id=item_id,
+            decision=decision,
+            agent=item.get("agent", ""),
+            item_type=item.get("item_type", ""),
+            title=item.get("title", ""),
+            notes=notes,
+            annotation_path=str(ann_file),
+            regulatory_domain=domain,
+        )
+    except Exception as e:
+        import logging as _log
+        _log.getLogger("server").warning(f"Annotation save failed for review {item_id}: {e}")
 
 @app.get("/api/review/history")
 def review_history():
@@ -2741,6 +2813,161 @@ def security_status():
         ],
         "standard": "SOC II Type II relevant controls — CC6.1, CC6.6, CC6.7, CC7.2, A1.2",
     }
+
+
+# ── Phase 2C: Client Lifecycle API ───────────────────────────────────────────
+
+class ClientCreateRequest(BaseModel):
+    name:                 str
+    org:                  str  = ""
+    role:                 str  = ""
+    email:                str  = ""
+    phone:                str  = ""
+    program_tier:         str  = ""
+    regulatory_challenge: str  = ""
+    timeline:             str  = ""
+    budget_range:         str  = ""
+    status:               str  = "prospect"
+    source_target_id:     int  = None
+    notes:                str  = ""
+
+class ClientUpdateRequest(BaseModel):
+    org:                  str  = None
+    role:                 str  = None
+    email:                str  = None
+    phone:                str  = None
+    program_tier:         str  = None
+    regulatory_challenge: str  = None
+    timeline:             str  = None
+    budget_range:         str  = None
+    status:               str  = None
+    notes:                str  = None
+
+class EngagementCreateRequest(BaseModel):
+    title:       str
+    description: str  = ""
+    status:      str  = "scoping"
+    start_date:  str  = None
+    end_date:    str  = None
+    value_usd:   float= None
+    notes:       str  = ""
+
+class EngagementUpdateRequest(BaseModel):
+    title:       str   = None
+    description: str   = None
+    sow_path:    str   = None
+    status:      str   = None
+    start_date:  str   = None
+    end_date:    str   = None
+    value_usd:   float = None
+    notes:       str   = None
+
+class SOWTriggerRequest(BaseModel):
+    client_id:    int
+    engagement_id:int = None
+
+class RegulatoryAssessmentRequest(BaseModel):
+    device_type:    str
+    classification: str
+    markets:        list = ["US"]
+    qms_state:      str
+    context:        str  = ""
+    client_id:      int  = None
+
+@app.get("/api/clients")
+def get_clients(status: str = None):
+    if not mem: return {"clients": []}
+    return {"clients": mem.get_clients(status=status or None)}
+
+@app.post("/api/clients")
+def create_client(req: ClientCreateRequest):
+    if not mem: return JSONResponse(status_code=503, content={"error": "DB unavailable"})
+    client_id = mem.add_client(
+        name=req.name, org=req.org or None, role=req.role or None,
+        email=req.email or None, phone=req.phone or None,
+        program_tier=req.program_tier or None,
+        regulatory_challenge=req.regulatory_challenge or None,
+        timeline=req.timeline or None, budget_range=req.budget_range or None,
+        status=req.status, source_target_id=req.source_target_id,
+        notes=req.notes or None,
+    )
+    return {"status": "created", "client_id": client_id}
+
+@app.get("/api/clients/{client_id}")
+def get_client(client_id: int):
+    if not mem: return JSONResponse(status_code=503, content={"error": "DB unavailable"})
+    client = mem.get_client(client_id)
+    if not client: return JSONResponse(status_code=404, content={"error": "Not found"})
+    return client
+
+@app.put("/api/clients/{client_id}")
+async def update_client(client_id: int, req: ClientUpdateRequest):
+    if not mem: return JSONResponse(status_code=503, content={"error": "DB unavailable"})
+    fields = {k: v for k, v in req.model_dump().items() if v is not None}
+    mem.update_client(client_id, **fields)
+    return {"status": "updated", "client_id": client_id}
+
+@app.delete("/api/clients/{client_id}")
+def delete_client(client_id: int):
+    if not mem: return JSONResponse(status_code=503, content={"error": "DB unavailable"})
+    mem.delete_client(client_id)
+    return {"status": "deleted", "client_id": client_id}
+
+@app.get("/api/clients/{client_id}/engagements")
+def get_engagements(client_id: int):
+    if not mem: return {"engagements": []}
+    return {"engagements": mem.get_engagements(client_id)}
+
+@app.post("/api/clients/{client_id}/engagements")
+def create_engagement(client_id: int, req: EngagementCreateRequest):
+    if not mem: return JSONResponse(status_code=503, content={"error": "DB unavailable"})
+    eng_id = mem.add_engagement(
+        client_id=client_id, title=req.title,
+        description=req.description or None, status=req.status,
+        start_date=req.start_date, end_date=req.end_date,
+        value_usd=req.value_usd, notes=req.notes or None,
+    )
+    return {"status": "created", "engagement_id": eng_id}
+
+@app.put("/api/engagements/{engagement_id}")
+async def update_engagement(engagement_id: int, req: EngagementUpdateRequest):
+    if not mem: return JSONResponse(status_code=503, content={"error": "DB unavailable"})
+    fields = {k: v for k, v in req.model_dump().items() if v is not None}
+    mem.update_engagement(engagement_id, **fields)
+    return {"status": "updated", "engagement_id": engagement_id}
+
+@app.post("/api/agents/sow")
+async def trigger_sow(req: SOWTriggerRequest, background_tasks: BackgroundTasks):
+    args = ["--client-id", str(req.client_id)]
+    if req.engagement_id:
+        args += ["--engagement-id", str(req.engagement_id)]
+    background_tasks.add_task(run_agent, "sow_agent", "sow_agent.py", args)
+    return {"status": "started", "agent": "sow_agent", "client_id": req.client_id}
+
+@app.post("/api/agents/regulatory-assessment")
+async def trigger_regulatory_assessment(req: RegulatoryAssessmentRequest,
+                                         background_tasks: BackgroundTasks):
+    args = [
+        "--device-type",    _safe_arg(req.device_type),
+        "--classification", _safe_arg(req.classification),
+        "--markets",        *[_safe_arg(m) for m in req.markets],
+        "--qms-state",      _safe_arg(req.qms_state),
+    ]
+    if req.context:
+        args += ["--context", _safe_arg(req.context)]
+    if req.client_id:
+        args += ["--client-id", str(req.client_id)]
+    background_tasks.add_task(
+        run_agent, "regulatory_strategy_agent", "regulatory_strategy_agent.py", args,
+        req.device_type
+    )
+    return {"status": "started", "agent": "regulatory_strategy_agent",
+            "device_type": req.device_type}
+
+@app.get("/api/annotations")
+def get_annotations(decision: str = None, limit: int = 50):
+    if not mem: return {"annotations": []}
+    return {"annotations": mem.get_annotations(decision=decision, limit=limit)}
 
 
 if __name__ == "__main__":
