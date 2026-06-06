@@ -113,9 +113,9 @@
   }
   .bar-wrap {
     position:absolute;
-    bottom:0; left:0; right:0;
-    width:100%; height:4px;
-    background:rgba(255,255,255,0.08);
+    bottom:0; left:0;
+    width:100%; height:5px;
+    background:#1a3a58;
     overflow:hidden;
     z-index:3;
   }
@@ -224,6 +224,12 @@ Sub Window_OnLoad
   img.style.left   = Int((pw - newW) * 0.28) & "px"
   img.style.top    = Int((ph - newH) / 2) & "px"
   img.style.display = "block"
+
+  ' ── Force bar-wrap to full pixel width (IE quirks % can collapse) ─────────
+  Err.Clear
+  Dim barWrap
+  Set barWrap = document.getElementById("bar").parentNode
+  barWrap.style.width = pw & "px"
 End Sub
 
 Sub CancelEvent

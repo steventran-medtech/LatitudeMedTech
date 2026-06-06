@@ -100,4 +100,6 @@ Athena/knowledge_base/General/tavily_*.json
 
 # Google Drive integration — credentials and upload cache (never commit)
 Athena/credentials.json
+Athena/client_secrets.json
+Athena/drive_token.json
 Athena/drive_cache.json

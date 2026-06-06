@@ -1094,7 +1094,16 @@
       "ingested_at": "2026-06-05T18:12:25.154458",
       "source": "tavily:FDA recall Class I medical device",
       "hash": "e09bf90c27cdfdf0"
+    },
+    "tavily_eb7539ba684001f7": {
+      "name": "DHF vs. DMR vs. DHR: Differences Explained - Greenlight Guru",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/design-history-file-dhf-device-master-record-dmr-device-history-record-dhr",
+      "chunks": 6,
+      "ingested_at": "2026-06-05T22:19:06.145945",
+      "source": "tavily:medical device design controls DHF regulatory guidance",
+      "hash": "65fecd96e6334f1e"
     }
   },
-  "last_run": "2026-06-05T18:12:38.939357"
+  "last_run": "2026-06-05T22:19:22.950770"
 }

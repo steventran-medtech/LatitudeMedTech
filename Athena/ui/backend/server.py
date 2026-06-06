@@ -1952,9 +1952,10 @@ def serve_file(folder: str, filename: str):
 # Re-opening an unchanged file costs zero — cached Drive file ID returned instantly.
 
 _DRIVE_CACHE_PATH   = ATHENA / "drive_cache.json"
-_GDRIVE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS_PATH", str(ATHENA / "credentials.json"))
-_GDRIVE_FOLDER_ID   = os.getenv("GOOGLE_DRIVE_FOLDER_ID", "")
-_GDRIVE_SHARE_EMAIL = os.getenv("GOOGLE_SHARE_EMAIL", "steven.tran@latitudemedtech.com")
+_GDRIVE_SECRETS     = str(ATHENA / "client_secrets.json")
+_GDRIVE_TOKEN       = str(ATHENA / "drive_token.json")
+_GDRIVE_SCOPES      = ["https://www.googleapis.com/auth/drive"]
+_GDRIVE_FOLDER_ID   = os.getenv("GOOGLE_DRIVE_FOLDER_ID", "")  # optional; uploads go to Drive root if blank
 
 # Local MIME → (upload MIME, target Google MIME)
 _TO_GOOGLE_MIME = {
@@ -1988,21 +1989,73 @@ def _drive_cache_save(cache: dict):
 
 
 def _build_drive_service():
-    """Return an authenticated Google Drive v3 service, or None if not configured."""
-    creds_path = Path(_GDRIVE_CREDENTIALS)
-    if not creds_path.exists():
+    """Return an authenticated Google Drive v3 service (OAuth 2.0), or None if not ready."""
+    token_path   = Path(_GDRIVE_TOKEN)
+    secrets_path = Path(_GDRIVE_SECRETS)
+    if not secrets_path.exists():
         return None
     try:
-        from google.oauth2 import service_account
+        from google.oauth2.credentials import Credentials
+        from google.auth.transport.requests import Request
         from googleapiclient.discovery import build as _gbuild
-        creds = service_account.Credentials.from_service_account_file(
-            str(creds_path),
-            scopes=["https://www.googleapis.com/auth/drive"],
-        )
+        creds = None
+        if token_path.exists():
+            creds = Credentials.from_authorized_user_file(str(token_path), _GDRIVE_SCOPES)
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+                token_path.write_text(creds.to_json())
+            else:
+                return None  # needs browser auth — call POST /api/google/auth
         return _gbuild("drive", "v3", credentials=creds, cache_discovery=False)
     except Exception as exc:
         print(f"[drive] Could not build service: {exc}")
         return None
+
+
+@app.post("/api/google/auth")
+def google_auth_connect():
+    """
+    Open the browser OAuth 2.0 consent flow and save the resulting token to
+    drive_token.json.  Call this once from the frontend 'Connect Google Drive'
+    button.  Subsequent calls refresh the token automatically via _build_drive_service().
+    """
+    secrets_path = Path(_GDRIVE_SECRETS)
+    if not secrets_path.exists():
+        raise HTTPException(503, "client_secrets.json not found in Athena root folder")
+    try:
+        from google_auth_oauthlib.flow import InstalledAppFlow
+        flow  = InstalledAppFlow.from_client_secrets_file(str(secrets_path), _GDRIVE_SCOPES)
+        creds = flow.run_local_server(port=0, open_browser=True)
+        Path(_GDRIVE_TOKEN).write_text(creds.to_json())
+        return {"ok": True, "message": "Google Drive connected successfully."}
+    except Exception as exc:
+        raise HTTPException(500, f"OAuth flow failed: {exc}")
+
+
+@app.get("/api/google/auth-status")
+def google_auth_status():
+    """Check whether Drive credentials exist and are valid (or auto-refreshable)."""
+    secrets_path = Path(_GDRIVE_SECRETS)
+    token_path   = Path(_GDRIVE_TOKEN)
+    if not secrets_path.exists():
+        return {"configured": False, "reason": "client_secrets.json missing"}
+    if not token_path.exists():
+        return {"configured": False, "reason": "not_authorized",
+                "message": "Authorization required — click 'Connect Google Drive'."}
+    try:
+        from google.oauth2.credentials import Credentials
+        from google.auth.transport.requests import Request
+        creds = Credentials.from_authorized_user_file(str(token_path), _GDRIVE_SCOPES)
+        if creds.valid:
+            return {"configured": True, "reason": "Token valid"}
+        if creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            token_path.write_text(creds.to_json())
+            return {"configured": True, "reason": "Token refreshed"}
+        return {"configured": False, "reason": "Token expired — re-authorization required"}
+    except Exception as exc:
+        return {"configured": False, "reason": str(exc)}
 
 
 @app.get("/api/files/google-view/{folder}/{filename}")
@@ -2025,16 +2078,17 @@ def google_view(folder: str, filename: str):
         raise HTTPException(400, f"Unsupported type for Google viewer: {suffix}")
 
     # ── credentials check ────────────────────────────────────────────────────
-    if not Path(_GDRIVE_CREDENTIALS).exists():
+    if not Path(_GDRIVE_SECRETS).exists():
         return JSONResponse(status_code=503, content={
             "error": "not_configured",
-            "message": "credentials.json not found. Drop it in the Athena root folder "
-                       "and set GOOGLE_DRIVE_FOLDER_ID in voice/.env.",
+            "message": "client_secrets.json not found in the Athena root folder.",
         })
-    if not _GDRIVE_FOLDER_ID:
+    _svc = _build_drive_service()
+    if _svc is None:
         return JSONResponse(status_code=503, content={
             "error": "not_configured",
-            "message": "GOOGLE_DRIVE_FOLDER_ID not set in voice/.env.",
+            "needs_auth": True,
+            "message": "Google Drive not authorized. Click 'Connect Google Drive' to complete setup.",
         })
 
     # ── cache lookup (skip upload if file unchanged) ─────────────────────────
@@ -2049,12 +2103,12 @@ def google_view(folder: str, filename: str):
         return {"url": embed_url, "file_id": entry["file_id"], "cached": True}
 
     # ── upload to Drive ───────────────────────────────────────────────────────
-    service = _build_drive_service()
-    if service is None:
-        raise HTTPException(503, "Could not authenticate with Google Drive")
+    service = _svc
 
     upload_mime, google_mime = _TO_GOOGLE_MIME[suffix]
-    file_metadata = {"name": filename, "parents": [_GDRIVE_FOLDER_ID]}
+    file_metadata = {"name": filename}
+    if _GDRIVE_FOLDER_ID:
+        file_metadata["parents"] = [_GDRIVE_FOLDER_ID]
     if google_mime:
         file_metadata["mimeType"] = google_mime  # convert to native Docs/Slides
 
@@ -2073,18 +2127,6 @@ def google_view(folder: str, filename: str):
     ).execute()
     file_id     = uploaded["id"]
     actual_mime = uploaded.get("mimeType") or (google_mime or upload_mime)
-
-    # Share with the user so the iframe loads while signed into their account
-    if _GDRIVE_SHARE_EMAIL:
-        try:
-            service.permissions().create(
-                fileId=file_id,
-                body={"type": "user", "role": "reader",
-                      "emailAddress": _GDRIVE_SHARE_EMAIL},
-                sendNotificationEmail=False,
-            ).execute()
-        except Exception as exc:
-            print(f"[drive] Share warning: {exc}")
 
     cache[cache_key] = {
         "file_id": file_id, "mtime": file_mtime, "google_mime": actual_mime,
@@ -2330,6 +2372,79 @@ def review_serve(item_id: int):
     }.get(suffix, "application/octet-stream")
     return FResponse(content=f.read_bytes(), media_type=mime,
                      headers={"Content-Disposition": f'inline; filename="{f.name}"'})
+
+
+@app.get("/api/review/{item_id}/google-view")
+def review_google_view(item_id: int):
+    """
+    Upload a review-queue file to Google Drive (once, mtime-cached) and return an
+    embed URL for the Google Docs / Slides / Drive viewer.  Falls back gracefully if
+    Drive is not yet authorized.
+    """
+    f = _resolve_review_file(item_id)
+    if not f:
+        return JSONResponse(status_code=404, content={"error": "File not found"})
+
+    suffix = f.suffix.lower()
+    if suffix not in _TO_GOOGLE_MIME:
+        return JSONResponse(status_code=400, content={
+            "error": "unsupported",
+            "message": f"No Google viewer for {suffix} files.",
+        })
+
+    # ── credentials check ────────────────────────────────────────────────────
+    if not Path(_GDRIVE_SECRETS).exists():
+        return JSONResponse(status_code=503, content={
+            "error": "not_configured",
+            "message": "client_secrets.json not found in the Athena root folder.",
+        })
+    svc = _build_drive_service()
+    if svc is None:
+        return JSONResponse(status_code=503, content={
+            "error": "not_configured",
+            "needs_auth": True,
+            "message": "Google Drive not authorized. Click 'Connect Google Drive' to complete setup.",
+        })
+
+    # ── cache lookup ─────────────────────────────────────────────────────────
+    cache_key  = f"__review__/{item_id}/{f.name}"
+    file_mtime = str(f.stat().st_mtime)
+    cache      = _drive_cache_load()
+    entry      = cache.get(cache_key, {})
+
+    if entry.get("mtime") == file_mtime and entry.get("file_id"):
+        google_mime = entry.get("google_mime")
+        embed_url   = _EMBED_URL.get(google_mime, _EMBED_URL[None]).format(id=entry["file_id"])
+        return {"url": embed_url, "file_id": entry["file_id"], "cached": True}
+
+    # ── upload ───────────────────────────────────────────────────────────────
+    upload_mime, google_mime = _TO_GOOGLE_MIME[suffix]
+    file_metadata = {"name": f.name}
+    if _GDRIVE_FOLDER_ID:
+        file_metadata["parents"] = [_GDRIVE_FOLDER_ID]
+    if google_mime:
+        file_metadata["mimeType"] = google_mime
+
+    from googleapiclient.http import MediaFileUpload
+    media = MediaFileUpload(str(f), mimetype=upload_mime, resumable=False)
+
+    if entry.get("file_id"):
+        try:
+            svc.files().delete(fileId=entry["file_id"]).execute()
+        except Exception:
+            pass
+
+    uploaded    = svc.files().create(
+        body=file_metadata, media_body=media, fields="id,mimeType"
+    ).execute()
+    file_id     = uploaded["id"]
+    actual_mime = uploaded.get("mimeType") or (google_mime or upload_mime)
+
+    cache[cache_key] = {"file_id": file_id, "mtime": file_mtime, "google_mime": actual_mime}
+    _drive_cache_save(cache)
+
+    embed_url = _EMBED_URL.get(actual_mime, _EMBED_URL[None]).format(id=file_id)
+    return {"url": embed_url, "file_id": file_id, "cached": False}
 
 
 def _split_frontmatter(text: str):
