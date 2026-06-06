@@ -54,10 +54,13 @@ Thumbs.db
 
 # Runtime database (regenerable, not versioned)
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
 *.sqlite-shm
 *.sqlite-wal
+Athena/memory/
 # Runtime flag files
 Athena/ui/.athena_ready
 Athena/ui/.athena_error
