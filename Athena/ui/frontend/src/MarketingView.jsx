@@ -367,7 +367,7 @@ export default function MarketingView({ runningAgents }) {
         <div>
           <h2 style={{ fontFamily: F.sans, fontSize: 17, fontWeight: 700,
             color: C.ink, margin: "0 0 4px", letterSpacing: "-0.01em" }}>
-            Marketing & Sales
+            Marketing
           </h2>
           <div style={{ fontFamily: F.sans, fontSize: 11, color: C.fog }}>
             Guerilla pipeline · SoCal MedTech corridor · {phaseMeta}

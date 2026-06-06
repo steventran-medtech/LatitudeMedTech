@@ -90,11 +90,12 @@ export function useVoiceSession() {
         if (v > peakRef.current) peakRef.current = v;
         return;
       }
-      if (type === "thinking")  { setQuery(msg.query ?? ""); setSpeakingLines([]); setStreamingText(""); }
+      if (type === "thinking")  { setQuery(msg.query ?? ""); setSpeakingLines([]); setStreamingText(""); setLastAthena(""); }
       if (type === "transcript") {
         // Animate transcript character-by-character
         const full = msg.text ?? "";
         setLastYou(full);
+        setLastAthena("");
         setQuery("");
         setSpeakingLines([]);
         queryCount.current += 1;

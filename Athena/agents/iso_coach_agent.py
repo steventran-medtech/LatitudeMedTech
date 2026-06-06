@@ -21,6 +21,7 @@ Output: ~/Athena/coaching/iso13485/
 
 import os
 import sys
+import re
 import json
 import argparse
 import logging
@@ -148,6 +149,8 @@ Writing rules:
 IMPORTANT: This is educational content only. Not regulatory advice. Readers should refer to the actual ISO 14971:2019 standard."""
 
 
+_CASE_TITLE_RE = re.compile(r'^CASE_TITLE:\s*(.+)$', re.MULTILINE)
+
 def generate_lesson(clause_num: str, clause_name: str) -> dict:
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
@@ -164,86 +167,101 @@ def generate_lesson(clause_num: str, clause_name: str) -> dict:
         kb_ctx = _kb.format_context(chunks, max_chars=1500)
     kb_block = f"\n\nKNOWLEDGE BASE CONTEXT:\n{kb_ctx}\n" if kb_ctx else ""
 
+    title_instruction = f"""On the VERY FIRST LINE output a compelling case-study title in this exact format (no quote marks):
+CASE_TITLE: [A specific, story-driven headline that captures what the case teaches — e.g. "The Supplier Audit Gap That Triggered a Class II Recall" or "When Risk Estimation Missed the Pediatric Use Case"]
+
+The title must:
+- Be a specific, gripping headline — not a clause description
+- Tell the reader what went wrong or what was learned
+- Reference a real device failure, enforcement action, or high-stakes decision where possible
+- Never say "ISO 13485" or "ISO 14971" in the title — the clause reference is shown separately
+
+Then write the lesson body starting with the first section heading below."""
+
     if is_14971:
-        prompt = f"""Generate a complete coaching lesson for ISO 14971:2019 Clause {display_clause}: {clause_name}.
+        prompt = f"""Generate a case-study-driven coaching lesson for ISO 14971:2019 Clause {display_clause}: {clause_name}.
 {kb_block}
 
-IMPORTANT: Do NOT include a title heading. The title is added automatically.
-Start directly with the first section heading below.
+{title_instruction}
 
-## What This Clause Is About
-(2-3 sentences. What risk management problem does this clause solve? Why does it exist?)
+## The Incident
+(Open with a specific real-world case: an FDA recall, MAUDE adverse event, or enforcement action where inadequate application of this clause contributed to patient harm. Name the device category, company size/type, what happened, and the consequence. 150–200 words. If no exact match exists, use the closest analogous case and note the connection. This is the HOOK — make it vivid.)
 
-## What It Requires (The Essentials)
-(The 3-5 most important requirements in plain language. What must you actually do to comply?)
+## What {std_label} §{display_clause} Actually Requires
+(Plain English. 3–5 requirements. Not a copy of the clause — what an early-career engineer must actually DO to comply. Under 200 words.)
 
-## Case Study 1 — Real World
-(Draw from a real FDA recall, warning letter, or MAUDE adverse event where inadequate application of this clause contributed to patient harm or regulatory action. Name the device category and specific failure. Structure: What happened → What clause element was deficient → What compliant practice looks like. If no precisely matching case exists, use the closest analogous enforcement action and note the connection.)
+## What Went Wrong — Clause Analysis
+(Map the incident back to this clause. What specific element was deficient? What did the evidence show? Be precise about the gap between what was done and what compliance looks like.)
 
-## Case Study 2 — Hypothetical
-(Create a realistic fictional scenario. Specify company type and device — e.g. "ClearPath Diagnostics, a 15-person startup making a portable blood glucose monitor." Walk through: the hazard or risk challenge for this clause, the analysis steps, the control chosen, and one mistake the team might make. Instructive, not a success story.)
+## A Second Scenario
+(Fictional but specific: name the company, device, and team. "NovaSkin Medical, a 12-person startup making a wound-monitoring patch." Walk through a risk challenge for this clause — the wrong path the team takes, the moment they realize it, and the corrected approach. 200 words.)
 
-## Common Mistakes and Audit Findings
-(3-4 concrete mistakes or FDA/notified body observations for this clause. No vague generalities.)
+## What Auditors Look For
+(3–4 concrete findings from FDA 483s, notified body audits, or MAUDE. Specific, not generic.)
 
-## Key Terms to Know
-(5-8 terms with plain-English definitions and a device example for each.)
+## Key Terms
+(5–7 terms. Plain-English definition + one device example each.)
 
 ## Check Your Understanding
-(5 questions with answers. Include 2 scenario-based questions tied to the case studies above.)
+(4 questions. At least 2 tied to the case studies above. Include answers.)
 
-## How This Connects to Your Career
-(1 paragraph. How does mastering this clause make you a better risk engineer? Be direct.)
+## Career Impact
+(1 paragraph. How does owning this clause make you more effective? Be direct.)
 
-Total length: 1000-1400 words."""
+Total length: 1000–1400 words. Case studies must dominate — they are the curriculum, not appendices."""
 
     else:
-        prompt = f"""Generate a complete coaching lesson for ISO 13485:2016 Clause {clause_num}: {clause_name}.
+        prompt = f"""Generate a case-study-driven coaching lesson for ISO 13485:2016 Clause {clause_num}: {clause_name}.
 {kb_block}
 
-IMPORTANT: Do NOT include a title heading. The title is added automatically.
-Start directly with the first section heading below.
+{title_instruction}
 
-## What This Clause Is About
-(2-3 sentences. Plain English. What QMS problem does this clause solve?)
+## The Incident
+(Open with a specific real-world case: an FDA 483 observation, warning letter, or recall where non-compliance with this clause was cited. Name the device category, company size/type, what the inspector found, and what the consequence was. 150–200 words. If no exact match exists, use the closest analogous FDA enforcement action and note the connection. This is the HOOK — make it vivid and specific.)
 
-## What It Requires (The Essentials)
-(The 3-5 most important requirements. Not exhaustive — what an early-career professional must understand.)
+## What {std_label} §{clause_num} Actually Requires
+(Plain English. 3–5 requirements. Not a copy of the clause — what an early-career professional must actually DO to comply. Under 200 words.)
 
-## Case Study 1 — Real World
-(Draw from a real FDA 483 observation, warning letter, or recall where non-compliance with this clause was cited. Name the device category and specific deficiency. Structure: What the company did wrong → What the inspector cited → What compliant practice looks like. If no precisely matching case exists, use the closest analogous enforcement action and note the connection.)
+## What Went Wrong — Clause Analysis
+(Map the incident back to this clause. What specific element was deficient? What did the inspector cite? Be precise about the gap between what the company did and what compliance looks like.)
 
-## Case Study 2 — Hypothetical
-(Create a realistic fictional scenario. Specify the company and device — e.g. "MedCore Systems, a 40-person contract manufacturer making orthopedic implants." Walk through how this company encounters a challenge with this clause, what they initially get wrong, and how a strong QA professional fixes it. Make it memorable and instructive.)
+## A Second Scenario
+(Fictional but specific: name the company, device, and team. "MedCore Systems, a 40-person contract manufacturer making spinal implants." Walk through a challenge with this clause — the wrong path the team takes, the moment of reckoning, and how a strong QA engineer fixes it. 200 words.)
 
-## Common Mistakes and Audit Findings
-(3-4 concrete mistakes early-career professionals make, or common FDA/notified body observations. No vague generalities.)
+## What Auditors Look For
+(3–4 concrete findings from FDA 483s or notified body audits. Specific observation language where possible.)
 
-## Key Terms to Know
-(5-8 terms with plain-English definitions directly relevant to this clause.)
+## Key Terms
+(5–7 terms directly relevant to this clause. Plain-English definition + one device example each.)
 
 ## Check Your Understanding
-(5 questions with answers. Include 2 scenario-based questions tied to the case studies above.)
+(4 questions. At least 2 tied to the case studies above. Include answers.)
 
-## How This Connects to Your Career
-(1 paragraph. How does understanding this clause make you better at your job? Be direct and practical.)
+## Career Impact
+(1 paragraph. How does owning this clause make you more effective? Be direct and practical.)
 
-Total length: 1000-1400 words."""
+Total length: 1000–1400 words. Case studies must dominate — they are the curriculum, not appendices."""
 
     resp = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=2500,
+        max_tokens=3000,
         system=coach_system,
         messages=[{"role": "user", "content": prompt}],
     )
-    content = resp.content[0].text.strip()
+    raw = resp.content[0].text.strip()
+
+    # Extract the case study title from the first line
+    m = _CASE_TITLE_RE.search(raw)
+    case_title = m.group(1).strip() if m else ""
+    content = _CASE_TITLE_RE.sub("", raw).lstrip("\n")
 
     return {
-        "clause":     clause_num,
-        "name":       clause_name,
-        "content":    content,
-        "generated":  datetime.now().isoformat(),
-        "word_count": len(content.split()),
+        "clause":      clause_num,
+        "name":        clause_name,
+        "case_title":  case_title,
+        "content":     content,
+        "generated":   datetime.now().isoformat(),
+        "word_count":  len(content.split()),
     }
 
 
@@ -265,16 +283,21 @@ def save_lesson(lesson: dict) -> Path:
         std_label = "ISO 13485:2016"
         display_clause = lesson['clause']
 
+    case_title = lesson.get('case_title', '').strip()
+    h1 = case_title if case_title else f"{std_label} — Clause {display_clause}: {lesson['name']}"
     header = f"""---
 clause: {lesson['clause']}
 title: {lesson['name']}
+case_title: {case_title or lesson['name']}
 standard: {std_label}
 generated: {lesson['generated']}
 word_count: {lesson['word_count']}
 status: DRAFT — review before sharing with clients
 ---
 
-# {std_label} — Clause {display_clause}: {lesson['name']}
+# {h1}
+
+*{std_label} · Clause {display_clause}: {lesson['name']}*
 
 """
     with open(out_path, 'w', encoding='utf-8') as f:

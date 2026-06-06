@@ -145,8 +145,9 @@ function fmtElapsed(s) {
 }
 
 export default function VoiceView({ voice }) {
-  const { running, state, level, query, lastYou, lastAthena, speakingLines, log, status,
-          devices, selDev, setSelDev, elapsed, startVoice, stopVoice } = voice;
+  const { running, state, level, query, lastYou, lastAthena, speakingLines,
+          streamingText, typedYou,
+          log, status, devices, selDev, setSelDev, elapsed, startVoice, stopVoice } = voice;
   const cfg = ORB[state] ?? ORB.idle;
 
   return (
@@ -275,38 +276,49 @@ export default function VoiceView({ voice }) {
       {/* HUD panels — last exchange */}
       <div style={{ width: "100%", maxWidth: 560, display: "flex", flexDirection: "column", gap: 10 }}>
 
-        {lastYou && (
+        {(lastYou || typedYou) && (
           <HUDPanel label="You said" accent={GOLD}>
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: 13, color: "#fff",
               lineHeight: 1.6, fontWeight: 400 }}>
-              {lastYou}
+              {typedYou || lastYou}
+              {typedYou && typedYou.length < (lastYou || "").length && (
+                <span style={{
+                  display: "inline-block", width: 2, height: "0.85em",
+                  background: GOLD, marginLeft: 2, verticalAlign: "middle",
+                  animation: "cursorBlink 0.9s step-end infinite",
+                }}/>
+              )}
             </div>
           </HUDPanel>
         )}
 
-        {(speakingLines.length > 0 || lastAthena) && (
+        {(streamingText || speakingLines.length > 0 || lastAthena) && (
           <HUDPanel label="Athena" accent={TEAL}>
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: 13, color: "#e0eaf2",
               lineHeight: 1.8, fontWeight: 300 }}>
-              {speakingLines.length > 0
-                ? speakingLines.map((line, i) => (
-                    <span key={line.id} style={{
-                      display: "inline",
-                      animation: "lineIn 0.35s ease forwards",
-                      opacity: 0,
-                    }}>
-                      {i > 0 ? " " : ""}{line.text}
-                    </span>
-                  ))
-                : lastAthena
+              {streamingText
+                ? (
+                  <>
+                    {streamingText}
+                    <span style={{
+                      display: "inline-block", width: 2, height: "0.85em",
+                      background: TEAL, marginLeft: 3, verticalAlign: "middle",
+                      animation: "cursorBlink 0.9s step-end infinite",
+                    }}/>
+                  </>
+                )
+                : speakingLines.length > 0
+                  ? speakingLines.map((line, i) => (
+                      <span key={line.id} style={{
+                        display: "inline",
+                        animation: "lineIn 0.35s ease forwards",
+                        opacity: 0,
+                      }}>
+                        {i > 0 ? " " : ""}{line.text}
+                      </span>
+                    ))
+                  : lastAthena
               }
-              {state === "speaking" && speakingLines.length > 0 && (
-                <span style={{
-                  display: "inline-block", width: 2, height: "0.85em",
-                  background: TEAL, marginLeft: 3, verticalAlign: "middle",
-                  animation: "cursorBlink 0.9s step-end infinite",
-                }}/>
-              )}
             </div>
           </HUDPanel>
         )}

@@ -1,5 +1,5 @@
 # Latitude MedTech — Master Instructions
-**Version:** 2026-06-05 v9 · Compressed and updated after each session per Agent Principle #7.
+**Version:** 2026-06-05 v10 · Compressed and updated after each session per Agent Principle #7.
 
 ---
 
@@ -221,20 +221,23 @@ Separate from Git history, Athena tracks a user-facing **release version** so St
 ---
 
 ## Current Phase
-**Phase 1A — Coaching Core (Active, near-complete)**
-- ✅ **LangGraph orchestration** — `agents/orchestrator.py`. Coaching graph: intake → generate_brief → **human-gate `interrupt()`** → finalize. Durable SQLite checkpointer (`memory/orchestrator_checkpoints.sqlite`); paused runs survive restart, resumed by `thread_id`. Endpoints: `POST /api/orchestrate/coaching` (start); review approve/reject auto-resume the linked thread. Other agents still run via subprocess.
-- ✅ **Human review queue** — `/api/review/*`, `ReviewView.jsx`, `review_queue` table (now has `thread_id` linking each item to its workflow).
-- ✅ **Disclaimer layer** — applied at orchestrator `finalize` (brief gets disclaimer + "Alpha — Steve Review Required" label), plus docx + agent system prompts.
-- ✅ **Auth (Phase 1A scope)** — session token `.athena.key`. Clerk/Auth0 is Phase 2B.
-- ✅ **Marketing UI** — MarketingView.jsx wired to MarketingAgent; pipeline DB lazy-initialized on first run; full campaign/outreach/events/scorecard modes live.
-- ✅ **Review edit-prompt** — Steven can request AI-driven revisions to queued documents via natural language before approving.
-- ✅ **Dashboard charts** — timeseries (hourly token spend today/yesterday) + knowledge-growth (cumulative KB items) live in DashboardView.
-- ⏳ **Custom "Hi Athena" wake word** — wiring done (`voice_bridge.py` auto-loads `voice/wake/hi_athena.onnx`, else "alexa"); trainer + `voice/wake/README.md` ready. **Awaiting Steven's one-time Colab training run** (external GPU). Until then, "alexa" fallback.
+**Phase 1A — Coaching Core: ✅ COMPLETE (2026-06-05)**
+All items shipped. Custom "Hi Athena" wake word is the only optional item remaining — awaiting Steven's one-time Colab training run; "alexa" fallback active until then.
 
-Phase 1A gate (Steve runs the full coaching workflow end-to-end) is met for the coaching line; only the optional custom wake word remains.
+**Phase 2A — Voice + Visual: ✅ COMPLETE (2026-06-05)**
+- ✅ **Deck Agent** (`agents/deck_agent.py`) — PPTX slide deck generation. McKinsey/PwC quality. Cover, exec summary, SCR narrative, data charts, comparison tables, roadmap, recommendations, next steps. Client lookup against briefing KB. Shipped PR #30.
+- ✅ **DeckView gallery UI** — deck browser with preview and download. Shipped PR #31.
+- ✅ **Dashboard charts** — timeseries (hourly token spend today/yesterday) + knowledge-growth (cumulative KB items); 6 time-range toggles.
 
-**✅ Resolved (2026-06-05):** canonical-root path issue fixed. New `agents/pathconfig.py` derives `ATHENA_ROOT` from its own file location (no `Path.home()` assumption); all 17 agent modules import it, and entry points (`voice_bridge.py`, `ui/backend/server.py`) resolve the same root from `Path(__file__)`. Verified: imports clean, `ATHENA_ROOT` → `LatitudeMedTech\Athena`, runtime paths exist. Standalone runs no longer fragile.
+**Phase 2B — Agent Health + UX Hardening: ✅ COMPLETE (2026-06-05)**
+- ✅ Briefing + Marketing outputs now surface in Documents hub review queue (`submit_for_review()`).
+- ✅ Wake threshold lowered 0.5→0.35; M&A TTS substitution; per-token `speaking_word` events for Voice UI.
+- ✅ `agent_learning.py` stamps `last_learning` on clean no-op runs — agents no longer stay red/yellow after a healthy run with no new items.
+- ✅ `useVoiceSession.js` race condition fixed — generation counter cancels in-flight animation loops on new transcript.
+- ✅ Stale dead code removed (`__import__(datetime).timedelta` in server.py; dead `CLAUSES` const in ISOView.jsx). Shipped PR #33.
 
-**✅ Resolved (2026-06-05):** Skills & KB accumulation fully wired. `agents/skills_profile.py` generates per-agent profiles (`knowledge_base/skills/<agent>.md`) and master `SKILLS.md`. `memory.get_skill_accumulation()` is the single source of truth. Workforce UI now shows an **Accumulated** column (all-time items + chunks) live from the DB, with a Refresh Skills button (`POST /api/agents/skills-profile`). `.gitignore` hardened to exclude `*.sqlite-shm`, `*.sqlite-wal`, and `.athena_ready`.
+**Next:** Phase 2B gate — Steven runs full coaching + voice workflow end-to-end. Auth (Clerk/Auth0) and cloud infra (AWS ECS + RDS + S3) are deferred until revenue gate.
+
+⏳ **Open:** Custom "Hi Athena" wake word (Colab training run, external GPU required).
 
 See `.claude/rules/` — agents.md · architecture.md · compliance.md · business.md

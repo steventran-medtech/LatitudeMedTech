@@ -68,17 +68,17 @@ function BulkBar({ count, total, onDeleteSelected, onSelectAll, onClear }) {
   if (count === 0) return null;
   return (
     <div style={{
-      display: "flex", alignItems: "center", gap: 8,
-      padding: "8px 12px", marginBottom: 8,
-      background: "#EEF5FB", border: `1px solid ${C.ocean}33`, borderRadius: 6,
+      display: "flex", alignItems: "center", gap: 10,
+      padding: "10px 14px", marginBottom: 12,
+      background: "#EEF5FB", border: `1px solid ${C.ocean}33`, borderRadius: 7,
     }}>
-      <span style={{ fontFamily: "Inter,sans-serif", fontSize: 11,
+      <span style={{ fontFamily: "Inter,sans-serif", fontSize: 12,
         fontWeight: 600, color: C.ocean, flex: 1 }}>
         {count} selected
       </span>
       <button onClick={onSelectAll} style={actionBtn(C.fog)}>All ({total})</button>
       <button onClick={onClear}     style={actionBtn(C.fog)}>None</button>
-      <button onClick={onDeleteSelected} style={actionBtn(C.red)}>
+      <button onClick={onDeleteSelected} style={{ ...actionBtn(C.red), padding: "5px 14px" }}>
         Delete {count}
       </button>
     </div>
@@ -346,7 +346,7 @@ export default function ISOView({ runningAgents }) {
       <div style={{ display: "flex", gap: 20 }}>
 
         {/* Sidebar */}
-        <div style={{ width: 240, flexShrink: 0 }}>
+        <div style={{ width: 260, flexShrink: 0 }}>
           <BulkBar count={ms.size} total={lessons.length}
             onDeleteSelected={deleteSelected}
             onSelectAll={() => ms.selectAll(allIds)}

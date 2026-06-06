@@ -48,6 +48,16 @@ function parseDeckMeta(filename) {
   return { date, time, label: label || filename };
 }
 
+const BUILD_STAGES = [
+  { label: "Cover & Title",        secs: 0   },
+  { label: "Executive Summary",    secs: 30  },
+  { label: "Situation / Context",  secs: 70  },
+  { label: "Analysis Slides",      secs: 110 },
+  { label: "Recommendations",      secs: 150 },
+  { label: "Next Steps",           secs: 180 },
+  { label: "Finalising & Export",  secs: 210 },
+];
+
 export default function DeckView({ runningAgents }) {
   const [decks,   setDecks]   = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +67,10 @@ export default function DeckView({ runningAgents }) {
   const [context, setContext] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [statusMsg,  setStatusMsg]  = useState("");
+  const [activeBuild, setActiveBuild] = useState(null);  // {topic, dtype, client, context, startedAt}
+  const [buildElapsed, setBuildElapsed] = useState(0);
   const prevRunning = useRef(false);
+  const timerRef    = useRef(null);
 
   const loadDecks = () =>
     fetch(`${API}/api/decks`)
@@ -73,9 +86,24 @@ export default function DeckView({ runningAgents }) {
     if (prevRunning.current && !isRunning) {
       loadDecks();
       setStatusMsg("");
+      setActiveBuild(null);
+      setBuildElapsed(0);
+      clearInterval(timerRef.current);
     }
     prevRunning.current = !!isRunning;
   }, [runningAgents]);
+
+  // Elapsed timer while building
+  useEffect(() => {
+    if (activeBuild) {
+      timerRef.current = setInterval(() => {
+        setBuildElapsed(Math.floor((Date.now() - activeBuild.startedAt) / 1000));
+      }, 1000);
+    } else {
+      clearInterval(timerRef.current);
+    }
+    return () => clearInterval(timerRef.current);
+  }, [activeBuild]);
 
   const isGenerating = runningAgents?.has("deck_agent") || submitting;
 
@@ -83,14 +111,17 @@ export default function DeckView({ runningAgents }) {
     if (!topic.trim()) return;
     setSubmitting(true);
     setStatusMsg("Queuing deck…");
+    const buildInfo = { topic: topic.trim(), dtype, client: client.trim(), context: context.trim(), startedAt: Date.now() };
     fetch(`${API}/api/decks/generate`, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ topic: topic.trim(), deck_type: dtype, client_name: client.trim(), context: context.trim() }),
+      body:    JSON.stringify({ topic: buildInfo.topic, deck_type: dtype, client_name: buildInfo.client, context: buildInfo.context }),
     })
       .then(r => r.json())
       .then(() => {
-        setStatusMsg("Building your deck — this takes 3–5 minutes.");
+        setStatusMsg("");
+        setActiveBuild(buildInfo);
+        setBuildElapsed(0);
         setTopic("");
         setClient("");
         setContext("");
@@ -98,6 +129,14 @@ export default function DeckView({ runningAgents }) {
       .catch(() => setStatusMsg("Error starting deck generation."))
       .finally(() => setSubmitting(false));
   };
+
+  // Current build stage based on elapsed seconds
+  const currentStage = activeBuild
+    ? BUILD_STAGES.reduce((acc, s) => buildElapsed >= s.secs ? s : acc, BUILD_STAGES[0])
+    : null;
+  const stageIdx = currentStage ? BUILD_STAGES.indexOf(currentStage) : -1;
+
+  const fmtElapsed = (s) => s < 60 ? `${s}s` : `${Math.floor(s/60)}m ${s%60}s`;
 
   return (
     <div style={{ fontFamily: F.sans }}>
@@ -210,6 +249,69 @@ export default function DeckView({ runningAgents }) {
 
         <style>{`@keyframes deckSpin { to { transform: rotate(360deg); } }`}</style>
       </div>
+
+      {/* ── Active build panel ────────────────────────────────────────────── */}
+      {activeBuild && (
+        <div style={{
+          background: C.navy, borderRadius: 12, padding: "20px 24px",
+          marginBottom: 24, border: `1px solid ${C.ocean}44`,
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
+                            color: `${C.ocean}`, marginBottom: 6 }}>
+                Building Deck — {fmtElapsed(buildElapsed)}
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: "#fff", marginBottom: 4 }}>
+                {activeBuild.topic}
+              </div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 10, color: "#A8C4D8", background: "rgba(255,255,255,0.08)",
+                               padding: "2px 8px", borderRadius: 10 }}>
+                  {DECK_TYPES.find(t => t.value === activeBuild.dtype)?.label || activeBuild.dtype}
+                </span>
+                {activeBuild.client && (
+                  <span style={{ fontSize: 10, color: "#A8C4D8", background: "rgba(255,255,255,0.08)",
+                                 padding: "2px 8px", borderRadius: 10 }}>
+                    Client: {activeBuild.client}
+                  </span>
+                )}
+                {activeBuild.context && (
+                  <span style={{ fontSize: 10, color: "#A8C4D8", background: "rgba(255,255,255,0.08)",
+                                 padding: "2px 8px", borderRadius: 10,
+                                 maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                 display: "inline-block" }}>
+                    {activeBuild.context}
+                  </span>
+                )}
+              </div>
+            </div>
+            {/* Spinner */}
+            <div style={{ width: 20, height: 20, border: `2px solid ${C.ocean}44`,
+                          borderTopColor: C.ocean, borderRadius: "50%",
+                          animation: "deckSpin 0.9s linear infinite", flexShrink: 0, marginTop: 2 }}/>
+          </div>
+
+          {/* Stage progress bar */}
+          <div style={{ display: "flex", gap: 4 }}>
+            {BUILD_STAGES.map((s, i) => (
+              <div key={s.label} style={{ flex: 1 }} title={s.label}>
+                <div style={{
+                  height: 3, borderRadius: 2,
+                  background: i < stageIdx ? C.ocean : i === stageIdx ? "#fff" : "rgba(255,255,255,0.15)",
+                  transition: "background 0.4s",
+                }}/>
+                {i === stageIdx && (
+                  <div style={{ fontSize: 9, color: "#A8C4D8", marginTop: 4, whiteSpace: "nowrap",
+                                overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {s.label}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Deck list ──────────────────────────────────────────────────────── */}
       <div style={{ background: C.pearl, border: `1px solid ${C.mist}`, borderRadius: 12, padding: "20px 24px" }}>
