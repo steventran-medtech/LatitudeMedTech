@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { authHdr } from "./api.js";
 
 const API = "http://localhost:8000";
 
@@ -329,7 +330,7 @@ export default function DeckView({ runningAgents }) {
     const buildInfo = { topic: topic.trim(), dtype, client: client.trim(),
                         context: context.trim(), startedAt: Date.now() };
     fetch(`${API}/api/decks/generate`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", ...authHdr() },
       body: JSON.stringify({ topic: buildInfo.topic, deck_type: dtype,
                              client_name: buildInfo.client, context: buildInfo.context }),
     })
@@ -362,7 +363,7 @@ export default function DeckView({ runningAgents }) {
     if (!selected.size) return;
     if (!window.confirm(`Permanently delete ${selected.size} deck(s)?`)) return;
     await fetch(`${API}/api/decks/bulk-delete`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", ...authHdr() },
       body: JSON.stringify({ filenames: [...selected] }),
     });
     clearAll(); loadDecks();
@@ -370,7 +371,7 @@ export default function DeckView({ runningAgents }) {
   const bulkAccept = async () => {
     if (!selected.size) return;
     await fetch(`${API}/api/decks/bulk-accept`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", ...authHdr() },
       body: JSON.stringify({ filenames: [...selected] }),
     });
     clearAll(); loadDecks();
@@ -379,7 +380,7 @@ export default function DeckView({ runningAgents }) {
     if (!selected.size) return;
     if (!window.confirm(`Reject & delete ${selected.size} deck(s)?`)) return;
     await fetch(`${API}/api/decks/bulk-reject`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", ...authHdr() },
       body: JSON.stringify({ filenames: [...selected] }),
     });
     clearAll(); loadDecks();

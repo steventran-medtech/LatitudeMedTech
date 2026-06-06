@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { setToken, authHdr, wsUrl } from "./api.js";   // SOC II CC6.6 — session-token auth
 import SettingsView from "./SettingsView.jsx";
 import VoiceView from "./VoiceView.jsx";
 import HRView from "./HRView.jsx";
@@ -9,8 +10,8 @@ import MarketingView from "./MarketingView.jsx";
 import DeckView from "./DeckView.jsx";
 import { useVoiceSession } from "./useVoiceSession.js";
 
-const API = "http://localhost:8000";
-const WS  = "ws://localhost:8000/ws";
+const API     = "http://localhost:8000";
+const WS_PATH = "ws://localhost:8000/ws";   // pass through wsUrl() at connect time
 
 // ── Pacific Palette — San Diego consulting brand ────────────────────────────
 const C = {
@@ -640,7 +641,7 @@ function InlineEditor({content, filename, endpoint, onSave, onCancel}){
   const save = async()=>{
     setSaving(true);
     try{
-      await fetch(`${API}${endpoint}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({filename,content:val})});
+      await fetch(`${API}${endpoint}`,{method:"POST",headers:{"Content-Type":"application/json",...authHdr()},body:JSON.stringify({filename,content:val})});
       onSave(val);
     }catch(e){console.error(e);}
     setSaving(false);
@@ -949,7 +950,7 @@ function BriefingView(){
   useEffect(()=>{if(!selected)return;fetch(`${API}/api/briefings/${selected}`).then(r=>r.json()).then(d=>setContent(d.content||"")).catch(()=>{});},[selected]);
 
   const deleteFile=async(filename)=>{
-    await fetch(`${API}/api/files/delete`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({filename,folder:"briefings"})});
+    await fetch(`${API}/api/files/delete`,{method:"POST",headers:{"Content-Type":"application/json",...authHdr()},body:JSON.stringify({filename,folder:"briefings"})});
     if(selected===filename){setSelected(null);setContent("");setEditing(false);}
     ms.clear(); setTimeout(()=>load(), 200);
   };
@@ -998,7 +999,7 @@ function ContentView({onGenerate}){
   useEffect(()=>{if(!selected)return;fetch(`${API}/api/drafts/${selected}`).then(r=>r.json()).then(d=>setContent(d.content||"")).catch(()=>{});},[selected]);
 
   const deleteFile=async(filename)=>{
-    await fetch(`${API}/api/files/delete`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({filename,folder:"content/drafts"})});
+    await fetch(`${API}/api/files/delete`,{method:"POST",headers:{"Content-Type":"application/json",...authHdr()},body:JSON.stringify({filename,folder:"content/drafts"})});
     if(selected===filename){setSelected(null);setContent("");setEditing(false);}
     ms.clear(); setTimeout(()=>load(), 200);
   };
@@ -1016,7 +1017,7 @@ function ContentView({onGenerate}){
     const title=drafts.find(d=>d.filename===selected)?.title||selected;
     setGenStatus(openInApp?"Generating preview…":"Generating Word document...");
     try{
-      const res=await fetch(`${API}/api/documents/generate`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title,content,doc_type:"article"})});
+      const res=await fetch(`${API}/api/documents/generate`,{method:"POST",headers:{"Content-Type":"application/json",...authHdr()},body:JSON.stringify({title,content,doc_type:"article"})});
       const data=await res.json();
       if(data.path){
         setGenStatus(`Ready: ${data.filename}`);
@@ -1075,11 +1076,11 @@ function CoachingView({onGenerate}){
   const runBrief=()=>{
     if(!client.trim())return;
     setStatus(`Generating brief for ${client}...`);
-    fetch(`${API}/api/orchestrate/coaching`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({client})}).then(()=>setStatus("Brief generating — will appear in Review queue for your approval")).catch(()=>setStatus("Error"));
+    fetch(`${API}/api/orchestrate/coaching`,{method:"POST",headers:{"Content-Type":"application/json",...authHdr()},body:JSON.stringify({client})}).then(()=>setStatus("Brief generating — will appear in Review queue for your approval")).catch(()=>setStatus("Error"));
   };
 
   const deleteFile=async(filename)=>{
-    await fetch(`${API}/api/files/delete`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({filename,folder:"coaching/briefs"})});
+    await fetch(`${API}/api/files/delete`,{method:"POST",headers:{"Content-Type":"application/json",...authHdr()},body:JSON.stringify({filename,folder:"coaching/briefs"})});
     if(selected===filename){setSelected(null);setContent("");setEditing(false);}
     ms.clear(); setTimeout(()=>load(), 200);
   };
@@ -1096,7 +1097,7 @@ function CoachingView({onGenerate}){
     if(!content)return;
     setStatus("Generating Word document...");
     try{
-      const res=await fetch(`${API}/api/documents/generate`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title:`Discovery Call Brief — ${client||selected}`,content,doc_type:"brief"})});
+      const res=await fetch(`${API}/api/documents/generate`,{method:"POST",headers:{"Content-Type":"application/json",...authHdr()},body:JSON.stringify({title:`Discovery Call Brief — ${client||selected}`,content,doc_type:"brief"})});
       const data=await res.json();
       if(data.path){setStatus(`Saved: ${data.filename}`);await fetch(`${API}/api/documents/open/${data.filename}`);}
     }catch{setStatus("Error");}
@@ -1155,7 +1156,7 @@ function DocumentsView(){
   useEffect(()=>{load();},[]);
   const openDoc=(filename,folder)=>{fetch(`${API}/api/documents/open/${encodeURIComponent(filename)}?folder=${folder||"documents"}`).catch(()=>{});};
   const deleteDoc=async(filename,folder)=>{
-    await fetch(`${API}/api/files/delete`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({filename,folder:folder||"documents"})});
+    await fetch(`${API}/api/files/delete`,{method:"POST",headers:{"Content-Type":"application/json",...authHdr()},body:JSON.stringify({filename,folder:folder||"documents"})});
     ms.clear(); load();
   };
   const deleteSelected=async()=>{
@@ -2113,7 +2114,7 @@ export default function App(){
     let reconnectTimer=null; // tracked so cleanup can cancel a pending reconnect
     const connect=()=>{
       if(closed) return;
-      const ws=new WebSocket(WS);
+      const ws=new WebSocket(wsUrl(WS_PATH));
       ws.onopen=()=>setWsReady(true);
       ws.onclose=()=>{setWsReady(false);if(!closed)reconnectTimer=setTimeout(connect,3000);};
       ws.onmessage=(e)=>{
@@ -2172,7 +2173,7 @@ export default function App(){
             // Spoken notification if Athena is live
             if(voiceRunningRef.current&&ok){
               fetch(`${API}/api/voice/notify`,{
-                method:"POST",headers:{"Content-Type":"application/json"},
+                method:"POST",headers:{"Content-Type":"application/json",...authHdr()},
                 body:JSON.stringify({text:`Your ${label} is ready for review.`}),
               }).catch(()=>{});
             }
@@ -2197,6 +2198,14 @@ export default function App(){
   },[]);
 
   useEffect(()=>{loadData();},[loadData]);
+
+  // SOC II CC6.6 — fetch session token first; all mutating requests need it
+  useEffect(()=>{
+    fetch(`${API}/api/auth/token`)
+      .then(r=>r.json())
+      .then(d=>{ if(d.token) setToken(d.token); })
+      .catch(()=>{});
+  },[]);
 
   // Load app version once (for the sidebar badge + About panel)
   useEffect(()=>{
@@ -2227,7 +2236,7 @@ export default function App(){
     };
     if(endpoints[id] && !pendingRef.current.has(id)){
       pendingRef.current.add(id);
-      fetch(`${API}${endpoints[id]}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({override})})
+      fetch(`${API}${endpoints[id]}`,{method:"POST",headers:{"Content-Type":"application/json",...authHdr()},body:JSON.stringify({override})})
         .finally(()=>{ setTimeout(()=>pendingRef.current.delete(id), 2000); })
         .catch(()=>{ pendingRef.current.delete(id); });
       // Don't navigate away if voice is active — user is mid-conversation.
@@ -2273,7 +2282,7 @@ export default function App(){
     setExitDialog(false);
     try {
       // Await the response — the backend blocks until TTS finishes before replying.
-      await fetch(`${API}/api/shutdown`, { method: "POST" });
+      await fetch(`${API}/api/shutdown`, { method: "POST", headers: authHdr() });
     } catch {}
     // TTS is complete by now; close immediately.
     window.athena?.quit?.();

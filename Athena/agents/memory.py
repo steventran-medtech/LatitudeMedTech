@@ -50,6 +50,8 @@ class Memory:
     def __init__(self):
         self.conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
+        self.conn.execute("PRAGMA journal_mode=WAL")
+        self.conn.execute("PRAGMA synchronous=NORMAL")
         self._init_schema()
 
     def _init_schema(self):
