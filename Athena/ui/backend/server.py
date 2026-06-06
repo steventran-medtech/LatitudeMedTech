@@ -2133,29 +2133,23 @@ def _pick_greeting() -> str:
 def _speak_phrase(text: str):
     """Speak a greeting or goodbye phrase using Kokoro's voice.
 
-    Fetches WAV bytes from the Kokoro server (port 8002) then plays them
-    via System.Media.SoundPlayer so audio routes through the Windows
-    default playback device — not sounddevice's selected interface.
+    Fetches WAV bytes from the Kokoro server (port 8002) and plays them
+    via sounddevice — the same path used by the voice conversation TTS.
+    Server runs in the voice venv so sounddevice/soundfile are available.
     """
-    import urllib.request, json, tempfile, os as _os
+    import urllib.request, json, io
     try:
+        import soundfile as sf
+        import sounddevice as sd
         payload = json.dumps({"text": text, "voice": os.getenv("VOICE_KOKORO_VOICE", "bf_emma")}).encode()
         req = urllib.request.Request("http://127.0.0.1:8002/speak", data=payload,
                                      headers={"Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with urllib.request.urlopen(req, timeout=20) as resp:
             wav = resp.read()
-        tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
-        try:
-            tmp.write(wav); tmp.flush(); tmp.close()
-            subprocess.run(
-                ["powershell.exe", "-NoProfile", "-WindowStyle", "Hidden", "-Command",
-                 f"$p = New-Object System.Media.SoundPlayer '{tmp.name}'; $p.PlaySync()"],
-                timeout=30, check=False,
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-            )
-        finally:
-            try: _os.unlink(tmp.name)
-            except Exception: pass
+        data, sr = sf.read(io.BytesIO(wav))
+        import numpy as np
+        sd.play(data.astype(np.float32), sr)
+        sd.wait()
     except Exception:
         pass
     import time; time.sleep(0.5)

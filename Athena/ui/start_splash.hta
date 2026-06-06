@@ -27,15 +27,6 @@
     0%   { background-position:-300% center; }
     100% { background-position: 300% center; }
   }
-  @-ms-keyframes blink {
-    0%,80%,100% { opacity:0.15; }
-    40%         { opacity:0.9;  }
-  }
-  @keyframes blink {
-    0%,80%,100% { opacity:0.15; }
-    40%         { opacity:0.9;  }
-  }
-
   html { width:100%; height:100%; }
   body {
     width:100%; height:100%;
@@ -136,14 +127,12 @@
     color:rgba(220,210,195,0.65);
     letter-spacing:0.04em;
   }
-  #dot1, #dot2, #dot3 {
-    font-size:22px;
-    color:rgba(196,146,42,0.6);
-    -ms-animation: blink 1.4s ease-in-out infinite both;
-    animation:     blink 1.4s ease-in-out infinite both;
+  #pct {
+    font-size:17px;
+    color:rgba(196,146,42,0.85);
+    letter-spacing:0.04em;
+    margin-left:8px;
   }
-  #dot2 { -ms-animation-delay:0.22s; animation-delay:0.22s; }
-  #dot3 { -ms-animation-delay:0.44s; animation-delay:0.44s; }
 </style>
 </head>
 <body>
@@ -156,17 +145,18 @@
     <div class="name">Athena</div>
     <div class="tagline">Advancing Human Intelligence</div>
     <div class="bar-wrap"><div class="bar-fill" id="bar"></div></div>
-    <span class="status-text" id="status">Starting up</span><span id="dots">&#160;<span id="dot1">&#183;</span><span id="dot2">&#183;</span><span id="dot3">&#183;</span></span>
+    <span class="status-text" id="status">Starting up</span><span id="pct">0%</span>
   </div>
 
 <script language="VBScript">
-Dim bar, statusEl, dotsEl, stepVal, timer_id, poll_id, waited
+Dim bar, statusEl, pctEl, stepVal, targetVal, timer_id, poll_id, waited
 Dim BACKEND, FRONTEND, MAX_WAIT
 Dim dragging, dragLastX, dragLastY
 BACKEND  = "http://127.0.0.1:8000/"
 FRONTEND = "http://localhost:3000"
 MAX_WAIT = 60
 waited   = 0
+targetVal = 0
 
 Sub Window_OnLoad
   ' On Error Resume Next: a resize/image failure must never stop the timers and
@@ -176,8 +166,9 @@ Sub Window_OnLoad
   ' ── Critical section: these MUST register regardless of what follows ──────
   Set bar      = document.getElementById("bar")
   Set statusEl = document.getElementById("status")
-  Set dotsEl   = document.getElementById("dots")
-  stepVal = 0
+  Set pctEl    = document.getElementById("pct")
+  stepVal  = 0
+  targetVal = 0
   timer_id = window.setInterval("Tick",       400)
   poll_id  = window.setInterval("PollBackend", 800)
 
@@ -243,26 +234,25 @@ Sub Drag_End
   End If
 End Sub
 
-Sub SetStatus(msg, showDots)
+Sub SetStatus(msg, newTarget)
   statusEl.innerText = msg
-  If showDots Then
-    dotsEl.style.display = "inline"
-  Else
-    dotsEl.style.display = "none"
-  End If
+  If newTarget > targetVal Then targetVal = newTarget
 End Sub
 
 Sub Tick
-  If stepVal < 85 Then
-    stepVal = stepVal + 2
+  ' Creep stepVal toward targetVal 1% per tick — never overshoot.
+  If stepVal < targetVal Then
+    stepVal = stepVal + 1
+    If stepVal > targetVal Then stepVal = targetVal
     bar.style.width = stepVal & "%"
+    pctEl.innerText = stepVal & "%"
   End If
 End Sub
 
 Sub PollBackend
   waited = waited + 1
   If waited > MAX_WAIT Then
-    SetStatus "Connection timed out - please try again", False
+    SetStatus "Connection timed out - please try again", 0
     window.clearInterval poll_id
     window.clearInterval timer_id
     window.setTimeout "window.close()", 3000
@@ -275,12 +265,12 @@ Sub PollBackend
   xhr.setTimeouts 500, 500, 500, 500
   xhr.send
   If Err.Number = 0 And xhr.status = 200 Then
-    SetStatus "Backend ready - launching interface", True
-    bar.style.width = "90%"
+    SetStatus "Backend ready - launching interface", 90
     window.clearInterval poll_id
     poll_id = window.setInterval("PollFrontend", 800)
   Else
-    SetStatus "Warming up the backend", True
+    ' Nudge the bar slowly while waiting (target 85)
+    SetStatus "Warming up the backend", 85
   End If
   On Error Resume Next
   Err.Clear
@@ -294,12 +284,11 @@ Sub PollFrontend
   xhr.setTimeouts 500, 500, 500, 500
   xhr.send
   If Err.Number = 0 And xhr.status = 200 Then
-    bar.style.width = "95%"
-    SetStatus "Opening in Chrome", True
+    SetStatus "Opening in Chrome", 95
     window.clearInterval poll_id
     poll_id = window.setInterval("PollChromeReady", 500)
   Else
-    SetStatus "Loading the interface", True
+    SetStatus "Loading the interface", 90
   End If
   On Error Resume Next
   Err.Clear
@@ -309,11 +298,11 @@ Sub PollChromeReady
   Dim fso
   Set fso = CreateObject("Scripting.FileSystemObject")
   If fso.FileExists("C:\Users\huann\LatitudeMedTech\Athena\ui\.athena_ready") Then
-    bar.style.width = "100%"
-    SetStatus "Welcome back. Athena is ready.", False
+    SetStatus "Welcome back. Athena is ready.", 100
     window.clearInterval poll_id
     window.clearInterval timer_id
-    window.setTimeout "window.close()", 900
+    ' Let Tick finish painting 100% before closing
+    window.setTimeout "window.close()", 1200
   End If
 End Sub
 </script>
