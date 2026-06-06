@@ -1085,7 +1085,16 @@
       "ingested_at": "2026-06-05T16:46:55.709230",
       "source": "tavily:MDSAP audit approach update 2025 2026",
       "hash": "82b4d2d31ced7b0c"
+    },
+    "tavily_4bad1f676738b053": {
+      "name": "Medical Device Recalls and Early Alerts | FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/medical-devices/medical-device-safety/medical-device-recalls-and-early-alerts",
+      "chunks": 17,
+      "ingested_at": "2026-06-05T18:12:25.154458",
+      "source": "tavily:FDA recall Class I medical device",
+      "hash": "e09bf90c27cdfdf0"
     }
   },
-  "last_run": "2026-06-05T16:57:52.590730"
+  "last_run": "2026-06-05T18:12:38.939357"
 }

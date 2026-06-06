@@ -303,7 +303,7 @@ status: DRAFT — review before sharing with clients
     with open(out_path, 'w', encoding='utf-8') as f:
         f.write(header + lesson['content'])
 
-    return out_path
+    return out_path, h1
 
 
 def show_menu():
@@ -389,10 +389,15 @@ def main():
 
         log.info(f"  Generating: Clause {clause_num} — {clause_name}")
         try:
-            lesson   = generate_lesson(clause_num, clause_name)
-            out_path = save_lesson(lesson)
+            lesson            = generate_lesson(clause_num, clause_name)
+            out_path, title   = save_lesson(lesson)
             generated.append((clause_num, clause_name, out_path))
             log.info(f"  Saved: {out_path.name} ({lesson['word_count']} words)")
+            try:
+                from memory import Memory as _Mem
+                _Mem().submit_for_review('iso_coach', 'lesson', title, str(out_path))
+            except Exception:
+                pass
         except Exception as e:
             log.error(f"  Failed {clause_num}: {e}")
 

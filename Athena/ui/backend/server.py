@@ -202,6 +202,10 @@ except Exception as _ve:
     _voice_queue = None
     print(f"[voice] Bridge not loaded: {_ve}")
 
+# Track review-queue IDs already spoken so the batch announcement never repeats
+# an item that was announced in an earlier agent-completion cycle this session.
+_announced_review_ids: set = set()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000",
@@ -316,20 +320,22 @@ async def run_agent(agent_name: str, script: str, args: list = None, context: st
     await manager.broadcast({"type": "agent_done", "agent": agent_name, "status": status,
                               "ts": datetime.now().isoformat(), **result_extras})
 
-    # Batch-announce all pending review items via voice (SOC II CC6.6 — user awareness)
-    # Groups multiple pending items into a single sentence rather than individual announcements.
+    # Batch-announce newly queued review items via voice (SOC II CC6.6 — user awareness).
+    # Only announces items not spoken in a prior agent-completion cycle this session.
     if status == "success" and mem and _voice_queue is not None:
         try:
-            pending = mem.get_pending_reviews()
-            if pending:
-                n = len(pending)
+            pending   = mem.get_pending_reviews()
+            new_items = [p for p in pending if p["id"] not in _announced_review_ids]
+            if new_items:
+                n = len(new_items)
                 if n == 1:
-                    note = f"1 item ready for your review: {pending[0]['title']}"
+                    note = f"1 item ready for your review: {new_items[0]['title']}"
                 else:
-                    listed = ", ".join(p["title"] for p in pending[:3])
+                    listed = ", ".join(p["title"] for p in new_items[:3])
                     tail   = f", and {n - 3} more" if n > 3 else ""
                     note   = f"{n} items ready for your review: {listed}{tail}"
                 _voice_queue.append(note)
+                _announced_review_ids.update(p["id"] for p in new_items)
         except Exception:
             pass
 
