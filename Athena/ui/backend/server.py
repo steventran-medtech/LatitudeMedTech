@@ -2033,11 +2033,11 @@ async def edit_document_voice(request: Request, background_tasks: BackgroundTask
         raise HTTPException(404, "Document not found")
 
     async def _run():
-        await manager.broadcast(json.dumps({
+        await manager.broadcast({
             "type": "doc_edit_progress",
             "filename": filename, "folder": folder,
             "message": f"Editing \"{filename}\"…",
-        }))
+        })
         try:
             suffix = f.suffix.lower()
 
@@ -2071,16 +2071,16 @@ async def edit_document_voice(request: Request, background_tasks: BackgroundTask
             else:
                 raise ValueError(f"Unsupported type for editing: {suffix}")
 
-            await manager.broadcast(json.dumps({
+            await manager.broadcast({
                 "type": "doc_edit_done",
                 "filename": filename, "folder": folder, "status": "done",
-            }))
+            })
         except Exception as exc:
-            await manager.broadcast(json.dumps({
+            await manager.broadcast({
                 "type": "doc_edit_done",
                 "filename": filename, "folder": folder,
                 "status": "error", "message": str(exc),
-            }))
+            })
 
     background_tasks.add_task(_run)
     return {"status": "started", "filename": filename, "folder": folder}

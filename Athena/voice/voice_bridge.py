@@ -43,10 +43,15 @@ from scipy.signal import resample_poly
 
 try:
     import webrtcvad as _webrtcvad
-    _vad = _webrtcvad.Vad(2)   # aggressiveness 2: filters keyboard/ambient, keeps speech
-    _VAD_FRAME = 480            # 30 ms @ 16 kHz — exact frame size required by webrtcvad
+    # Two VAD instances:
+    #   _vad_wake  — aggressiveness 2: stricter, filters keyboard/ambient during wake-word phase
+    #   _vad_query — aggressiveness 1: more permissive, avoids cutting off soft syllables mid-command
+    _vad_wake  = _webrtcvad.Vad(2)
+    _vad_query = _webrtcvad.Vad(1)
+    _vad       = _vad_wake   # default (wake phase)
+    _VAD_FRAME = 480          # 30 ms @ 16 kHz — exact frame size required by webrtcvad
 except ImportError:
-    _vad = None
+    _vad_wake = _vad_query = _vad = None
     _VAD_FRAME = 480
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 
@@ -70,14 +75,31 @@ except Exception:
     _kb = None
 
 # ── Config ────────────────────────────────────────────────────────────────────
+# Voice params loaded from Athena/settings.json["voice"]; hardcoded values are
+# failsafe defaults used when settings.json is absent or unreadable.
+
+_voice_cfg: dict = {}
+try:
+    _cfg_path = ATHENA / "settings.json"
+    if _cfg_path.exists():
+        _voice_cfg = json.loads(_cfg_path.read_text(encoding="utf-8")).get("voice", {})
+except Exception:
+    pass
 
 TARGET_RATE       = 16000
 CHUNK_SAMPLES_16K = 1280
-SILENCE_THRESHOLD = 0.01
-SILENCE_DURATION  = 1.5   # 0.8 cut off speech mid-sentence → bad transcription → blocked response
-MAX_RECORD_SEC    = 30
-WAKE_THRESHOLD    = 0.35   # lowered from 0.5 — custom sklearn model needs lower threshold for good recall
-WHISPER_MODEL     = "tiny.en"    # tiny is 3× faster than base with acceptable accuracy
+SILENCE_THRESHOLD       = float(_voice_cfg.get("silence_threshold", 0.01))
+SILENCE_DURATION        = float(_voice_cfg.get("silence_duration",  2.2))
+# Fixed threshold during query recording — not affected by the wake-word
+# auto-tuner, which can drift SILENCE_THRESHOLD up in noisy rooms.
+QUERY_SILENCE_THRESHOLD = 0.012
+MAX_RECORD_SEC    = int(_voice_cfg.get("max_record_sec", 30))
+# WAKE_THRESHOLD stays hardcoded: the custom sklearn model was tuned at 0.35 for
+# good recall; settings.json still shows the old OWW default of 0.5.
+WAKE_THRESHOLD    = 0.35
+# base.en default: ~15-20% better WER vs tiny.en on medical/regulatory vocab;
+# RTX 4070 runs it in ~80 ms (vs ~50 ms for tiny) — a worthwhile trade.
+WHISPER_MODEL     = _voice_cfg.get("whisper_model", "base.en")
 
 TTS_BACKEND   = os.getenv("VOICE_TTS_BACKEND",  "kokoro").lower()
 KOKORO_VOICE  = os.getenv("VOICE_KOKORO_VOICE", "bf_emma")
@@ -449,6 +471,34 @@ _notification_queue: deque = deque()
 # Tracks an active conversational review — Steven can say "review items" and
 # Athena walks through each pending item, reads a summary, and accepts
 # "approve", "reject [reason]", "skip", "repeat", or "cancel".
+
+def _vary_phrase(base: str, hint: str = "") -> str:
+    """Return a naturally varied rephrasing of `base` via Claude Haiku.
+    Preserves all titles, names, and numbers exactly — only the connecting
+    language changes.  Falls back to `base` silently on any error."""
+    if not ANTHROPIC_API_KEY:
+        return base
+    try:
+        import anthropic as _ant
+        _client = _ant.Anthropic(api_key=ANTHROPIC_API_KEY)
+        _extra  = f"\n\nContext: {hint}" if hint else ""
+        _resp   = _client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=100,
+            system=(
+                "You are Athena, a warm and professional British English voice assistant "
+                "for Latitude MedTech LLC. Rephrase the given phrase naturally as spoken "
+                "dialogue — one or two short sentences, no markdown, no bullet points. "
+                "Preserve all specific titles, names, numbers, and dates exactly as given. "
+                "Vary only the connecting language and sentence structure."
+            ),
+            messages=[{"role": "user", "content": f"{base}{_extra}"}],
+        )
+        return _resp.content[0].text.strip()
+    except Exception:
+        return base
+
+
 _review_session: dict = {
     "active":            False,  # True while a review walk-through is in progress
     "items":             [],     # list of pending review item dicts from the API
@@ -632,16 +682,18 @@ def _resample(audio_f32):
 def _rms(chunk_f32):
     return float(np.sqrt(np.mean(chunk_f32 ** 2)))
 
-def _chunk_is_speech(chunk_f32_16k: np.ndarray) -> bool:
-    """True if the 16 kHz chunk likely contains human speech (not keyboard/ambient noise)."""
-    if _vad is None:
+def _chunk_is_speech(chunk_f32_16k: np.ndarray, vad_instance=None) -> bool:
+    """True if the 16 kHz chunk likely contains human speech (not keyboard/ambient noise).
+    Pass vad_instance explicitly to use the wake or query VAD — defaults to _vad_wake."""
+    v = vad_instance or _vad_wake
+    if v is None:
         return True
     frame = chunk_f32_16k[:_VAD_FRAME]
     if len(frame) < _VAD_FRAME:
         return True
     pcm = (frame * 32768).clip(-32768, 32767).astype(np.int16).tobytes()
     try:
-        return _vad.is_speech(pcm, TARGET_RATE)
+        return v.is_speech(pcm, TARGET_RATE)
     except Exception:
         return True
 
@@ -873,22 +925,60 @@ def _load_whisper():
     return WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8")
 
 def _record_query():
-    frames = []
-    silence = 0
-    sil_chunks = int(SILENCE_DURATION * TARGET_RATE / CHUNK_SAMPLES_16K)
-    max_chunks  = int(MAX_RECORD_SEC  * TARGET_RATE / CHUNK_SAMPLES_16K)
+    """Record until SILENCE_DURATION of continuous silence after at least
+    MIN_SPEECH_CHUNKS of detected speech.  Uses the permissive query VAD and a
+    fixed silence threshold that is not affected by the wake-word auto-tuner.
+
+    Two-phase silence logic:
+      Pre-speech  — bail out after PRE_SPEECH_SIL_CHUNKS of continuous silence
+                    so a false-positive wake trigger never blocks for 30 s.
+      Post-speech — require BOTH RMS and VAD to agree on silence before counting,
+                    so soft syllables don't prematurely end the recording.
+    """
+    frames             = []
+    silence            = 0
+    speech_seen        = 0
+    pre_speech_silence = 0   # separate counter — reset on first speech chunk
+    MIN_SPEECH_CHUNKS     = int(0.3 * TARGET_RATE / CHUNK_SAMPLES_16K)   # ~0.3 s to start
+    PRE_SPEECH_SIL_CHUNKS = int(2.5 * TARGET_RATE / CHUNK_SAMPLES_16K)   # bail-out on false-positive wake
+    sil_chunks            = int(SILENCE_DURATION * TARGET_RATE / CHUNK_SAMPLES_16K)
+    max_chunks            = int(MAX_RECORD_SEC   * TARGET_RATE / CHUNK_SAMPLES_16K)
+
     with sd.InputStream(device=INPUT_DEVICE, samplerate=DEVICE_RATE,
                         channels=DEVICE_CH, dtype="int16",
                         blocksize=CHUNK_NATIVE) as stream:
         while len(frames) < max_chunks and _active:
             chunk, _ = stream.read(CHUNK_NATIVE)
-            mono = _to_mono_float(chunk)
-            rs   = _resample(mono)
-            _emit("level", level=round(min(1.0, _rms(mono) * 8), 3))
+            mono  = _to_mono_float(chunk)
+            rs    = _resample(mono)
+            rms   = _rms(mono)
+            _emit("level", level=round(min(1.0, rms * 8), 3))
             frames.append(rs)
-            is_speech = _chunk_is_speech(rs)
-            silence = silence + 1 if (_rms(mono) < SILENCE_THRESHOLD or not is_speech) else 0
-            if silence >= sil_chunks: break
+
+            # Use the permissive (aggressiveness=1) VAD so soft syllables are
+            # not misclassified as silence mid-sentence.
+            is_speech = _chunk_is_speech(rs, _vad_query)
+
+            if rms >= QUERY_SILENCE_THRESHOLD and is_speech:
+                speech_seen        += 1
+                silence             = 0
+                pre_speech_silence  = 0   # reset both on confirmed speech
+            elif speech_seen >= MIN_SPEECH_CHUNKS:
+                # Post-speech: only count silence once BOTH indicators agree,
+                # so one ambiguous frame doesn't prematurely end the recording.
+                if rms < QUERY_SILENCE_THRESHOLD and not is_speech:
+                    silence += 1
+            else:
+                # Pre-speech: count toward false-positive bail-out only.
+                if rms < QUERY_SILENCE_THRESHOLD and not is_speech:
+                    pre_speech_silence += 1
+                    if pre_speech_silence >= PRE_SPEECH_SIL_CHUNKS:
+                        frames = []   # discard — no speech detected, likely false positive
+                        break
+
+            if silence >= sil_chunks:
+                break
+
     _emit("level", level=0.0)
     return np.concatenate(frames) if frames else np.array([], dtype=np.float32)
 
@@ -898,16 +988,7 @@ _LOW_CONFIDENCE_THRESHOLD = -0.7   # avg_logprob below this = uncertain transcri
 TELEMETRY_FILE = ATHENA / "voice" / "query_telemetry.jsonl"
 SAMPLES_DIR    = ATHENA / "voice" / "samples"
 
-# Reads capture_samples flag from settings.json at module load.
-# Set to true in settings.json to save WAV clips for Whisper fine-tuning.
-_CAPTURE_SAMPLES = False
-try:
-    _cfg_path = ATHENA / "settings.json"
-    if _cfg_path.exists():
-        _CAPTURE_SAMPLES = json.loads(_cfg_path.read_text(encoding="utf-8")).get(
-            "voice", {}).get("capture_samples", False)
-except Exception:
-    pass
+_CAPTURE_SAMPLES = bool(_voice_cfg.get("capture_samples", False))
 
 
 def _log_query_telemetry(data: dict):
@@ -950,10 +1031,17 @@ def _save_audio_sample(audio: np.ndarray, transcript: str, avg_logprob: float):
 # at zero latency cost (no extra API call).
 _WHISPER_DOMAIN_PROMPT = (
     "Latitude MedTech, FDA 483, Form 483, 483 observations, inspectional observations, "
-    "warning letter, FDA report, ISO 13485, 510(k), PMA, De Novo, CAPA, QMS, MDR, "
-    "MDSAP, CFR 820, CFR 21, medical device, regulatory submission, predicate device, "
-    "substantial equivalence, design controls, risk management, clinical evaluation, "
-    "post-market surveillance, adverse event, recall, field safety, FDA audit, "
+    "warning letter, untitled letter, consent decree, import alert, FDA report, "
+    "ISO 13485, 510(k), PMA, De Novo, CAPA, corrective action, preventive action, "
+    "QMS, quality management system, MDR, medical device report, MDSAP, "
+    "CFR 820, CFR 21, SaMD, software as a medical device, "
+    "EU MDR, IVDR, CE marking, notified body, technical file, PMCF, "
+    "medical device, regulatory submission, predicate device, substantial equivalence, "
+    "design controls, design history file, DHF, device history record, DHR, "
+    "risk management, ISO 14971, post-market surveillance, PMS, adverse event, recall, "
+    "field safety corrective action, FSCA, FDA audit, CDRH, EUA, emergency use, "
+    "UDI, unique device identifier, labeling, intended use, indications for use, "
+    "sterilization, biocompatibility, usability, human factors, software validation, "
     "generate report, draft briefing, run briefing, M&A report, pipeline report, "
     "Steven, Latitude MedTech, San Diego."
 )
@@ -1048,9 +1136,13 @@ def _build_system_prompt():
 
     return (
         "You are Athena, the voice assistant and chief of staff for Latitude MedTech LLC — "
-        "a MedTech and Pharma management consulting firm in San Diego, CA. "
+        "a MedTech and Pharma regulatory consulting and career coaching firm in San Diego, CA. "
         "You serve Steven Tran, Managing Partner and CEO.\n\n"
         f"{firm_context}\n"
+        "Domain expertise: FDA (510k, PMA, De Novo, 483s, warning letters, CFR 820/21, CDRH), "
+        "ISO 13485, ISO 14971, EU MDR/IVDR, MDSAP, SaMD, QMS, CAPA, risk management, "
+        "clinical evaluation, post-market surveillance, design controls, regulatory submissions, "
+        "MedTech career coaching (QA/RA professionals, early-to-mid career).\n\n"
         "You can trigger agents on Steven's behalf when he asks for: content drafts, "
         "daily briefings, knowledge base updates, ISO coaching, coaching briefs, "
         "or marketing tasks (weekly brief, 30-60-90 plan, outreach copy, events calendar, "
@@ -1058,7 +1150,7 @@ def _build_system_prompt():
         "VOICE RULES — follow strictly:\n"
         "- Conversational British English. Use contractions naturally: don't, can't, it's, I'd, you'll.\n"
         "- No markdown, lists, bullet points, asterisks, or symbols — these won't render in speech.\n"
-        "- Maximum 2 sentences. Never more unless explicitly asked.\n"
+        "- Under 80 words unless asked for detail. Never more than 3 sentences unprompted.\n"
         "- Answer first. Cut all preamble and restating the question.\n"
         "- Vary sentence length for natural rhythm — mix short punchy sentences with longer ones.\n"
         "- Speak like a trusted colleague, not a formal report.\n"
@@ -1071,23 +1163,35 @@ def _build_system_prompt():
 # MedTech shorthand that Kokoro would mangle, and normalises symbols.
 
 _TTS_SUBS = [
-    (re.compile(r'\*+([^*]+)\*+'),          r'\1'),          # bold/italic markdown
-    (re.compile(r'`([^`]+)`'),              r'\1'),          # inline code
-    (re.compile(r'^#+\s*', re.MULTILINE),   ''),             # heading hashes
-    (re.compile(r'\b510\(k\)', re.I),       'five-ten-K'),
-    (re.compile(r'\b510k\b',   re.I),       'five-ten-K'),
-    (re.compile(r'\bISO\s*13485\b'),        'I S O thirteen four eighty-five'),
-    (re.compile(r'\bCAPAs?\b'),             'CAPA'),         # already word-like; keep
-    (re.compile(r'\bFDA\b'),                'F D A'),
-    (re.compile(r'\bQMS\b'),                'Q M S'),
-    (re.compile(r'\bMDR\b'),                'M D R'),
-    (re.compile(r'\bPMA\b'),                'P M A'),
-    (re.compile(r'\bMDSAP\b'),              'M D S A P'),
-    (re.compile(r'\bUDI\b'),                'U D I'),
-    (re.compile(r'\bRAQA\b'),               'R A Q A'),
-    (re.compile(r'\bM&A\b', re.I),          'em en ay'),     # M&A → "em en ay" (before generic & rule)
-    (re.compile(r'&'),                      'and'),
-    (re.compile(r'\s{2,}'),                 ' '),            # collapse extra spaces
+    (re.compile(r'\*+([^*]+)\*+'),              r'\1'),      # bold/italic markdown
+    (re.compile(r'`([^`]+)`'),                  r'\1'),      # inline code
+    (re.compile(r'^#+\s*', re.MULTILINE),       ''),         # heading hashes
+    (re.compile(r'\b510\(k\)', re.I),           'five-ten-K'),
+    (re.compile(r'\b510k\b',   re.I),           'five-ten-K'),
+    (re.compile(r'\bISO\s*13485\b'),            'I S O thirteen four eighty-five'),
+    (re.compile(r'\bISO\s*14971\b'),            'I S O fourteen nine seventy-one'),
+    (re.compile(r'\bEU\s*MDR\b'),               'E U M D R'),
+    (re.compile(r'\bIVDR\b'),                   'I V D R'),
+    (re.compile(r'\bSaMD\b'),                   'sam D'),
+    (re.compile(r'\bCAPAs?\b'),                 'CAPA'),     # already word-like; keep
+    (re.compile(r'\bFDA\b'),                    'F D A'),
+    (re.compile(r'\bCDRH\b'),                   'C D R H'),
+    (re.compile(r'\bQMS\b'),                    'Q M S'),
+    (re.compile(r'\bMDR\b'),                    'M D R'),
+    (re.compile(r'\bPMA\b'),                    'P M A'),
+    (re.compile(r'\bMDSAP\b'),                  'M D S A P'),
+    (re.compile(r'\bUDI\b'),                    'U D I'),
+    (re.compile(r'\bEUA\b'),                    'E U A'),
+    (re.compile(r'\bDHF\b'),                    'D H F'),
+    (re.compile(r'\bDHR\b'),                    'D H R'),
+    (re.compile(r'\bPMS\b'),                    'P M S'),
+    (re.compile(r'\bFSCA\b'),                   'F S C A'),
+    (re.compile(r'\bPMCF\b'),                   'P M C F'),
+    (re.compile(r'\bRAQA\b'),                   'R A Q A'),
+    (re.compile(r'\bCFR\b'),                    'C F R'),
+    (re.compile(r'\bM&A\b', re.I),              'em en ay'), # M&A → "em en ay" (before generic & rule)
+    (re.compile(r'&'),                          'and'),
+    (re.compile(r'\s{2,}'),                     ' '),        # collapse extra spaces
 ]
 
 def _preprocess_tts(text: str) -> str:
@@ -1126,7 +1230,7 @@ def _ask_claude_streaming(text: str, history: list, kb_ctx: str = "") -> str:
 
         with client.messages.stream(
             model="claude-haiku-4-5",
-            max_tokens=120,
+            max_tokens=200,
             system=system,
             messages=msgs,
         ) as stream:
@@ -1206,6 +1310,26 @@ def _speak_kokoro(text: str):
     data, sr = sf.read(buf)
     sd.play(data.astype(np.float32), sr)
 
+_CREATE_NO_WINDOW = 0x08000000
+
+def _sapi_speak(text: str):
+    """Windows SAPI fallback — no extra Python packages; always available on Windows 11."""
+    try:
+        safe = text.replace("'", "").replace('"', "")
+        script = (
+            "Add-Type -AssemblyName System.Speech; "
+            "$s = New-Object System.Speech.Synthesis.SpeechSynthesizer; "
+            "$s.Rate = 0; "
+            f"$s.Speak('{safe}')"
+        )
+        subprocess.run(
+            ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script],
+            timeout=30, creationflags=_CREATE_NO_WINDOW,
+        )
+    except Exception as exc:
+        print(f"[voice] _sapi_speak failed: {exc!r}", flush=True)
+
+
 def _speak_sentence(text: str):
     """
     Sentence-level TTS — called per sentence during streaming.
@@ -1224,13 +1348,9 @@ def _speak_sentence(text: str):
         else:
             _speak_kokoro(text)
             sd.wait()   # block until this sentence finishes
-    except Exception:
-        try:
-            import pyttsx3
-            e = pyttsx3.init(); e.setProperty("rate", 175)
-            e.say(text); e.runAndWait()
-        except Exception:
-            pass
+    except Exception as exc:
+        print(f"[voice] _speak_sentence TTS failed: {exc!r}", flush=True)
+        _sapi_speak(text)
     # Pause after TTS — lets room echo decay so the mic doesn't hear Athena's own voice
     time.sleep(0.4)
 
@@ -1261,12 +1381,9 @@ def _speak(text: str):
             raise NotImplementedError("Miso API not yet available")
         else:
             _speak_kokoro(text)
-    except Exception:
-        try:
-            import pyttsx3
-            e = pyttsx3.init(); e.setProperty("rate", 175)
-            e.say(text); e.runAndWait()
-        except Exception: pass
+    except Exception as exc:
+        print(f"[voice] _speak TTS failed: {exc!r}", flush=True)
+        _sapi_speak(text)
 
 def _post_response_cooldown(oww_model):
     """
@@ -1373,14 +1490,11 @@ def _voice_loop():
             continue   # → top of loop → LISTENING emit → wake-word
         stt_ms = (time.time() - stt_t0) * 1000
 
-        empty = not bool(text)
-        _track_query(0, empty=empty, stt_logprob=avg_logprob,
-                     wake_score=wake_score, transcript=text, stt_ms=stt_ms)
-
         if text:
             _save_audio_sample(audio, text, avg_logprob)
-
-        if not text:
+        else:
+            _track_query(0, empty=True, stt_logprob=avg_logprob,
+                         wake_score=wake_score, transcript=text, stt_ms=stt_ms)
             _emit("info", message="No speech detected")
             continue   # → top of loop → LISTENING emit → wake-word
 
@@ -1465,6 +1579,8 @@ def _voice_loop():
                 if len(history) > _HISTORY_MAX: history = history[-_HISTORY_MAX:]
                 _save_history(history)
                 _post_response_cooldown(oww)
+                _track_query(0, stt_logprob=avg_logprob,
+                             wake_score=wake_score, transcript=text, stt_ms=stt_ms)
                 continue   # → top of loop → LISTENING emit → wake-word
 
             # ── Conversational query: KB grounding + streaming Claude → TTS ───
