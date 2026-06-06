@@ -149,14 +149,15 @@
   </div>
 
 <script language="VBScript">
-Dim bar, statusEl, pctEl, stepVal, targetVal, timer_id, poll_id, waited
+Dim bar, statusEl, pctEl, stepVal, targetVal, timer_id, poll_id, waited, readyToClose
 Dim BACKEND, FRONTEND, MAX_WAIT
 Dim dragging, dragLastX, dragLastY
 BACKEND  = "http://127.0.0.1:8000/"
 FRONTEND = "http://localhost:3000"
 MAX_WAIT = 60
 waited   = 0
-targetVal = 0
+targetVal    = 0
+readyToClose = False
 
 Sub Window_OnLoad
   ' On Error Resume Next: a resize/image failure must never stop the timers and
@@ -167,8 +168,9 @@ Sub Window_OnLoad
   Set bar      = document.getElementById("bar")
   Set statusEl = document.getElementById("status")
   Set pctEl    = document.getElementById("pct")
-  stepVal  = 0
-  targetVal = 0
+  stepVal      = 0
+  targetVal    = 0
+  readyToClose = False
   timer_id = window.setInterval("Tick",       400)
   poll_id  = window.setInterval("PollBackend", 800)
 
@@ -247,6 +249,11 @@ Sub Tick
     bar.style.width = stepVal & "%"
     pctEl.innerText = stepVal & "%"
   End If
+  ' Close only after the bar has visually reached 100%.
+  If readyToClose And stepVal >= 100 Then
+    window.clearInterval timer_id
+    window.setTimeout "window.close()", 300
+  End If
 End Sub
 
 Sub PollBackend
@@ -299,10 +306,8 @@ Sub PollChromeReady
   Set fso = CreateObject("Scripting.FileSystemObject")
   If fso.FileExists("C:\Users\huann\LatitudeMedTech\Athena\ui\.athena_ready") Then
     SetStatus "Welcome back. Athena is ready.", 100
-    window.clearInterval poll_id
-    window.clearInterval timer_id
-    ' Let Tick finish painting 100% before closing
-    window.setTimeout "window.close()", 1200
+    window.clearInterval poll_id   ' stop polling — Tick keeps running
+    readyToClose = True            ' Tick will close once stepVal reaches 100
   End If
 End Sub
 </script>
