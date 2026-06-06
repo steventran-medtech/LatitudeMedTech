@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { authHdr } from "./api.js";
 
 const API = "http://localhost:8000";
 
@@ -157,7 +158,7 @@ function NextActions({ actions, onUpdateStatus }) {
   const updateStatus = async (name, status) => {
     setUpdating(name);
     await fetch(`${API}/api/marketing/pipeline/update`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", ...authHdr() },
       body: JSON.stringify({ name, status, note: `Status updated via UI` }),
     }).catch(() => {});
     setUpdating(null);
@@ -341,7 +342,7 @@ export default function MarketingView({ runningAgents }) {
       fallbackRef.current = null;
     }, 180000);
     fetch(`${API}/api/agents/marketing`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", ...authHdr() },
       body: JSON.stringify({ mode, target }),
     }).then(() => {
       setStatus(`${mode} running — this can take a minute or two…`);

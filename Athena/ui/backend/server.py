@@ -14,6 +14,8 @@ import json
 import secrets
 import subprocess
 import asyncio
+import logging
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Literal, Optional
@@ -121,20 +123,26 @@ def _extract_md_summary(path: "Path", max_chars: int = 220) -> str:
         pass
     return ""
 
-# ── Audit logging ─────────────────────────────────────────────────────────────
+# ── Audit logging (SOC II CC7.2) ──────────────────────────────────────────────
+# Rotating at 5 MB, keeping 5 backups → max 30 MB on-disk; never silently drops.
 
 _AUDIT_LOG = ATHENA / "logs" / "audit.log"
 _AUDIT_LOG.parent.mkdir(parents=True, exist_ok=True)
 
+_audit_logger = logging.getLogger("latitude.audit")
+_audit_logger.setLevel(logging.INFO)
+_audit_logger.propagate = False
+_audit_handler = RotatingFileHandler(
+    str(_AUDIT_LOG), maxBytes=5 * 1024 * 1024, backupCount=5, encoding="utf-8"
+)
+_audit_handler.setFormatter(logging.Formatter("%(message)s"))
+_audit_logger.addHandler(_audit_handler)
+
 def _audit(action: str, detail: str = "", request: "Request | None" = None) -> None:
-    """Append a one-line audit record to logs/audit.log (SOC II CC7.2)."""
-    ts      = datetime.now().isoformat(timespec="seconds")
-    origin  = request.headers.get("origin", "local") if request else "system"
-    try:
-        with open(_AUDIT_LOG, "a", encoding="utf-8") as f:
-            f.write(f"{ts}  {action:<30}  origin={origin}  {detail}\n")
-    except Exception:
-        pass
+    """Append a one-line audit record (SOC II CC7.2). Rotates at 5 MB, 5 backups."""
+    ts     = datetime.now().isoformat(timespec="seconds")
+    origin = request.headers.get("origin", "local") if request else "system"
+    _audit_logger.info(f"{ts}  {action:<30}  origin={origin}  {detail}")
 
 # ── Database file protection (SOC II CC6.1) ───────────────────────────────────
 
@@ -151,6 +159,26 @@ def _harden_db_permissions() -> None:
                 p.chmod(stat.S_IRUSR | stat.S_IWUSR)
             except Exception:
                 pass
+
+# ── Session-token authentication middleware (SOC II CC6.6) ────────────────────
+# All API requests must carry X-Athena-Key: <SESSION_TOKEN> (or ?token= for
+# WebSocket handshakes).  Exempt: / · /api/version · /api/auth/token.
+
+_AUTH_EXEMPT = frozenset({"/", "/api/version", "/api/auth/token"})
+
+class AuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        if path in _AUTH_EXEMPT or path.startswith("/ws"):
+            return await call_next(request)
+        key = (request.headers.get("X-Athena-Key", "")
+               or request.query_params.get("token", ""))
+        if not secrets.compare_digest(key.encode(), SESSION_TOKEN.encode()):
+            _audit("auth_failure",
+                   f"path={path} ip={getattr(request.client, 'host', 'unknown')}",
+                   request)
+            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+        return await call_next(request)
 
 # ── Request body size limit middleware ────────────────────────────────────────
 class BodySizeLimitMiddleware(BaseHTTPMiddleware):
@@ -185,6 +213,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(BodySizeLimitMiddleware)
+app.add_middleware(AuthMiddleware)           # SOC II CC6.6: token auth on every request
 
 # Harden file permissions on startup (SOC II CC6.1)
 _harden_db_permissions()
@@ -781,6 +810,7 @@ async def update_pipeline_target(request: Request):
             (status, f"[{datetime.now().strftime('%Y-%m-%d')}] {note}", f"%{name}%")
         )
         conn.commit()
+    _audit("pipeline_update", f"target={name} status={status}", request)
     return {"status": "updated", "target": name}
 
 
@@ -961,6 +991,7 @@ async def bulk_delete_decks(request: Request):
         if str(path).startswith(str(decks_dir)) and path.exists():
             path.unlink()
             deleted.append(fn)
+    _audit("decks_bulk_delete", f"count={len(deleted)}", request)
     return {"deleted": deleted}
 
 @app.post("/api/decks/bulk-accept")
@@ -978,6 +1009,7 @@ async def bulk_accept_decks(request: Request):
         if str(src).startswith(str(decks_dir)) and src.exists():
             src.rename(approved_dir / fn)
             accepted.append(fn)
+    _audit("decks_bulk_accept", f"count={len(accepted)}", request)
     return {"accepted": accepted}
 
 @app.post("/api/decks/bulk-reject")
@@ -993,6 +1025,7 @@ async def bulk_reject_decks(request: Request):
         if str(path).startswith(str(decks_dir)) and path.exists():
             path.unlink()
             rejected.append(fn)
+    _audit("decks_bulk_reject", f"count={len(rejected)}", request)
     return {"rejected": rejected}
 
 @app.post("/api/iso/lesson-deck/{lesson_filename}")
@@ -1554,12 +1587,13 @@ def list_documents():
         if not base.exists():
             continue
         for f in base.glob(pattern):
+            _st = f.stat()
             item = {
                 "filename": f.name,
                 "folder": folder,
                 "path": str(f),
-                "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
-                "mtime": f.stat().st_mtime,
+                "modified": datetime.fromtimestamp(_st.st_mtime).isoformat(),
+                "mtime": _st.st_mtime,
             }
             if include_summary:
                 item["summary"] = _extract_md_summary(f)
@@ -1583,7 +1617,12 @@ def open_document(filename: str, folder: str = "documents"):
 # ── WebSocket ─────────────────────────────────────────────────────────────────
 
 @app.websocket("/ws")
-async def websocket_endpoint(ws: WebSocket):
+async def websocket_endpoint(ws: WebSocket, token: str = ""):
+    # SOC II CC6.6 — reject unauthenticated WebSocket upgrades
+    if not secrets.compare_digest(token.encode(), SESSION_TOKEN.encode()):
+        _audit("ws_auth_failure", "rejected /ws without valid token")
+        await ws.close(code=4001)
+        return
     global _goodbye_task
     # Cancel any pending goodbye — this is a reconnect (e.g. page refresh).
     if _goodbye_task and not _goodbye_task.done():
@@ -1599,7 +1638,12 @@ async def websocket_endpoint(ws: WebSocket):
 
 
 @app.websocket("/ws/voice")
-async def voice_ws_endpoint(ws: WebSocket):
+async def voice_ws_endpoint(ws: WebSocket, token: str = ""):
+    # SOC II CC6.6 — reject unauthenticated voice WebSocket upgrades
+    if not secrets.compare_digest(token.encode(), SESSION_TOKEN.encode()):
+        _audit("ws_auth_failure", "rejected /ws/voice without valid token")
+        await ws.close(code=4001)
+        return
     if VOICE_AVAILABLE:
         await voice_websocket_endpoint(ws)
     else:
@@ -1635,6 +1679,7 @@ async def update_settings(request: Request):
         body = await request.json()
         for key_path, value in body.items():
             agent_settings.set(key_path, value)
+        _audit("settings_update", f"keys={list(body.keys())}", request)
         return {"status": "saved", "updated_at": datetime.now().isoformat()}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
@@ -1648,6 +1693,7 @@ async def update_prompt(agent_name: str, request: Request):
         body  = await request.json()
         prompt = body.get("prompt", "")
         agent_settings.set_prompt(agent_name, prompt)
+        _audit("settings_prompt_update", f"agent={agent_name}", request)
         return {"status": "saved", "agent": agent_name}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
@@ -1658,6 +1704,7 @@ def reset_settings():
     if not SETTINGS_AVAILABLE:
         return JSONResponse(status_code=503, content={"error": "settings_manager not available"})
     agent_settings.reset_to_defaults()
+    _audit("settings_reset", "all settings restored to defaults")
     return {"status": "reset"}
 
 
@@ -1695,12 +1742,14 @@ async def delete_file(request: Request):
         print(f"DELETE: {f} exists={f.exists()}")
         if f.exists():
             f.unlink()
+            _audit("file_delete", f"filename={filename} folder={folder}", request)
             return {"status": "deleted", "filename": filename}
         # Try searching all folders
         for fname, fbase in FOLDER_MAP.items():
             candidate = fbase / filename
             if candidate.exists():
                 candidate.unlink()
+                _audit("file_delete", f"filename={filename} folder={fname}", request)
                 return {"status": "deleted", "filename": filename, "found_in": fname}
         return JSONResponse(status_code=404, content={"error": f"File not found: {filename} in {base}"})
     except Exception as e:
@@ -1736,6 +1785,7 @@ async def delete_files_bulk(request: Request):
                         break
             if not deleted_this:
                 failed.append(filename)
+        _audit("file_delete_bulk", f"deleted={len(deleted)} failed={len(failed)}", request)
         return {"deleted": deleted, "failed": failed, "count": len(deleted)}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
@@ -1751,6 +1801,7 @@ async def save_file(request: Request):
             f = base / filename
             if f.exists():
                 f.write_text(content, encoding="utf-8")
+                _audit("file_save", f"filename={filename} folder={folder}", request)
                 return {"status": "saved", "filename": filename}
         return JSONResponse(status_code=404, content={"error": f"File not found in any folder: {filename}"})
     except Exception as e:
@@ -1772,9 +1823,10 @@ def list_briefs():
 
 @app.get("/api/coaching/briefs/{filename}")
 def get_brief(filename: str):
+    _safe_filename(filename)   # SOC II CC6.1 — prevent path traversal
     briefs_dir = _HOME_ATHENA / "coaching" / "briefs"
-    f = briefs_dir / filename
-    if not f.exists():
+    f = (briefs_dir / filename).resolve()
+    if not str(f).startswith(str(briefs_dir.resolve())) or not f.exists():
         return JSONResponse(status_code=404, content={"error": "Not found"})
     return {"filename": filename, "content": f.read_text(encoding="utf-8", errors="replace")}
 
@@ -1820,23 +1872,26 @@ def list_iso_lessons():
         title  = " ".join(w.capitalize() for w in word_parts) if word_parts else clause
         return clause, title
 
-    return {"lessons": [
-        {
+    lessons = []
+    for f in files[:100]:
+        clause, title = _parse_iso_stem(f.stem)
+        lessons.append({
             "filename": f.name,
-            "clause":   _parse_iso_stem(f.stem)[0],
-            "title":    _parse_iso_stem(f.stem)[1],
+            "clause":   clause,
+            "title":    title,
             "standard": "ISO 14971" if f.name.startswith("14971_") else "ISO 13485",
             "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
-        }
-        for f in files[:100]
-    ]}
+        })
+    return {"lessons": lessons}
 
 
 @app.get("/api/iso/lessons/{filename}")
 def get_iso_lesson(filename: str):
+    _safe_filename(filename)   # SOC II CC6.1 — prevent path traversal
     for sub in ("iso14971", "iso13485"):
-        f = _HOME_ATHENA / "coaching" / sub / filename
-        if f.exists():
+        base = (_HOME_ATHENA / "coaching" / sub).resolve()
+        f    = (base / filename).resolve()
+        if str(f).startswith(str(base)) and f.exists():
             return {"filename": filename, "content": f.read_text(encoding="utf-8", errors="replace")}
     return JSONResponse(status_code=404, content={"error": "Not found"})
 

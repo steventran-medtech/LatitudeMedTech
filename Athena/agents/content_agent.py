@@ -20,6 +20,7 @@ import feedparser
 import requests
 from pathlib import Path
 from datetime import datetime
+import random
 from dotenv import load_dotenv
 import anthropic
 
@@ -399,8 +400,7 @@ def select_topic(news_items: list, override: str = "") -> dict:
     cat_examples = category.get("examples", [])
     sec_label    = subsector.get("label", "")
     sec_key      = subsector.get("key", "")
-    import random as _rnd
-    example_hint = _rnd.choice(cat_examples) if cat_examples else ""
+    example_hint = random.choice(cat_examples) if cat_examples else ""
 
     avoid_note = ""
     if recent:

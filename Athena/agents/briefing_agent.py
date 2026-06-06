@@ -23,6 +23,7 @@ import feedparser
 import requests
 from pathlib import Path
 from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 import anthropic
 
@@ -155,35 +156,44 @@ def item_id(url: str) -> str:
 
 # ── RSS fetching ──────────────────────────────────────────────────────────────
 
+def _fetch_rss_source(source: dict, seen: set) -> list:
+    """Fetch and filter items from a single RSS source (runs in a thread)."""
+    items = []
+    try:
+        feed = feedparser.parse(source['url'])
+        for entry in feed.entries[:10]:
+            title   = getattr(entry, 'title',   '').strip()
+            link    = getattr(entry, 'link',    '').strip()
+            summary = getattr(entry, 'summary', '').strip()
+            if not title or not link:
+                continue
+            iid = item_id(link)
+            if iid in seen:
+                continue
+            text  = f"{title} {summary}".lower()
+            score = sum(1 for kw in QA_RA_KEYWORDS if kw.lower() in text)
+            items.append({
+                'title':    title,
+                'link':     link,
+                'summary':  summary[:300],
+                'source':   source['name'],
+                'category': source['category'],
+                'priority': source['priority'],
+                'score':    score,
+                'id':       iid,
+                'via':      'rss',
+            })
+    except Exception as e:
+        log.warning(f"RSS failed {source['name']}: {e}")
+    return items
+
+
 def fetch_rss_items(seen: set) -> list:
     all_items = []
-    for source in RSS_SOURCES:
-        try:
-            feed = feedparser.parse(source['url'])
-            for entry in feed.entries[:10]:
-                title   = getattr(entry, 'title',   '').strip()
-                link    = getattr(entry, 'link',    '').strip()
-                summary = getattr(entry, 'summary', '').strip()
-                if not title or not link:
-                    continue
-                iid = item_id(link)
-                if iid in seen:
-                    continue
-                text  = f"{title} {summary}".lower()
-                score = sum(1 for kw in QA_RA_KEYWORDS if kw.lower() in text)
-                all_items.append({
-                    'title':    title,
-                    'link':     link,
-                    'summary':  summary[:300],
-                    'source':   source['name'],
-                    'category': source['category'],
-                    'priority': source['priority'],
-                    'score':    score,
-                    'id':       iid,
-                    'via':      'rss',
-                })
-        except Exception as e:
-            log.warning(f"RSS failed {source['name']}: {e}")
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = [executor.submit(_fetch_rss_source, source, seen) for source in RSS_SOURCES]
+        for future in as_completed(futures):
+            all_items.extend(future.result())
     return all_items
 
 
@@ -269,7 +279,6 @@ def fetch_brave_items(seen: set, focus: str = "") -> list:
                 'via':      'brave',
             })
             seen_urls.add(r["link"])
-        import time; time.sleep(0.3)
 
     log.info(f"  Brave found {len(all_items)} relevant items")
     return all_items

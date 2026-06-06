@@ -1,5 +1,5 @@
 # Latitude MedTech — Master Instructions
-**Version:** 2026-06-05 v10 · Compressed and updated after each session per Agent Principle #7.
+**Version:** 2026-06-05 v11 · Compressed and updated after each session per Agent Principle #7.
 
 ---
 
@@ -154,7 +154,15 @@ Athena is the primary interface and coordinator — not just a voice assistant. 
 ## Security & Compliance
 SOC 2 Type II (target) · NIST CSF 2.0 · HIPAA (hard gate — no PHI until BAA) · OWASP Top 10 · 21 CFR Part 11 (future)
 
-**Controls:** Rate limiting (120 req/min) · Security headers (CSP, X-Frame-Options, nosniff) · Path traversal protection · Input sanitisation · Session token · API docs disabled · `shell=False` all subprocesses · CORS: localhost + app:// only
+**Controls implemented (2026-06-05):**
+- **CC6.6 Auth** — `AuthMiddleware` validates `X-Athena-Key` on every API request; `secrets.compare_digest` (timing-safe); auth failures audit-logged; WebSocket rejects without `?token=`
+- **CC6.1 DB hardening** — `latitude_memory.db` + `.athena.key` chmod 0600 on startup
+- **CC7.2 Rotating audit log** — `logs/audit.log` via `RotatingFileHandler` (5 MB × 5 backups); logs: server_start, agent lifecycle, auth_failure, file_open/save/delete, settings_update/reset, decks_bulk_*, pipeline_update
+- **OWASP A03** — `os.startfile()` replaces `shell=True` for doc open; `_safe_filename()` + resolved-path checks on `get_brief`, `get_iso_lesson`
+- **Frontend auth** — `src/api.js` token singleton; `X-Athena-Key` in all POST/DELETE calls across all components + WebSocket URLs include `?token=`
+- Rate limiting (120/min) · CSP + security headers · CORS: localhost:3000 + app:// · API docs disabled
+
+**Formal SOC II + OWASP matrix:** `.claude/rules/compliance.md` (update manually — auto-mode blocks agent writes to rules dir).
 
 ---
 

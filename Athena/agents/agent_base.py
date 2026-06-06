@@ -125,6 +125,7 @@ class AgentBase:
         self.name    = agent_name
         self._ctx    = None   # lazy-loaded context file
         self._claude = None   # lazy anthropic client
+        self._firm_ctx_cache = {}   # cache firm_context reads (file rarely changes)
 
     # ── Context file ──────────────────────────────────────────────────────────
 
@@ -146,6 +147,8 @@ class AgentBase:
 
     def firm_context(self, sections=("## Core Values", "## North Star")) -> str:
         """Extract relevant sections from CLAUDE.md for prompt grounding."""
+        if sections in self._firm_ctx_cache:
+            return self._firm_ctx_cache[sections]
         if not CLAUDE_MD.exists():
             return ""
         raw = CLAUDE_MD.read_text(encoding="utf-8")
@@ -155,7 +158,8 @@ class AgentBase:
             if start != -1:
                 end = raw.find("\n## ", start + 1)
                 parts.append(raw[start: end if end != -1 else start + 500])
-        return "\n".join(parts)
+        self._firm_ctx_cache[sections] = "\n".join(parts)
+        return self._firm_ctx_cache[sections]
 
     # ── KB context ────────────────────────────────────────────────────────────
 

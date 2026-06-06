@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { authHdr } from "./api.js";
 
 const API = "http://localhost:8000";
 
@@ -101,7 +102,7 @@ function PromptEditor({ agentId, label, prompt, onSave }) {
   const save = async () => {
     try {
       const res = await fetch(`${API}/api/settings/prompt/${agentId}`, {
-        method:  "POST",
+        method:  "POST",  ...authHdr(),
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ prompt: val }),
       });
@@ -157,7 +158,7 @@ export default function SettingsView() {
   const saveSetting = useCallback(async (keyPath, value) => {
     try {
       await fetch(`${API}/api/settings`, {
-        method:  "POST",
+        method:  "POST",  ...authHdr(),
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ [keyPath]: value }),
       });
@@ -177,7 +178,7 @@ export default function SettingsView() {
     if (!window.confirm("Reset all settings to defaults? This cannot be undone.")) return;
     setResetting(true);
     try {
-      await fetch(`${API}/api/settings/reset`, { method: "POST" });
+      await fetch(`${API}/api/settings/reset`, { method: "POST", headers: authHdr() });
       loadSettings();
       setStatus("Reset to defaults");
       setTimeout(() => setStatus(""), 3000);

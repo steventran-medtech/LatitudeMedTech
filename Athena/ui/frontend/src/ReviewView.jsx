@@ -3,6 +3,7 @@
  * Every client-facing output (briefs, articles) lands here before Steven approves it.
  */
 import { useEffect, useRef, useState } from "react";
+import { authHdr } from "./api.js";
 import mammoth from "mammoth";
 
 const API = "http://localhost:8000";
@@ -383,7 +384,7 @@ export default function ReviewView() {
     setEdits(p => ({ ...p, [id]: { status: "editing", msg: "" } }));
     try {
       const r = await fetch(`${API}/api/review/${id}/edit`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json", ...authHdr() },
         body: JSON.stringify({ instruction }),
       });
       const d = await r.json();
@@ -403,7 +404,7 @@ export default function ReviewView() {
     setActing(p => ({ ...p, [id]: true }));
     try {
       await fetch(`${API}/api/review/${id}/${action}`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json", ...authHdr() },
         body: JSON.stringify({ notes: notes[id] || "" }),
       });
     } finally {
@@ -415,7 +416,7 @@ export default function ReviewView() {
   const reopen = async (id) => {
     setReopening(p => ({ ...p, [id]: true }));
     try {
-      await fetch(`${API}/api/review/${id}/reopen`, { method: "POST" });
+      await fetch(`${API}/api/review/${id}/reopen`, { method: "POST", headers: authHdr() });
     } finally {
       setReopening(p => ({ ...p, [id]: false }));
       load();

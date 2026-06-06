@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { authHdr, wsUrl } from "./api.js";
 
 const API     = "http://localhost:8000";
 const MAX_LOG = 40;
@@ -61,7 +62,7 @@ export function useVoiceSession() {
             sessionStart.current = Date.now(); queryCount.current = 0;
             fetch(`${API}/api/sessions/start`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", ...authHdr() },
               body: JSON.stringify({
                 session_id: sid,
                 started_at: new Date().toISOString(),
@@ -77,10 +78,10 @@ export function useVoiceSession() {
             return;
           }
           // All models ready — greet then start
-          fetch(`${API}/api/voice/greet`, { method: "POST" })
+          fetch(`${API}/api/voice/greet`, { method: "POST", headers: authHdr() })
             .catch(() => {})
             .finally(() => {
-              fetch(`${API}/api/voice/start`, { method: "POST" })
+              fetch(`${API}/api/voice/start`, { method: "POST", headers: authHdr() })
                 .then(r => r.json()).then(s => {
                   if (s.status === "started" || s.status === "already_running") {
                     const now = Date.now();
@@ -92,7 +93,7 @@ export function useVoiceSession() {
                     sessionStart.current = now; queryCount.current = 0;
                     fetch(`${API}/api/sessions/start`, {
                       method: "POST",
-                      headers: { "Content-Type": "application/json" },
+                      headers: { "Content-Type": "application/json", ...authHdr() },
                       body: JSON.stringify({
                         session_id: sid,
                         started_at: new Date(now).toISOString(),
@@ -113,7 +114,7 @@ export function useVoiceSession() {
   // WebSocket to voice event stream — lives for app lifetime, not just Voice tab
   useEffect(() => {
     if (!running) { wsRef.current?.close(); return; }
-    const ws = new WebSocket("ws://localhost:8000/ws/voice");
+    const ws = new WebSocket(wsUrl("ws://localhost:8000/ws/voice"));
     wsRef.current = ws;
     ws.onmessage = (e) => {
       const msg  = JSON.parse(e.data);
@@ -166,7 +167,7 @@ export function useVoiceSession() {
 
   const startVoice = () => {
     const params = selDev !== "" ? `?device=${selDev}` : "";
-    fetch(`${API}/api/voice/start${params}`, { method: "POST" })
+    fetch(`${API}/api/voice/start${params}`, { method: "POST", headers: authHdr() })
       .then(r => r.json()).then(d => {
         if (d.status === "started" || d.status === "already_running") {
           const now = Date.now();
@@ -178,7 +179,7 @@ export function useVoiceSession() {
           sessionStart.current = now; queryCount.current = 0; setElapsed(0);
           fetch(`${API}/api/sessions/start`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...authHdr() },
             body: JSON.stringify({
               session_id: sid,
               started_at: new Date(now).toISOString(),
@@ -194,14 +195,14 @@ export function useVoiceSession() {
     const start = sessionStart.current;
     const sid   = sessionIdRef.current;
     const isNew = sessionIsNew.current;
-    fetch(`${API}/api/voice/stop`, { method: "POST" })
+    fetch(`${API}/api/voice/stop`, { method: "POST", headers: authHdr() })
       .then(() => {
         setRunning(false); setState("stopped"); setLevel(0);
         const ended = new Date().toISOString();
         const dur   = start ? Math.floor((Date.now() - start) / 1000) : 0;
         fetch(`${API}/api/sessions/log`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...authHdr() },
           body: JSON.stringify({
             session_id:    sid ?? crypto.randomUUID(),
             started_at:    start ? new Date(start).toISOString() : ended,

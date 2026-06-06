@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { authHdr } from "./api.js";
 
 const API = "http://localhost:8000";
 
@@ -140,7 +141,7 @@ function LessonEditor({ filename, content, onSave, onCancel }) {
     setSaving(true);
     try {
       await fetch(`${API}/api/files/save`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json", ...authHdr() },
         body: JSON.stringify({ filename, content: val }),
       });
       onSave(val);
@@ -258,7 +259,7 @@ export default function ISOView({ runningAgents }) {
       setStatus("Done — refresh if your lesson isn't listed yet.");
     }, 120000);
     fetch(`${API}/api/agents/iso`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", ...authHdr() },
       body: JSON.stringify({ clause: clause.trim() || null }),
     }).then(() => {
       setStatus("Generating — check Run Agents log");
@@ -273,7 +274,7 @@ export default function ISOView({ runningAgents }) {
 
   const deleteOne = async (filename) => {
     await fetch(`${API}/api/files/delete`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", ...authHdr() },
       body: JSON.stringify({ filename, folder: folderOf(filename) }),
     });
     if (selected === filename) { setSelected(null); setContent(""); setEditing(false); }
@@ -284,7 +285,7 @@ export default function ISOView({ runningAgents }) {
     if (!ms.size) return;
     if (!window.confirm(`Delete ${ms.size} lesson(s)?`)) return;
     await fetch(`${API}/api/files/delete-bulk`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", ...authHdr() },
       body: JSON.stringify({ items: [...ms.checked].map(f => ({ folder: folderOf(f), filename: f })) }),
     });
     if (ms.has(selected)) { setSelected(null); setContent(""); setEditing(false); }

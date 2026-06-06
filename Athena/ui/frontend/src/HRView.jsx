@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { authHdr } from "./api.js";
 
 const API = "http://localhost:8000";
 
@@ -277,7 +278,7 @@ export default function HRView({ runningAgents }) {
       delete fallbacksRef.current[fbKey];
     }, FALLBACK_MS[key] || 300000);
     fetch(`${API}${endpoint}`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", ...authHdr() },
       body: JSON.stringify(body),
     }).catch(() => {
       setRunning(p => ({ ...p, [key]: false }));
