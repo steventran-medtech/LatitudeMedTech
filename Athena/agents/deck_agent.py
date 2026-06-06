@@ -159,6 +159,45 @@ class DeckAgent:
             self._client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
         return self._client
 
+    # ── Client brief lookup ───────────────────────────────────────────────────
+
+    def _find_client_brief(self, client_name: str) -> str:
+        """Fuzzy-match client_name against coaching/briefs/ filenames.
+        Returns the brief content (stripped of frontmatter) or empty string."""
+        from pathconfig import BRIEFS_DIR
+        if not client_name or not BRIEFS_DIR.exists():
+            return ""
+
+        # Normalise: "Maya Patel" → "maya_patel"
+        slug = re.sub(r"[^a-z0-9]+", "_", client_name.lower()).strip("_")
+        # Individual tokens for partial matching: ["maya", "patel"]
+        tokens = [t for t in slug.split("_") if len(t) > 1]
+
+        candidates = []
+        for f in BRIEFS_DIR.glob("*.md"):
+            # Filename: "2026-06-05_maya_patel.md" → name_slug = "maya_patel"
+            name_slug = f.stem.split("_", 1)[1] if "_" in f.stem else f.stem
+            if slug == name_slug:                              # exact
+                candidates.append((2, f.stat().st_mtime, f))
+            elif tokens and all(t in name_slug for t in tokens):  # partial
+                candidates.append((1, f.stat().st_mtime, f))
+
+        if not candidates:
+            return ""
+
+        best = sorted(candidates, key=lambda x: (x[0], x[1]), reverse=True)[0][2]
+        try:
+            raw = best.read_text(encoding="utf-8")
+            # Strip YAML frontmatter
+            if raw.startswith("---"):
+                end = raw.find("\n---", 3)
+                raw = raw[end + 4:].strip() if end != -1 else raw
+            log.info(f"Client brief matched: {best.name}")
+            return raw[:4000]   # cap at 4k chars — enough context, won't blow the prompt
+        except Exception as e:
+            log.warning(f"Brief read error: {e}")
+            return ""
+
     # ── Planning ──────────────────────────────────────────────────────────────
 
     def _plan(self, topic: str, deck_type: str, context: str,
@@ -182,6 +221,16 @@ class DeckAgent:
         meta = [f"Topic: {topic}", f"Deck type: {deck_type}", f"Date: {today}"]
         if client_name:
             meta.append(f"Client / audience: {client_name}")
+            brief = self._find_client_brief(client_name)
+            if brief:
+                meta.append(
+                    f"## Existing client file for {client_name}\n"
+                    f"Use this to tailor slide content, framing, and recommendations "
+                    f"specifically to this client's background, goals, and program match:\n\n"
+                    f"{brief}"
+                )
+            else:
+                log.info(f"No existing brief found for client: {client_name!r}")
         if context:
             meta.append(f"Additional context: {context}")
         if data:
