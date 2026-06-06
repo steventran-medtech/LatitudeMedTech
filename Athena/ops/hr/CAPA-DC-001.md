@@ -1,7 +1,8 @@
 # CAPA-DC-001 — Unauthenticated Frontend API Fetch Calls
 
 **Date opened:** 2026-06-06  
-**Status:** OPEN — Preventive actions in progress  
+**Date closed:** 2026-06-06  
+**Status:** CLOSED — All verification criteria met  
 **Type:** Preventive (systemic pattern; no client impact at Alpha)  
 **Trigger:** dc_verify.py DI-020-B/C/E failed 3× during session — mandatory CAPA threshold  
 **Raised by:** Athena / reviewed by Steven Tran  
@@ -82,11 +83,11 @@ automated cross-file coverage in `dc_verify.py`.
 
 | ID | Action | Owner | Due | Status |
 |---|---|---|---|---|
-| PA-1 | Extend `dc_verify.py` with `test_DI_015_G` — scan all `.jsx`/`.js` files for naked `fetch(${API}/api/` calls lacking `authHdr()`, excluding exempt endpoints | Steven / Claude | Phase 2C close | OPEN |
-| PA-2 | Fix all remaining naked GET fetches identified in the scope audit above (CA-1–4 covered `ReviewView.jsx`; 9 files remain) | Steven / Claude | Phase 2C close | OPEN |
-| PA-3 | Add `DI-015-G` to DC-002 and RTM: *"All fetch calls to non-exempt `/api/` endpoints in the frontend shall include `authHdr()` in the request headers"* | Steven / Claude | Phase 2C close | OPEN |
-| PA-4 | Add to `CLAUDE.md` §Frontend Standards: *"Every `fetch(\`${API}/api/...\`)` call must include `{ headers: authHdr() }` unless the endpoint is in the auth-exempt list (`/api/auth/token`, `/api/version`). No exceptions. GET calls are not exempt."* | Steven / Claude | Phase 2C close | OPEN |
-| PA-5 | Audit `.catch(() => {})` usage across frontend — replace with error state that surfaces auth failures visibly rather than silently emptying the UI | Steven / Claude | Phase 2D | OPEN |
+| PA-1 | Extend `dc_verify.py` with `test_DI_015_G` — scan all `.jsx`/`.js` files for naked `fetch(${API}/api/` calls lacking `authHdr()`, excluding exempt endpoints | Steven / Claude | Phase 2C close | ✓ Done |
+| PA-2 | Fix all remaining naked GET fetches identified in the scope audit above (CA-1–4 covered `ReviewView.jsx`; 9 files remain) | Steven / Claude | Phase 2C close | ✓ Done |
+| PA-3 | Add `DI-015-G` to DC-002 and RTM: *"All fetch calls to non-exempt `/api/` endpoints in the frontend shall include `authHdr()` in the request headers"* | Steven / Claude | Phase 2C close | ✓ Done |
+| PA-4 | Add to `CLAUDE.md` §Frontend Standards: *"Every `fetch(\`${API}/api/...\`)` call must include `{ headers: authHdr() }` unless the endpoint is in the auth-exempt list (`/api/auth/token`, `/api/version`). No exceptions. GET calls are not exempt."* | Steven / Claude | Phase 2C close | ✓ Done |
+| PA-5 | Audit `.catch(() => {})` usage across frontend — replace with error state that surfaces auth failures visibly rather than silently emptying the UI | Steven / Claude | Phase 2D | OPEN (deferred) |
 
 ---
 

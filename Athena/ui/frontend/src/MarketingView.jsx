@@ -288,10 +288,10 @@ export default function MarketingView({ runningAgents }) {
   const fallbackRef    = useRef(null);
 
   const loadPipeline = () => {
-    fetch(`${API}/api/marketing/pipeline`).then(r => r.json()).then(setPipeline).catch(() => {});
+    fetch(`${API}/api/marketing/pipeline`, { headers: authHdr() }).then(r => r.json()).then(setPipeline).catch(() => {});
   };
   const loadOutputs = () => {
-    fetch(`${API}/api/marketing/outputs`).then(r => r.json()).then(d => {
+    fetch(`${API}/api/marketing/outputs`, { headers: authHdr() }).then(r => r.json()).then(d => {
       const files = d.files || [];
       setOutputs(files);
       // Auto-select latest if nothing selected yet
@@ -303,7 +303,7 @@ export default function MarketingView({ runningAgents }) {
 
   useEffect(() => {
     if (!selected) return;
-    fetch(`${API}/api/marketing/outputs/${selected}`)
+    fetch(`${API}/api/marketing/outputs/${selected}`, { headers: authHdr() })
       .then(r => r.json()).then(d => setContent(d.content || "")).catch(() => setContent(""));
   }, [selected]);
 

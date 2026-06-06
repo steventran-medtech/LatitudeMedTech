@@ -2,6 +2,7 @@
 // Intake form, engagement tracker, SOW + regulatory assessment triggers.
 
 import { useState, useEffect, useCallback } from "react";
+import { authHdr } from "./api.js";
 
 const API = "http://localhost:8000";
 
@@ -126,7 +127,7 @@ function IntakeForm({ onCreated, onCancel }) {
     try {
       const res  = await fetch(`${API}/api/clients`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHdr() },
         body: JSON.stringify(form),
       });
       const data = await res.json();
@@ -236,7 +237,7 @@ function EngagementPanel({ client, runningAgents }) {
   const [toast, setToast]             = useState("");
 
   const load = useCallback(() => {
-    fetch(`${API}/api/clients/${client.id}/engagements`)
+    fetch(`${API}/api/clients/${client.id}/engagements`, { headers: authHdr() })
       .then(r => r.json()).then(d => setEngagements(d.engagements || []))
       .catch(() => {});
   }, [client.id]);
@@ -247,7 +248,7 @@ function EngagementPanel({ client, runningAgents }) {
     if (!newTitle.trim()) return;
     await fetch(`${API}/api/clients/${client.id}/engagements`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHdr() },
       body: JSON.stringify({ title: newTitle, description: newDesc, status: "scoping" }),
     });
     setAdding(false); setNewTitle(""); setNewDesc("");
@@ -259,7 +260,7 @@ function EngagementPanel({ client, runningAgents }) {
     setToast("SOW generation started — check Review Queue when complete.");
     await fetch(`${API}/api/agents/sow`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHdr() },
       body: JSON.stringify({ client_id: client.id, engagement_id: engId }),
     });
     setTimeout(() => { setRunning(false); setToast(""); load(); }, 3000);
@@ -275,7 +276,7 @@ function EngagementPanel({ client, runningAgents }) {
     setToast("Regulatory gap assessment started — check Review Queue when complete.");
     await fetch(`${API}/api/agents/regulatory-assessment`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHdr() },
       body: JSON.stringify({
         device_type: client.regulatory_challenge,
         classification: "To be confirmed",
@@ -398,7 +399,7 @@ function ClientDetail({ client, onUpdate, onDelete, runningAgents }) {
     setSaving(true);
     await fetch(`${API}/api/clients/${client.id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHdr() },
       body: JSON.stringify(form),
     });
     setSaving(false);
@@ -408,7 +409,7 @@ function ClientDetail({ client, onUpdate, onDelete, runningAgents }) {
 
   const del = async () => {
     if (!window.confirm(`Delete client "${client.name}"? This cannot be undone.`)) return;
-    await fetch(`${API}/api/clients/${client.id}`, { method: "DELETE" });
+    await fetch(`${API}/api/clients/${client.id}`, { method: "DELETE", headers: authHdr() });
     onDelete();
   };
 
@@ -566,7 +567,7 @@ export default function ClientsView({ runningAgents }) {
   const [loading, setLoading]       = useState(true);
 
   const load = useCallback(() => {
-    fetch(`${API}/api/clients`)
+    fetch(`${API}/api/clients`, { headers: authHdr() })
       .then(r => r.json())
       .then(d => { setClients(d.clients || []); setLoading(false); })
       .catch(() => setLoading(false));
@@ -578,7 +579,7 @@ export default function ClientsView({ runningAgents }) {
     setShowIntake(false);
     load();
     setTimeout(() => {
-      fetch(`${API}/api/clients/${id}`).then(r => r.json()).then(setSelected);
+      fetch(`${API}/api/clients/${id}`, { headers: authHdr() }).then(r => r.json()).then(setSelected);
     }, 300);
   };
 
@@ -709,7 +710,7 @@ export default function ClientsView({ runningAgents }) {
               runningAgents={runningAgents}
               onUpdate={() => {
                 load();
-                fetch(`${API}/api/clients/${selected.id}`)
+                fetch(`${API}/api/clients/${selected.id}`, { headers: authHdr() })
                   .then(r => r.json()).then(setSelected);
               }}
               onDelete={() => { setSelected(null); load(); }}

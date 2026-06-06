@@ -147,7 +147,7 @@ export default function SettingsView() {
   const [resetting, setResetting] = useState(false);
 
   const loadSettings = useCallback(() => {
-    fetch(`${API}/api/settings`)
+    fetch(`${API}/api/settings`, { headers: authHdr() })
       .then(r => r.json())
       .then(setData)
       .catch(() => setData(null));
