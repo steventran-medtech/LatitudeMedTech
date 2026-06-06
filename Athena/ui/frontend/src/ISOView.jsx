@@ -218,14 +218,14 @@ export default function ISOView({ runningAgents }) {
   const fallbackRef = useRef(null);
 
   const load = () =>
-    fetch(`${API}/api/iso/lessons`).then(r => r.json())
+    fetch(`${API}/api/iso/lessons`, { headers: authHdr() }).then(r => r.json())
       .then(d => setLessons(d.lessons || [])).catch(() => {});
 
   useEffect(() => { load(); }, []);
 
   useEffect(() => {
     if (!selected) return;
-    fetch(`${API}/api/iso/lessons/${selected}`).then(r => r.json())
+    fetch(`${API}/api/iso/lessons/${selected}`, { headers: authHdr() }).then(r => r.json())
       .then(d => setContent(d.content || "")).catch(() => {});
   }, [selected]);
 
@@ -412,6 +412,7 @@ export default function ISOView({ runningAgents }) {
                       setDeckExportMsg("Building PPTX…");
                       fetch(`${API}/api/iso/lesson-deck/${encodeURIComponent(selected)}`, {
                         method: "POST",
+                        headers: authHdr(),
                       })
                         .then(r => r.json())
                         .then(d => setDeckExportMsg(

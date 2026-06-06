@@ -65,7 +65,7 @@ function SlidePreviewModal({ filename, onClose }) {
   const { label } = parseDeckMeta(filename);
 
   useEffect(() => {
-    fetch(`${API}/api/decks/${encodeURIComponent(filename)}/slides`)
+    fetch(`${API}/api/decks/${encodeURIComponent(filename)}/slides`, { headers: authHdr() })
       .then(r => r.json())
       .then(d => { setSlides(d.slides || []); setLoading(false); })
       .catch(() => setLoading(false));
@@ -294,7 +294,7 @@ export default function DeckView({ runningAgents }) {
   const timerRef    = useRef(null);
 
   const loadDecks = useCallback(() =>
-    fetch(`${API}/api/decks`)
+    fetch(`${API}/api/decks`, { headers: authHdr() })
       .then(r => r.json())
       .then(d => { setDecks(d.decks || []); setLoading(false); })
       .catch(() => setLoading(false)), []);
