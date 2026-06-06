@@ -954,6 +954,52 @@ def test_DI_018_B():
              "Add validate() that checks name/email/program_tier and sets per-field error state")
 
 
+# ── UN-019 / Startup Splash Screen ────────────────────────────────────────────
+
+def test_DI_019_A():
+    """DI-019-A: Splash .bar-wrap is absolutely positioned full-width at the bottom edge"""
+    di = "DI-019-A"
+    if _skip_if_filtered(di): return
+    f = ATHENA / "ui" / "start_splash.hta"
+    if not f.exists():
+        _log(FAIL, di, "start_splash.hta not found", str(f))
+        return
+    content = _read(f)
+    has_absolute  = "position:absolute" in content
+    has_bottom    = "bottom:0" in content
+    has_full_span = ("left:0" in content and "right:0" in content) or "width:100%" in content
+    if has_absolute and has_bottom and has_full_span:
+        _log(PASS, di, "Splash .bar-wrap is absolutely positioned full-width at the bottom edge")
+    else:
+        missing = []
+        if not has_absolute:  missing.append("position:absolute")
+        if not has_bottom:    missing.append("bottom:0")
+        if not has_full_span: missing.append("left:0 + right:0 (full span)")
+        _log(FAIL, di, f"Splash bar missing required CSS: {missing}",
+             "Set .bar-wrap { position:absolute; bottom:0; left:0; right:0; } in start_splash.hta")
+
+
+def test_DI_019_B():
+    """DI-019-B: Splash screen has no numeric percentage text element or VBScript assignment"""
+    di = "DI-019-B"
+    if _skip_if_filtered(di): return
+    f = ATHENA / "ui" / "start_splash.hta"
+    if not f.exists():
+        _log(FAIL, di, "start_splash.hta not found", str(f))
+        return
+    content = _read(f)
+    has_pct_element = 'id="pct"' in content
+    has_pct_script  = 'pctEl.innerText' in content
+    if has_pct_element or has_pct_script:
+        detail = []
+        if has_pct_element: detail.append('id="pct" element present in HTML')
+        if has_pct_script:  detail.append('pctEl.innerText assignment in VBScript')
+        _log(FAIL, di, "Percentage text not fully removed from splash screen",
+             "; ".join(detail))
+    else:
+        _log(PASS, di, "No percentage text element or VBScript assignment in start_splash.hta")
+
+
 # ── Live API Tests ─────────────────────────────────────────────────────────────
 
 def test_live_api():
@@ -1106,6 +1152,9 @@ def main():
 
     _section("UN-018 Client Lifecycle")
     test_DI_018_A(); test_DI_018_B()
+
+    _section("UN-019 Startup Experience")
+    test_DI_019_A(); test_DI_019_B()
 
     if args.live or args.full:
         test_live_api()

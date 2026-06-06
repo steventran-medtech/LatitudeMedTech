@@ -78,16 +78,18 @@ column are open findings requiring immediate remediation.
 | UN-017 | | DI-017-C | Review items retrievable by ID | `server.py` GET /api/review/{id} | `test_DI_017_C` | VERIFIED |
 | UN-018 | Client lifecycle | DI-018-A | Client creation returns ID; db errors return 500 JSON | `server.py` create_client | `test_DI_018_A` | VERIFIED |
 | UN-018 | | DI-018-B | Intake form required-field validation (name, email, tier) | `ClientsView.jsx` IntakeForm | `test_DI_018_B` | VERIFIED |
+| UN-019 | Startup experience | DI-019-A | Progress bar absolutely positioned full-width at bottom | `start_splash.hta` `.bar-wrap` CSS | `test_DI_019_A` | VERIFIED |
+| UN-019 | | DI-019-B | No numeric percentage text during loading | `start_splash.hta` — no `#pct` element or `pctEl.innerText` | `test_DI_019_B` | VERIFIED |
 
 ---
 
-## Coverage Summary (v1.1)
+## Coverage Summary (v1.2)
 
 | Metric | Count |
 |---|---|
-| Total user needs | 18 |
-| Total design inputs | 54 |
-| Design inputs with VERIFIED tests | 40 |
+| Total user needs | 19 |
+| Total design inputs | 56 |
+| Design inputs with VERIFIED tests | 42 |
 | Design inputs with PARTIAL coverage | 12 |
 | Design inputs with OPEN gap | 2 |
 | Design inputs with WAIVED status | 0 |
