@@ -242,9 +242,9 @@ Sub SetStatus(msg, newTarget)
 End Sub
 
 Sub Tick
-  ' Creep stepVal toward targetVal 2% per tick (200ms) = ~10%/sec — never overshoot.
+  ' Creep stepVal toward targetVal 1% per tick (200ms) = 5%/sec — never overshoot.
   If stepVal < targetVal Then
-    stepVal = stepVal + 2
+    stepVal = stepVal + 1
     If stepVal > targetVal Then stepVal = targetVal
     bar.style.width = stepVal & "%"
     pctEl.innerText = stepVal & "%"
