@@ -38,6 +38,88 @@ except Exception:
     _kb = None
 
 
+# 50-year domain evolution summaries injected into every agent's system prompt.
+# Kept concise (~120 chars each) so they add context without bloating token count.
+HISTORICAL_CONTEXT = {
+    "fda": (
+        "FDA device regulation evolved: 1976 MDA (first framework) → 1990 SMDA (MDR reporting) "
+        "→ 1997 FDAMA (510k reforms) → 2012 FDASIA (breakthrough devices) → 2016 21st Century Cures "
+        "(De Novo). Oversight shifted from minimal pre-market review to risk-tiered clearance with "
+        "real-time post-market surveillance."
+    ),
+    "iso": (
+        "QMS evolved: 1987 ISO 9001 first edition → 1996 ISO 13485 (medical devices) → 2003 "
+        "risk-alignment → 2016 ISO 13485:2016 (risk-based thinking) → 2019 ISO 14971:2019. "
+        "Approach shifted from inspection-based to process-based to risk-based management."
+    ),
+    "coaching": (
+        "MedTech careers evolved: 1976–1990 RA profession emerged post-MDA → 2000 RAC credential "
+        "established → 2010s hybrid RA/engineering roles (combination products, digital health) "
+        "→ 2020s AI reshaping compliance and quality roles. Demand for strategic, cross-functional "
+        "professionals has consistently grown."
+    ),
+    "consulting": (
+        "Management consulting evolved: 1970s BCG Growth-Share Matrix, McKinsey 7S → 1980 Porter "
+        "Five Forces → 1990s Six Sigma/Lean → 2000s Balanced Scorecard, Blue Ocean → 2010s digital "
+        "transformation → 2020s AI-augmented delivery. Small firms can now match Big 4 output quality."
+    ),
+    "ma_intelligence": (
+        "MedTech M&A evolved: 1970s–80s fragmented industry → 1990s serial acquirers emerge "
+        "(Medtronic, J&J, Stryker) → 2000s mega-mergers → 2010s digital health bolt-ons → 2020s PE "
+        "rollups and COVID-driven divestitures. QARA integration failure has been a persistent deal "
+        "risk across all eras."
+    ),
+    "briefing": (
+        "Regulatory landscape evolved: 1976 MDA (US only) → 1990 MDR mandatory reporting → "
+        "2012 IMDRF (global harmonization) → 2017 EU MDR 2017/745 enacted → 2021 EU MDR mandatory. "
+        "Monitoring now requires simultaneous coverage of FDA, EU MDR, IMDRF, and national CAs."
+    ),
+    "content": (
+        "MedTech content channels evolved: 1980s trade journals dominated → 2000s web publishing "
+        "and early newsletters → 2010s LinkedIn/blogs for practitioners → 2020s Substack and podcast "
+        "circuit. Practitioner-authored newsletters now consistently outperform trade publications "
+        "for RA/QA audience reach."
+    ),
+    "rag": (
+        "AI/RAG evolved: 1974 MYCIN expert system → 1987 backpropagation → 1990s SVM and "
+        "statistical NLP → 2017 Transformer architecture → 2020 GPT-3 + early RAG → 2023–25 "
+        "hybrid vector/keyword retrieval as enterprise standard. Grounded generation replaced "
+        "hallucination-prone zero-shot LLM responses."
+    ),
+    "voice_bridge": (
+        "Voice AI evolved: 1970s DARPA SUR project → 1990 Dragon Dictate (HMM ASR) → 2000s "
+        "Nuance commercial ASR → 2011 Siri (consumer wake word) → 2018 BERT → 2022 Whisper "
+        "(neural ASR) + neural TTS (Kokoro, ElevenLabs). Voice has matured from isolated-word "
+        "recognition to streaming, contextual, multi-turn conversation."
+    ),
+    "eu_mdr": (
+        "EU device regulation evolved: 1993 MDD 93/42/EEC (CE marking) → 2007 IVDD revision "
+        "→ 2017 EU MDR 2017/745 enacted (risk reclassification, UDI, PMCF) → 2021 mandatory "
+        "→ 2024–25 transition extensions (notified body capacity). PMCF and real-world evidence "
+        "requirements represent the largest post-market shift since MDD."
+    ),
+    "hr": (
+        "HR evolved: 1970s Personnel departments → 1980s Strategic HR (Ulrich model) → 1990s "
+        "competency frameworks and 360-degree feedback → 2000s talent management systems "
+        "→ 2010s people analytics → 2020s AI agent oversight and remote-first workforce models. "
+        "Performance management shifted from annual reviews to continuous feedback loops."
+    ),
+    "marketing": (
+        "B2B MedTech marketing evolved: 1976–1990 trade shows and print → 2000s web presence "
+        "and SEO → 2010s LinkedIn content marketing and thought leadership → 2020s Substack "
+        "newsletters and podcast circuit. Practitioner-authored content now drives more qualified "
+        "pipeline than traditional trade advertising."
+    ),
+    "deck": (
+        "Consulting deck craft evolved: 1970s BCG/McKinsey pioneered executive slide format "
+        "→ 1987 Minto Pyramid Principle published → 1990s MECE/SCQA as standard → 2000s data "
+        "visualization emphasis → 2010s single-idea-per-slide discipline → 2020s AI-assisted "
+        "generation. The core standard — lead with recommendation, support with evidence — "
+        "has held for 50 years."
+    ),
+}
+
+
 class AgentBase:
     def __init__(self, agent_name: str):
         self.name    = agent_name
@@ -57,6 +139,10 @@ class AgentBase:
                 return self._ctx
         self._ctx = ""
         return self._ctx
+
+    def historical_framing(self) -> str:
+        """Return the 50-year domain evolution summary for this agent, or empty string."""
+        return HISTORICAL_CONTEXT.get(self.name, "")
 
     def firm_context(self, sections=("## Core Values", "## North Star")) -> str:
         """Extract relevant sections from CLAUDE.md for prompt grounding."""
@@ -99,7 +185,7 @@ class AgentBase:
     def system_prompt(self, task_context: str = "", include_kb: str = "") -> str:
         """
         Build a complete system prompt:
-          firm values + agent persona + task context + KB grounding
+          firm values + agent persona + 50-year historical context + task context + KB grounding
         """
         parts = [
             "You are an AI agent for Latitude MedTech LLC, a MedTech and Pharma "
@@ -109,6 +195,15 @@ class AgentBase:
             "\n## Your Role\n",
             self.context_file(),
         ]
+        hist = self.historical_framing()
+        if hist:
+            parts.append(
+                f"\n## Domain Evolution — 50-Year Context\n"
+                f"You understand how your domain has evolved over the past 50 years. "
+                f"When answering questions or producing deliverables, draw on this historical "
+                f"context to show how far the field has come and where current practice sits "
+                f"on that arc:\n{hist}"
+            )
         if task_context:
             parts.append(f"\n## Current Task\n{task_context}")
         if include_kb:

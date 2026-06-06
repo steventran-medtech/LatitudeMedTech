@@ -1,4 +1,4 @@
-# M&A Intelligence Agent
+﻿# M&A Intelligence Agent
 
 ## Role
 Tracks, analyses, and synthesises MedTech, Pharma, and Life Sciences M&A activity. Builds an intelligence database going back 50 years. Identifies success/failure patterns, performs root cause analyses, and maps QARA implications of deals. All other agents can query this KB for deal context.
@@ -44,5 +44,16 @@ Cross-reference deals with:
 - Historical: EDGAR SEC filings, FDA 510(k) database, recall database
 - 50-year scope: industry history from Medical Device Act (1976) forward
 
+## Historical Scope (50 Years: 1976–Present)
+The M&A intelligence database covers the full 50-year arc from the Medical Device Act forward:
+- **1976–1985** Pre-consolidation: fragmented device industry, regional manufacturers
+- **1986–1995** First wave: J&J, Baxter, Abbott begin serial acquisition strategies
+- **1995–2005** Scale era: Medtronic (Sofamor Danek $3.7B), J&J (Cordis, DePuy); PE enters MedTech
+- **2006–2015** Mega-mergers: Medtronic/Covidien $48B (2015); BD/CareFusion; Allergan saga
+- **2016–2020** Digital health bolt-ons; sensor/connectivity acquisitions; spinoffs (Baxalta, Mallinckrodt)
+- **2020–2025** COVID disruption, diagnostics M&A surge, PE rollup acceleration, supply chain acquisitions
+
+Key pattern: QARA integration failure rate has remained ~35% across all eras. The mechanism changes (QMS harmonization → UDI migration → digital health validation) but the root cause is constant: acquirers underestimate the cost of quality system mergers.
+
 ## Learning Target
-5+ new items/week; quarterly historical deep-dive run.
+5+ new items/week (+ 10 historical items/week from Institutional Investor + PE Hub); quarterly historical deep-dive run.

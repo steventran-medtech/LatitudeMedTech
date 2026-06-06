@@ -136,19 +136,14 @@ def _save_to_kb(agent: str, source_name: str, domain: str,
 
 # ── Per-agent learning run ────────────────────────────────────────────────────
 
-def learn(agent_name: str, max_new: int = 10) -> Dict:
+def _ingest_sources(agent_name: str, sources: List[Dict], budget: int,
+                    new_items: int, new_chunks: int) -> tuple:
     """
-    Fetch new items for an agent from its source list + shared sources.
-    Returns {"agent": ..., "new_items": ..., "chunks": ...}
+    Fetch and ingest items from a source list up to `budget` new items.
+    Returns (new_items, new_chunks) after this pass.
     """
-    sources = AGENT_SOURCES.get(agent_name, []) + AGENT_SOURCES["_shared"]
-    new_items = 0
-    new_chunks = 0
-
-    log.info(f"[{agent_name}] Starting learning run ({len(sources)} sources)")
-
     for source in sources:
-        if new_items >= max_new:
+        if new_items >= budget:
             break
         items = _fetch_rss(source["url"]) if source["type"] == "rss" else []
 
@@ -156,9 +151,9 @@ def learn(agent_name: str, max_new: int = 10) -> Dict:
             if not item["url"] or not item["title"]:
                 continue
             if mem.learning_ingested(item["url"], agent_name):
-                continue   # this agent already learned it
+                continue
             if mem.url_ingested(item["url"], agent_name):
-                continue   # this agent already has it in the main KB
+                continue
 
             chunks = _save_to_kb(
                 agent_name, source["name"], source["domain"],
@@ -179,18 +174,57 @@ def learn(agent_name: str, max_new: int = 10) -> Dict:
             new_chunks += chunks
             log.info(f"  [{agent_name}] Learned: {item['title'][:60]} ({chunks} chunks)")
 
-            if new_items >= max_new:
+            if new_items >= budget:
                 break
 
-    # Update agent health record — always stamp the timestamp so "0 new items"
-    # (all already seen) doesn't leave the agent stuck in red/yellow indefinitely.
+    return new_items, new_chunks
+
+
+def learn(agent_name: str, max_new: int = 10, max_historical: int = 10) -> Dict:
+    """
+    Fetch new items for an agent in two separate passes:
+      Pass 1 — current + shared sources  (budget: max_new)
+      Pass 2 — historical sources         (budget: max_historical, independent of pass 1)
+
+    Historical sources have their own budget so they are never crowded out by
+    current news, and current learning is never displaced by historical deep-dives.
+    Returns {"agent": ..., "new_items": ..., "new_historical": ..., "chunks": ...}
+    """
+    current_sources  = AGENT_SOURCES.get(agent_name, []) + AGENT_SOURCES["_shared"]
+    historical_sources = (
+        # Per-agent historical feeds (inline in each agent section)
+        [s for s in AGENT_SOURCES.get(agent_name, []) if "50yr" in s["domain"] or "History" in s["domain"]]
+        # Plus the shared _historical block
+        + AGENT_SOURCES.get("_historical", [])
+    )
+
+    log.info(f"[{agent_name}] Starting learning run "
+             f"({len(current_sources)} current sources, "
+             f"{len(historical_sources)} historical sources)")
+
+    # ── Pass 1: current learning ──────────────────────────────────────────────
+    new_items, new_chunks = _ingest_sources(
+        agent_name, current_sources, max_new, 0, 0
+    )
+    log.info(f"[{agent_name}] Current pass: {new_items} items, {new_chunks} chunks")
+
+    # ── Pass 2: historical learning (own budget, does not compete with pass 1) ─
+    hist_items_start = new_items
+    new_items, new_chunks = _ingest_sources(
+        agent_name, historical_sources, new_items + max_historical, new_items, new_chunks
+    )
+    new_historical = new_items - hist_items_start
+    log.info(f"[{agent_name}] Historical pass: {new_historical} items")
+
+    # Update agent health — always stamp so "0 new items" doesn't leave agent stuck.
     mem.upsert_agent_health(
         agent_name,
         last_learning=datetime.now().isoformat(),
     )
 
-    log.info(f"[{agent_name}] Done — {new_items} new items, {new_chunks} chunks")
-    return {"agent": agent_name, "new_items": new_items, "chunks": new_chunks}
+    log.info(f"[{agent_name}] Done — {new_items} total items ({new_historical} historical), {new_chunks} chunks")
+    return {"agent": agent_name, "new_items": new_items,
+            "new_historical": new_historical, "chunks": new_chunks}
 
 
 # ── Single-run lock ───────────────────────────────────────────────────────────
@@ -258,7 +292,11 @@ def _release_lock() -> None:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 ALL_AGENTS = ["content", "briefing", "iso", "coaching", "fda", "rag",
-              "consulting", "ma_intelligence", "voice_bridge"]
+              "consulting", "ma_intelligence", "voice_bridge",
+              "eu_mdr", "hr", "marketing", "deck"]
+
+
+DEFAULT_MAX_HISTORICAL = 10  # target for 2026-06 through 2026-07; reduce to 2 after
 
 
 def main():
@@ -266,7 +304,9 @@ def main():
     parser.add_argument("--agent", type=str, default="",
                         help="Single agent name, or blank for all")
     parser.add_argument("--max",   type=int, default=10,
-                        help="Max new items per agent per source run")
+                        help="Max new current items per agent per run")
+    parser.add_argument("--max-historical", type=int, default=DEFAULT_MAX_HISTORICAL,
+                        help="Max new historical items per agent per run (separate budget)")
     parser.add_argument("--force", action="store_true",
                         help="Bypass the single-run lock")
     args = parser.parse_args()
@@ -287,20 +327,23 @@ def _run(args):
     log.info("=" * 50)
     log.info("  Latitude MedTech — Agent Learning Run")
     log.info(f"  {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    log.info(f"  Current max: {args.max}  Historical max: {args.max_historical}")
     log.info("=" * 50)
 
     for agent in targets:
-        r = learn(agent, max_new=args.max)
+        r = learn(agent, max_new=args.max, max_historical=args.max_historical)
         results.append(r)
 
-    total_items  = sum(r["new_items"] for r in results)
-    total_chunks = sum(r["chunks"] for r in results)
+    total_items    = sum(r["new_items"] for r in results)
+    total_hist     = sum(r.get("new_historical", 0) for r in results)
+    total_chunks   = sum(r["chunks"] for r in results)
 
     log.info("")
     log.info("Learning run complete:")
     for r in results:
-        log.info(f"  {r['agent']:<12} {r['new_items']:>3} items  {r['chunks']:>4} chunks")
-    log.info(f"  {'TOTAL':<12} {total_items:>3} items  {total_chunks:>4} chunks")
+        log.info(f"  {r['agent']:<14} {r['new_items']:>3} items "
+                 f"({r.get('new_historical', 0):>2} hist)  {r['chunks']:>4} chunks")
+    log.info(f"  {'TOTAL':<14} {total_items:>3} items ({total_hist:>2} hist)  {total_chunks:>4} chunks")
 
 
 if __name__ == "__main__":
