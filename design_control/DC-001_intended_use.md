@@ -1,5 +1,5 @@
 # DC-001 — Intended Use & User Needs
-**Document:** DC-001 · Version 1.0 · 2026-06-05  
+**Document:** DC-001 · Version 1.2 · 2026-06-05  
 **Approved by:** Steven Tran
 
 ---
@@ -88,6 +88,7 @@ These are the enumerated, controlled user needs for Athena v0.5 (Alpha).
 | UN-004 | Speak to Athena hands-free and receive a voiced response, routing my query to the appropriate agent automatically | P0 |
 | UN-005 | Be verbally notified when a long-running agent task completes, without checking the UI | P1 |
 | UN-006 | Keep my voice session alive as I navigate between UI tabs, without losing context or resetting | P1 |
+| UN-022 | Interact with a voice agent that responds with the quality and conversational fluency expected of a chief of staff or expert management consultant — audible response shall commence within 2 seconds of completing a spoken query | P1 |
 
 ### Content & Marketing
 
@@ -104,6 +105,7 @@ These are the enumerated, controlled user needs for Athena v0.5 (Alpha).
 | UN-010 | Access ISO 13485 clause-by-clause coaching content on demand | P0 |
 | UN-011 | Monitor and analyze MedTech M&A deals with QARA integration frameworks | P1 |
 | UN-012 | Receive structured briefings on FDA, EU MDR, and IMDRF regulatory developments | P1 |
+| UN-023 | Agents shall learn from and reason over historical data dating back at least 50 years — including regulatory filings, device clearance precedents, clinical evidence, standards evolution, and industry transactions — so that analysis reflects the full arc of the MedTech regulatory landscape and is not artificially constrained to recent data | P1 |
 
 ### Operations & Monitoring
 
@@ -125,6 +127,7 @@ These are the enumerated, controlled user needs for Athena v0.5 (Alpha).
 | ID | User Need | Priority |
 |---|---|---|
 | UN-019 | See startup progress displayed cleanly — a full-width progress bar at the window bottom, without a distracting numeric percentage counter | P2 |
+| UN-021 | It shall not be possible to operate two simultaneous instances of Athena in the same Windows session — a second launch attempt shall either bring the existing instance to the foreground or stop it completely before starting a fresh one; at no point shall two conflicting backend + frontend stacks be running at the same time | P0 |
 
 ---
 

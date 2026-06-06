@@ -133,6 +133,12 @@ Each entry:
 | DI-012-A | UN-012 | Briefing agent shall produce structured briefs covering FDA, EU MDR, and IMDRF | Briefing agent sources include all three frameworks | P1 | VERIFIED |
 | DI-012-B | UN-012 | Briefing outputs shall enter the review queue via `submit_for_review()` | `submit_for_review()` called in `briefing_agent.py` | P1 | VERIFIED |
 
+### UN-023 — Historical Data Depth
+
+| ID | Source | Requirement Statement | Verification | Priority | Status |
+|---|---|---|---|---|---|
+| DI-023-A | UN-023 | The knowledge base ingestion pipeline shall not apply a date filter that excludes documents published or effective more than 50 years before the current year; RAG search queries shall include non-date-restricted and historically-scoped terms alongside current-year queries, so that agents can access and cite source material spanning at least 50 years | `rag_agent.py` contains no hard `cutoff_year`, `min_year`, or equivalent date filter rejecting documents older than 50 years; KB seed queries include at least one historically-scoped term not restricted to a specific recent year | P1 | OPEN |
+
 ---
 
 ## Operations & Monitoring

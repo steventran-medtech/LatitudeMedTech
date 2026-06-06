@@ -270,6 +270,15 @@ Check: `athena_sessions.jsonl` appears in `stop_athena.ps1`.
 
 ---
 
+### DI-023 — Historical Data Depth
+
+**test_DI_023_A** — RAG pipeline has no hard date cutoff that blocks sources older than 50 years  
+Check: (1) `rag_agent.py` contains no `cutoff_year`, `min_year`, `year >=`, or equivalent expression that would exclude documents older than 50 years. (2) The KB seed query list includes at least one term not anchored to a specific recent year.  
+Live verification: Manual audit — confirm that the ingestion pipeline can accept a pre-1990 document without rejection, or that at least one historical source is present in the KB after a full RAG run.  
+Fail action: Remove any hard year filter from `rag_agent.py`. Add at least one historically-scoped query (e.g., "FDA medical device regulatory history", "ISO 9001 origins quality management") to the seed query list.
+
+---
+
 ## Interpreting Results
 
 | Test Result | Action |

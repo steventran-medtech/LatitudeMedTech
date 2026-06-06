@@ -170,14 +170,14 @@ function ReviewViewer({ itemId, title, onClose, editState, onEdit, readOnly = fa
   const loadContent = async (signal) => {
     setState({ loading: true, ext: "", content: "", html: "", error: "" });
     try {
-      const r = await fetch(`${API}/api/review/${itemId}/content`);
+      const r = await fetch(`${API}/api/review/${itemId}/content`, { headers: authHdr() });
       if (!r.ok) throw (await r.json()).error || "Not found";
       const d = await r.json();
       if (signal?.aborted) return;
       if (d.ext === "md" || d.ext === "txt") {
         setState({ loading: false, ext: d.ext, content: d.content || "", html: "", error: "", embedUrl: "" });
       } else if (d.ext === "docx" || d.ext === "pptx" || d.ext === "pdf") {
-        const gv = await fetch(`${API}/api/review/${itemId}/google-view`).then(r => r.json());
+        const gv = await fetch(`${API}/api/review/${itemId}/google-view`, { headers: authHdr() }).then(r => r.json());
         if (signal?.aborted) return;
         const url = gv.url || `${API}/api/review/${itemId}/serve`;
         setState({ loading: false, ext: d.ext, content: "", html: "", error: "", embedUrl: url });
@@ -365,12 +365,12 @@ export default function ReviewView({ reviewRefreshToken = 0 }) {
   const [reopening, setReopening] = useState({});        // id -> true while in-flight
 
   const load = () => {
-    fetch(`${API}/api/review/pending`).then(r => r.json())
+    fetch(`${API}/api/review/pending`, { headers: authHdr() }).then(r => r.json())
       .then(d => { setItems(d.items || []); setStats(d.stats || {}); }).catch(() => {});
   };
 
   const loadHistory = () => {
-    fetch(`${API}/api/review/history`).then(r => r.json())
+    fetch(`${API}/api/review/history`, { headers: authHdr() }).then(r => r.json())
       .then(d => setHistItems(d.items || [])).catch(() => {});
   };
 
