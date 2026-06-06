@@ -95,7 +95,7 @@ column are open findings requiring immediate remediation.
 
 ---
 
-## Coverage Summary (v1.5)
+## Coverage Summary (v1.6)
 
 | Metric | Count |
 |---|---|
