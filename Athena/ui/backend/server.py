@@ -206,6 +206,32 @@ except Exception as _ve:
 # an item that was announced in an earlier agent-completion cycle this session.
 _announced_review_ids: set = set()
 
+
+def _vary_voice_phrase(base: str) -> str:
+    """Return a naturally varied rephrasing of `base` via Claude Haiku for voice delivery.
+    Preserves all titles and names exactly.  Falls back to `base` on any error."""
+    try:
+        import anthropic as _ant
+        _key = os.getenv("ANTHROPIC_API_KEY", "")
+        if not _key:
+            return base
+        _client = _ant.Anthropic(api_key=_key)
+        _resp = _client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=80,
+            system=(
+                "You are Athena, a warm and professional British English voice assistant "
+                "for Latitude MedTech LLC. Rephrase the given phrase as a natural spoken "
+                "notification — one sentence, no markdown. "
+                "Preserve all specific titles, names, and numbers exactly as given."
+            ),
+            messages=[{"role": "user", "content": base}],
+        )
+        return _resp.content[0].text.strip()
+    except Exception:
+        return base
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000",
@@ -329,12 +355,12 @@ async def run_agent(agent_name: str, script: str, args: list = None, context: st
             if new_items:
                 n = len(new_items)
                 if n == 1:
-                    note = f"Your {new_items[0]['title']} is ready for your review."
+                    base = f"Your {new_items[0]['title']} is ready for your review."
                 else:
                     listed = ", ".join(p["title"] for p in new_items[:3])
                     tail   = f", and {n - 3} more" if n > 3 else ""
-                    note   = f"{n} deliverables ready for your review: {listed}{tail}."
-                _voice_queue.append(note)
+                    base   = f"{n} deliverables ready for your review: {listed}{tail}."
+                _voice_queue.append(_vary_voice_phrase(base))
                 _announced_review_ids.update(p["id"] for p in new_items)
         except Exception:
             pass
@@ -2033,11 +2059,11 @@ async def edit_document_voice(request: Request, background_tasks: BackgroundTask
         raise HTTPException(404, "Document not found")
 
     async def _run():
-        await manager.broadcast(json.dumps({
+        await manager.broadcast({
             "type": "doc_edit_progress",
             "filename": filename, "folder": folder,
             "message": f"Editing \"{filename}\"…",
-        }))
+        })
         try:
             suffix = f.suffix.lower()
 
@@ -2071,16 +2097,16 @@ async def edit_document_voice(request: Request, background_tasks: BackgroundTask
             else:
                 raise ValueError(f"Unsupported type for editing: {suffix}")
 
-            await manager.broadcast(json.dumps({
+            await manager.broadcast({
                 "type": "doc_edit_done",
                 "filename": filename, "folder": folder, "status": "done",
-            }))
+            })
         except Exception as exc:
-            await manager.broadcast(json.dumps({
+            await manager.broadcast({
                 "type": "doc_edit_done",
                 "filename": filename, "folder": folder,
                 "status": "error", "message": str(exc),
-            }))
+            })
 
     background_tasks.add_task(_run)
     return {"status": "started", "filename": filename, "folder": folder}
