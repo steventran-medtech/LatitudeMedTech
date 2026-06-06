@@ -649,9 +649,10 @@ def _start_kokoro_server():
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    # Wait up to 30 s — cold start takes 60–90 s so models_ready will fire
-    # before Kokoro is ready; _speak_phrase_greeting handles that separately.
-    for _ in range(60):
+    # Wait up to 180 s — cold start takes 60–90 s on this machine.
+    # _models_ready fires only after this loop, so the splash holds until
+    # Kokoro is truly ready and Chrome opens with the greeting path clear.
+    for _ in range(360):
         time.sleep(0.5)
         try:
             with urllib.request.urlopen(f"http://127.0.0.1:{KOKORO_PORT}/health", timeout=1):
@@ -662,7 +663,7 @@ def _start_kokoro_server():
         if _kokoro_proc.poll() is not None:
             print(f"[voice] Kokoro exited early (rc={_kokoro_proc.returncode})", flush=True)
             return False
-    print("[voice] Kokoro health-check timed out after 30 s — still loading in background", flush=True)
+    print("[voice] Kokoro health-check timed out after 180 s", flush=True)
     return False
 
 def _stop_kokoro_server():
