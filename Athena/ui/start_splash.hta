@@ -27,6 +27,14 @@
     0%   { background-position:-300% center; }
     100% { background-position: 300% center; }
   }
+  @-ms-keyframes dotFlash {
+    0%, 80%, 100% { opacity:0.15; }
+    40%           { opacity:1.0; }
+  }
+  @keyframes dotFlash {
+    0%, 80%, 100% { opacity:0.15; }
+    40%           { opacity:1.0; }
+  }
   html { width:100%; height:100%; }
   body {
     width:100%; height:100%;
@@ -133,6 +141,17 @@
     letter-spacing:0.04em;
     margin-left:8px;
   }
+  .dot {
+    display:inline-block;
+    font-size:17px;
+    color:rgba(196,146,42,0.85);
+    letter-spacing:0.01em;
+    -ms-animation: dotFlash 1.4s ease-in-out infinite both;
+    animation:     dotFlash 1.4s ease-in-out infinite both;
+  }
+  .dot1 { -ms-animation-delay:0.0s; animation-delay:0.0s; }
+  .dot2 { -ms-animation-delay:0.2s; animation-delay:0.2s; }
+  .dot3 { -ms-animation-delay:0.4s; animation-delay:0.4s; }
 </style>
 </head>
 <body>
@@ -145,11 +164,11 @@
     <div class="name">Athena</div>
     <div class="tagline">Advancing Human Intelligence</div>
     <div class="bar-wrap"><div class="bar-fill" id="bar"></div></div>
-    <span class="status-text" id="status">Starting up</span><span id="pct">0%</span>
+    <span class="status-text" id="status">Starting up</span><span id="dots"><span class="dot dot1">.</span><span class="dot dot2">.</span><span class="dot dot3">.</span></span><span id="pct">0%</span>
   </div>
 
 <script language="VBScript">
-Dim bar, statusEl, pctEl, stepVal, targetVal, timer_id, poll_id, abort_id, waited, readyToClose
+Dim bar, statusEl, pctEl, dotsEl, stepVal, targetVal, timer_id, poll_id, abort_id, waited, readyToClose
 Dim BACKEND, FRONTEND, MAX_WAIT
 Dim dragging, dragLastX, dragLastY
 BACKEND  = "http://127.0.0.1:8000/"
@@ -168,6 +187,7 @@ Sub Window_OnLoad
   Set bar      = document.getElementById("bar")
   Set statusEl = document.getElementById("status")
   Set pctEl    = document.getElementById("pct")
+  Set dotsEl   = document.getElementById("dots")
   stepVal      = 0
   targetVal    = 0
   readyToClose = False
@@ -309,6 +329,9 @@ Sub PollChromeReady
   Set fso = CreateObject("Scripting.FileSystemObject")
   If fso.FileExists("C:\Users\huann\LatitudeMedTech\Athena\ui\.athena_ready") Then
     SetStatus "Welcome back. Athena is ready.", 100
+    On Error Resume Next
+    dotsEl.style.display = "none"
+    On Error Resume Next
     window.clearInterval poll_id   ' stop polling — Tick keeps running
     readyToClose = True            ' Tick will close once stepVal reaches 100
   End If
