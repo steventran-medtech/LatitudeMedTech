@@ -551,26 +551,28 @@ def _present_review_item(item: dict) -> str:
 
     summary = _get_item_summary(item["id"])
 
+    # Baseline: position label + verbatim title + verbatim summary + action prompt.
+    # _vary_phrase varies the connecting language while preserving names and numbers.
     count_str = f"Deliverable {idx} of {total}" if total > 1 else "One deliverable"
-    text = f"{count_str}: {title}."
+    base = f"{count_str}: {title}."
     if summary and summary.strip().lower() != title.strip().lower():
-        text += f" {summary}"
-    text += " Approve, reject, or skip?"
-    return text
+        base += f" {summary}"
+    base += " Approve, reject, or skip?"
+    return _vary_phrase(base)
 
 
 def _start_voice_review() -> str:
     """Kick off a review session and return the spoken introduction + first item."""
     items = _fetch_pending_for_review()
     if not items:
-        return "No deliverables are waiting for your review right now."
+        return _vary_phrase("No deliverables are waiting for your review right now.")
     _review_session["active"]            = True
     _review_session["items"]             = items
     _review_session["index"]             = 0
     _review_session["awaiting_response"] = True
     n      = len(items)
     plural = "s" if n > 1 else ""
-    intro  = f"You have {n} deliverable{plural} waiting for review."
+    intro  = _vary_phrase(f"You have {n} deliverable{plural} waiting for review.")
     return f"{intro} {_present_review_item(items[0])}"
 
 
@@ -579,7 +581,7 @@ def _advance_review() -> str:
     _review_session["index"] += 1
     if _review_session["index"] >= len(_review_session["items"]):
         _review_session.update(active=False, items=[], index=0, awaiting_response=False)
-        return "All deliverables reviewed."
+        return _vary_phrase("All deliverables reviewed.")
     _review_session["awaiting_response"] = True
     return _present_review_item(_review_session["items"][_review_session["index"]])
 
@@ -597,16 +599,16 @@ def _handle_review_response(text: str) -> str:
     if any(w in t for w in ("approve", "approved", "looks good", "good", "yes",
                              "accept", "okay", "ok", "confirm")):
         _act_on_review(iid, "approve")
-        return "Approved. " + _advance_review()
+        return _vary_phrase("Approved.") + " " + _advance_review()
 
     if any(w in t for w in ("reject", "rejected", "no", "decline",
                              "revise", "revision", "send back")):
         notes = text if len(text) > 6 else ""
         _act_on_review(iid, "reject", notes)
-        return "Rejected. " + _advance_review()
+        return _vary_phrase("Rejected.") + " " + _advance_review()
 
     if any(w in t for w in ("skip", "next", "later", "pass", "come back")):
-        return "Skipping. " + _advance_review()
+        return _vary_phrase("Skipping.") + " " + _advance_review()
 
     if any(w in t for w in ("repeat", "again", "what was that",
                              "say that again", "read it again")):
@@ -616,11 +618,11 @@ def _handle_review_response(text: str) -> str:
     if any(w in t for w in ("cancel", "stop", "exit", "quit",
                              "never mind", "nevermind", "done reviewing")):
         _review_session.update(active=False, items=[], index=0, awaiting_response=False)
-        return "Exiting review."
+        return _vary_phrase("Exiting review.")
 
     # Unclear input — ask again without advancing
     _review_session["awaiting_response"] = True
-    return "I didn't catch that. Say approve, reject, skip, or cancel."
+    return _vary_phrase("I didn't catch that. Say approve, reject, skip, or cancel.")
 
 
 # ── Kokoro persistent server ──────────────────────────────────────────────────
