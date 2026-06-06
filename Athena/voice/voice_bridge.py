@@ -20,6 +20,7 @@ Key behaviours:
 import os
 import sys
 import asyncio
+import concurrent.futures
 import io
 import json
 import re
@@ -1512,23 +1513,16 @@ def _voice_loop():
             continue   # → top of loop → LISTENING emit → wake-word
 
         # ── Process ───────────────────────────────────────────────────────────
-        # Always run LLM correction — Whisper can be confident but still wrong
-        # on domain-specific terms (e.g. "part of FDA 483s" → "report of FDA 483s").
-        # Falls back to raw text if the correction call fails.
         try:
-            corrected = _correct_transcript(text)
-            if corrected != text:
-                _emit("transcript", text=f"{corrected}  [corrected]")
-                text = corrected
-            else:
-                tag = "" if confident else "  [low conf]"
-                _emit("transcript", text=f"{text}{tag}")
-
-            # ── Voice review session ───────────────────────────────────────────
-            # Intercept before Haiku so review commands never burn tokens on
-            # intent classification and responses arrive without API latency.
+            # Emit transcript on raw text immediately so the UI responds at once.
+            # Updated below if LLM correction changes it.
+            tag = "" if confident else "  [low conf]"
+            _emit("transcript", text=f"{text}{tag}")
             _t = text.lower()
 
+            # ── Voice review session (fast path — no API calls) ────────────────
+            # Intercept before Haiku so review commands never burn tokens on
+            # intent classification and responses arrive without API latency.
             if _review_session.get("active"):
                 # We're mid-review — parse approve / reject / skip / cancel / repeat.
                 _rv_reply = _handle_review_response(text)
@@ -1565,14 +1559,29 @@ def _voice_loop():
                 continue   # → top of loop → LISTENING emit → wake-word
             # ── End review handling ────────────────────────────────────────────
 
-            # ── Intent classification: LLM-driven, not regex ──────────────────
-            # Haiku+tool_use decides whether to dispatch an agent or fall through
-            # to the full conversational path. Classification adds ~200ms but only
-            # fires when Haiku returns a tool_use block — conversational turns
-            # proceed to streaming Sonnet as before.
+            # ── Parallel: correction + intent classification ───────────────────
+            # Both are ~200 ms Haiku calls. Running them concurrently cuts
+            # pre-streaming latency from ~400 ms (sequential) to ~200 ms.
+            # Classification runs on raw text — minor transcription errors don't
+            # affect intent recognition in practice.
             _state = VS.THINKING
             _emit("thinking", query=text)
-            agent_id, override, confirm = _classify_intent(text, history)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as _pool:
+                _fut_correct = _pool.submit(_correct_transcript, text)
+                _fut_intent  = _pool.submit(_classify_intent, text, history)
+                try:
+                    corrected = _fut_correct.result()
+                except Exception:
+                    corrected = text
+                try:
+                    agent_id, override, confirm = _fut_intent.result()
+                except Exception:
+                    agent_id, override, confirm = None, None, None
+
+            if corrected != text:
+                _emit("transcript", text=f"{corrected}  [corrected]")
+                text = corrected
+
             if agent_id:
                 ok = _trigger_agent(agent_id, override or "")
                 if not ok:
