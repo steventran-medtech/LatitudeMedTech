@@ -159,7 +159,7 @@ SOC 2 Type II (target) · NIST CSF 2.0 · HIPAA (hard gate — no PHI until BAA)
 - **CC6.1 DB hardening** — `latitude_memory.db` + `.athena.key` chmod 0600 on startup
 - **CC7.2 Rotating audit log** — `logs/audit.log` via `RotatingFileHandler` (5 MB × 5 backups); logs: server_start, agent lifecycle, auth_failure, file_open/save/delete, settings_update/reset, decks_bulk_*, pipeline_update
 - **OWASP A03** — `os.startfile()` replaces `shell=True` for doc open; `_safe_filename()` + resolved-path checks on `get_brief`, `get_iso_lesson`
-- **Frontend auth** — `src/api.js` token singleton; `X-Athena-Key` in all POST/DELETE calls across all components + WebSocket URLs include `?token=`
+- **Frontend auth** — `src/api.js` token singleton; `X-Athena-Key` required on **every** `fetch(\`${API}/api/...\`)` call — GET, POST, DELETE, all methods — across all components. WebSocket URLs include `?token=`. Only exempt endpoints are `/api/auth/token` and `/api/version`. No exceptions; GET calls are not exempt. (CAPA-DC-001)
 - Rate limiting (120/min) · CSP + security headers · CORS: localhost:3000 + app:// · API docs disabled
 
 **Formal SOC II + OWASP matrix:** `.claude/rules/compliance.md` (update manually — auto-mode blocks agent writes to rules dir).
