@@ -206,8 +206,10 @@ export default function ISOView({ runningAgents }) {
   const [selected, setSelected] = useState(null);
   const [content,  setContent]  = useState("");
   const [editing,  setEditing]  = useState(false);
-  const [running,  setRunning]  = useState(false);
-  const [clause,   setClause]   = useState("");
+  const [running,       setRunning]       = useState(false);
+  const [clause,        setClause]        = useState("");
+  const [deckExporting, setDeckExporting] = useState(false);
+  const [deckExportMsg, setDeckExportMsg] = useState("");
   const [status,   setStatus]   = useState("");
   const ms = useSelect();
 
@@ -388,14 +390,56 @@ export default function ISOView({ runningAgents }) {
               onCancel={() => setEditing(false)}
             />
           ) : (
-            <div style={{ background: C.pearl, border: `1px solid ${C.mist}`,
-              borderRadius: 10, padding: "20px 24px", minHeight: 300 }}>
-              {content
-                ? <MarkdownView content={content}/>
-                : <div style={{ color: C.fog, fontFamily: "Inter,sans-serif", fontSize: 13 }}>
-                    Select a lesson or generate a new one.
-                  </div>
-              }
+            <div>
+              {/* Toolbar — shown only when a lesson is selected */}
+              {selected && content && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  marginBottom: 8, justifyContent: "flex-end",
+                }}>
+                  {deckExportMsg && (
+                    <span style={{
+                      fontSize: 11, color: deckExportMsg.includes("Error") ? "#E74C3C" : "#1F7A6D",
+                    }}>
+                      {deckExportMsg}
+                    </span>
+                  )}
+                  <button
+                    disabled={deckExporting}
+                    onClick={() => {
+                      setDeckExporting(true);
+                      setDeckExportMsg("Building PPTX…");
+                      fetch(`${API}/api/iso/lesson-deck/${encodeURIComponent(selected)}`, {
+                        method: "POST",
+                      })
+                        .then(r => r.json())
+                        .then(d => setDeckExportMsg(
+                          `PPTX queued — ${d.standard} §${d.clause}: ${d.title}`
+                        ))
+                        .catch(() => setDeckExportMsg("Error starting PPTX export."))
+                        .finally(() => setDeckExporting(false));
+                    }}
+                    style={{
+                      padding: "5px 14px", borderRadius: 6, border: "none", cursor: deckExporting ? "default" : "pointer",
+                      background: deckExporting ? "#DDE2EC" : "#0A2540",
+                      color: deckExporting ? "#8A9BB0" : "#fff",
+                      fontFamily: "Inter,sans-serif", fontSize: 11, fontWeight: 700,
+                      display: "flex", alignItems: "center", gap: 5,
+                    }}
+                  >
+                    {deckExporting ? "Building…" : "Export as PPTX"}
+                  </button>
+                </div>
+              )}
+              <div style={{ background: C.pearl, border: `1px solid ${C.mist}`,
+                borderRadius: 10, padding: "20px 24px", minHeight: 300 }}>
+                {content
+                  ? <MarkdownView content={content}/>
+                  : <div style={{ color: C.fog, fontFamily: "Inter,sans-serif", fontSize: 13 }}>
+                      Select a lesson or generate a new one.
+                    </div>
+                }
+              </div>
             </div>
           )}
         </div>

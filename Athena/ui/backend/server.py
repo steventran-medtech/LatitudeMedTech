@@ -863,6 +863,207 @@ def download_deck(filename: str):
     return FileResponse(str(path), media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
                         filename=filename)
 
+_SAFE_PPTX = re.compile(r'^[A-Za-z0-9_\-]+\.pptx$')
+
+@app.get("/api/decks/{filename}/slides")
+def preview_deck_slides(filename: str):
+    """Extract slide text for in-browser preview — no external conversion needed."""
+    if not _SAFE_PPTX.match(filename):
+        raise HTTPException(404, "Not found")
+    decks_dir = (ATHENA / "documents" / "decks").resolve()
+    path = (decks_dir / filename).resolve()
+    if not str(path).startswith(str(decks_dir)) or not path.exists():
+        raise HTTPException(404, "Deck not found")
+    from pptx import Presentation as _Prs
+    prs = _Prs(str(path))
+    slides = []
+    for i, slide in enumerate(prs.slides):
+        texts, title = [], ""
+        for shape in slide.shapes:
+            if hasattr(shape, "text_frame"):
+                t = shape.text_frame.text.strip()
+                if t:
+                    if not title:
+                        title = t
+                    else:
+                        texts.append(t)
+            elif hasattr(shape, "table"):
+                for row in shape.table.rows:
+                    row_text = " | ".join(
+                        cell.text_frame.text.strip() for cell in row.cells
+                        if cell.text_frame.text.strip()
+                    )
+                    if row_text:
+                        texts.append(row_text)
+        slides.append({"index": i, "title": title, "texts": texts, "slide_number": i + 1})
+    return {"slides": slides, "filename": filename, "total": len(slides)}
+
+@app.post("/api/decks/bulk-delete")
+async def bulk_delete_decks(request: Request):
+    body = await request.json()
+    filenames = body.get("filenames", [])
+    decks_dir = (ATHENA / "documents" / "decks").resolve()
+    deleted = []
+    for fn in filenames:
+        if not _SAFE_PPTX.match(fn):
+            continue
+        path = (decks_dir / fn).resolve()
+        if str(path).startswith(str(decks_dir)) and path.exists():
+            path.unlink()
+            deleted.append(fn)
+    return {"deleted": deleted}
+
+@app.post("/api/decks/bulk-accept")
+async def bulk_accept_decks(request: Request):
+    body = await request.json()
+    filenames = body.get("filenames", [])
+    decks_dir = (ATHENA / "documents" / "decks").resolve()
+    approved_dir = decks_dir / "approved"
+    approved_dir.mkdir(exist_ok=True)
+    accepted = []
+    for fn in filenames:
+        if not _SAFE_PPTX.match(fn):
+            continue
+        src = (decks_dir / fn).resolve()
+        if str(src).startswith(str(decks_dir)) and src.exists():
+            src.rename(approved_dir / fn)
+            accepted.append(fn)
+    return {"accepted": accepted}
+
+@app.post("/api/decks/bulk-reject")
+async def bulk_reject_decks(request: Request):
+    body = await request.json()
+    filenames = body.get("filenames", [])
+    decks_dir = (ATHENA / "documents" / "decks").resolve()
+    rejected = []
+    for fn in filenames:
+        if not _SAFE_PPTX.match(fn):
+            continue
+        path = (decks_dir / fn).resolve()
+        if str(path).startswith(str(decks_dir)) and path.exists():
+            path.unlink()
+            rejected.append(fn)
+    return {"rejected": rejected}
+
+@app.post("/api/iso/lesson-deck/{lesson_filename}")
+async def export_iso_lesson_deck(lesson_filename: str, background_tasks: BackgroundTasks):
+    """Convert an ISO coaching lesson markdown into a management-consulting PPTX."""
+    if not re.match(r'^[A-Za-z0-9_\-]+\.md$', lesson_filename):
+        raise HTTPException(400, "Invalid filename")
+    lesson_path: Optional[Path] = None
+    for sub in ("iso14971", "iso13485"):
+        candidate = ATHENA / "coaching" / sub / lesson_filename
+        if candidate.exists():
+            lesson_path = candidate
+            break
+    if not lesson_path:
+        raise HTTPException(404, "Lesson not found")
+    stem = lesson_path.stem
+    is_14971 = stem.startswith("14971_")
+    standard = "ISO 14971:2019" if is_14971 else "ISO 13485:2016"
+    parts = stem.replace("14971_", "").replace("clause_", "").split("_")
+    clause_parts, title_parts = [], []
+    for p in parts:
+        if re.match(r'^\d+$', p) and not title_parts:
+            clause_parts.append(p)
+        else:
+            title_parts.append(p)
+    clause = ".".join(clause_parts) if clause_parts else "?"
+    title = " ".join(w.capitalize() for w in title_parts) if title_parts else stem
+    background_tasks.add_task(_build_iso_pptx, lesson_path, standard, clause, title)
+    return {"status": "started", "standard": standard, "clause": clause, "title": title}
+
+def _build_iso_pptx(lesson_path: Path, standard: str, clause: str, title: str):
+    """Parse ISO lesson markdown and build a branded PPTX. Runs in background."""
+    try:
+        import sys as _sys
+        _sys.path.insert(0, str(AGENTS_DIR))
+        from pptx import Presentation as _Prs
+        from deck_skills import DeckSkills
+
+        raw = lesson_path.read_text(encoding="utf-8", errors="replace")
+
+        def _section(text: str, heading: str) -> str:
+            pattern = rf"(?:^|\n)#+\s+{re.escape(heading)}[^\n]*\n(.*?)(?=\n#+\s|\Z)"
+            m = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+            return m.group(1).strip() if m else ""
+
+        def _bullets_from(text: str) -> list:
+            lines = []
+            for ln in text.splitlines():
+                ln = ln.strip()
+                if ln.startswith(("- ", "* ", "• ")):
+                    lines.append(ln[2:].strip())
+                elif re.match(r'^\d+\.\s', ln):
+                    lines.append(re.sub(r'^\d+\.\s*', '', ln))
+            return lines[:6]
+
+        overview      = _section(raw, "What This Clause") or _section(raw, "Overview") or raw[:400]
+        req_text      = _section(raw, "Requirements") or _section(raw, "Key Requirements")
+        reqs          = _bullets_from(req_text) or [
+            f"Documented procedure for {title}",
+            "Evidence of implementation and review",
+            "Integration with QMS processes",
+        ]
+        mistakes_text = _section(raw, "Common Mistakes") or _section(raw, "Common Errors")
+        mistakes      = _bullets_from(mistakes_text)
+        career_text   = _section(raw, "Career Connection") or ""
+
+        cs_blocks = re.findall(
+            r'(?:^|\n)#+\s+(?:Case Study|Example)[^\n]*\n(.*?)(?=\n#+\s|\Z)',
+            raw, re.IGNORECASE | re.DOTALL
+        )
+
+        terms: dict = {}
+        for row in re.findall(r'\|([^|]+)\|([^|]+)\|', raw)[:8]:
+            k, v = row[0].strip(), row[1].strip()
+            if k and v and k.lower() not in ("term", "definition", "concept"):
+                terms[k] = v
+        if not terms:
+            for k, v in re.findall(r'\*\*([^*]+)\*\*\s*[:\-—]\s*([^\n]{10,})', raw)[:6]:
+                terms[k.strip()] = v.strip()
+
+        prs = _Prs()
+        prs.slide_width  = int(13.333 * 914400)
+        prs.slide_height = int(7.5   * 914400)
+        ds = DeckSkills(prs)
+
+        ds.add_iso_cover(standard, clause, title, datetime.now().strftime("%B %Y"))
+        ds.add_iso_overview(
+            what_it_covers=overview[:500],
+            why_it_matters=(
+                f"Clause {clause} is a core requirement for {standard} certification. "
+                "Non-conformance is a common audit finding."
+            ),
+        )
+        ds.add_iso_requirements(reqs)
+
+        for i, block in enumerate(cs_blocks[:2]):
+            lines = [ln.strip() for ln in block.splitlines() if ln.strip()]
+            company  = lines[0] if lines else f"Case Study {i+1}"
+            scenario = lines[1] if len(lines) > 1 else block[:200]
+            finding  = lines[2] if len(lines) > 2 else "Finding details in the full lesson."
+            lesson   = lines[3] if len(lines) > 3 else "Apply rigorous documentation practices."
+            is_real  = "real" in block[:120].lower() or "fda" in block[:60].lower()
+            ds.add_iso_case_study_slide(
+                title=f"Case Study {i+1}", company=company,
+                scenario=scenario, finding=finding, lesson=lesson, is_real=is_real,
+            )
+
+        if mistakes:
+            ds.add_iso_mistakes(mistakes)
+        if terms or career_text:
+            ds.add_iso_key_terms(terms, career_note=career_text[:400])
+
+        decks_dir = ATHENA / "documents" / "decks"
+        decks_dir.mkdir(parents=True, exist_ok=True)
+        slug = re.sub(r'[^a-z0-9]+', '_', f"iso_{clause}_{title}".lower()).strip('_')[:40]
+        out  = decks_dir / f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{slug}.pptx"
+        prs.save(str(out))
+    except Exception as exc:
+        import logging as _log
+        _log.getLogger("server").error(f"ISO deck build failed: {exc}", exc_info=True)
+
 
 # ── LangGraph coaching orchestration (Phase 1A) ──────────────────────────────
 async def _run_coaching_workflow(client: str):
