@@ -1058,7 +1058,34 @@
       "ingested_at": "2026-06-05T13:16:54.976231",
       "source": "tavily:FDA 510k guidance update medical device quality",
       "hash": "6417fb4ef16838f4"
+    },
+    "tavily_e9ff5b6a241aa49f": {
+      "name": "US FDA CDRH Warning Letters: A Review of 2025 - Emergo by UL",
+      "category": "General",
+      "url": "https://www.emergobyul.com/news/us-fda-cdrh-warning-letters-review-2025",
+      "chunks": 4,
+      "ingested_at": "2026-06-05T16:46:35.752766",
+      "source": "tavily:FDA warning letter medical device quality system",
+      "hash": "880b9bd17a5850e9"
+    },
+    "tavily_666a9737a946854a": {
+      "name": "3 Common Problems with Design Controls (and the Solutions)",
+      "category": "General",
+      "url": "https://www.greenlight.guru/blog/design-control-problems-solutions",
+      "chunks": 4,
+      "ingested_at": "2026-06-05T16:46:38.671931",
+      "source": "tavily:medical device design controls DHF regulatory guidance",
+      "hash": "9388fb8f54e0a232"
+    },
+    "tavily_d2770b5929e668bb": {
+      "name": "MDSAP Audit Procedures and Forms - FDA",
+      "category": "FDA",
+      "url": "https://www.fda.gov/medical-devices/medical-device-single-audit-program-mdsap/mdsap-audit-procedures-and-forms",
+      "chunks": 1,
+      "ingested_at": "2026-06-05T16:46:55.709230",
+      "source": "tavily:MDSAP audit approach update 2025 2026",
+      "hash": "82b4d2d31ced7b0c"
     }
   },
-  "last_run": "2026-06-05T13:16:58.706181"
+  "last_run": "2026-06-05T16:57:52.590730"
 }

@@ -187,6 +187,51 @@ FINAL CHECK before submitting: Read the first sentence. Is it specific? Is it su
 
 
 
+# ── Device sub-sector curriculum ─────────────────────────────────────────────
+# 12 sub-sectors rotated alongside the topic category to prevent every
+# hypothetical from defaulting to cardiac rhythm management / San Diego CRM.
+
+DEVICE_SUBSECTORS = [
+    {"key": "orthopedics",          "label": "Orthopedics & Spine",           "seed": "orthopedic implants, joint replacement, spinal fusion, trauma fixation, bone screws"},
+    {"key": "ivd_diagnostics",      "label": "IVD & Diagnostics",             "seed": "in vitro diagnostics, point-of-care testing, glucose monitoring, molecular diagnostics, lab analyzers"},
+    {"key": "digital_health_samd",  "label": "Digital Health & SaMD",         "seed": "software as a medical device, AI diagnostic software, clinical decision support, digital therapeutics"},
+    {"key": "surgical_robotics",    "label": "Surgical Robotics",             "seed": "robotic surgery systems, laparoscopic robots, surgical navigation, image-guided surgery"},
+    {"key": "neurology",            "label": "Neurology & Neuromodulation",   "seed": "deep brain stimulation, spinal cord stimulators, neurosurgical devices, cochlear implants"},
+    {"key": "wound_infusion",       "label": "Wound Care & Infusion",         "seed": "wound management, infusion pumps, negative pressure wound therapy, IV drug delivery"},
+    {"key": "ophthalmology",        "label": "Ophthalmology",                 "seed": "intraocular lenses, LASIK platforms, retinal devices, ophthalmic surgical instruments"},
+    {"key": "monitoring_wearables", "label": "Monitoring & Wearables",        "seed": "remote patient monitoring, wearable biosensors, pulse oximetry, continuous glucose monitors"},
+    {"key": "endoscopy_gi",         "label": "Endoscopy & GI",                "seed": "endoscopes, capsule endoscopy, GI surgical devices, colonoscopy, minimally invasive GI"},
+    {"key": "combination_products", "label": "Combination Products",          "seed": "drug-device combinations, drug-eluting stents, prefilled syringes, combination product regulatory pathways"},
+    {"key": "imaging_radiology",    "label": "Imaging & Radiology",           "seed": "medical imaging systems, MRI, ultrasound, interventional radiology, imaging AI, PACS"},
+    {"key": "cardiovascular_crm",   "label": "Cardiovascular/CRM",            "seed": "cardiac rhythm management, pacemakers, ICD, ablation catheters, heart failure devices"},
+]
+
+def _get_next_subsector(mem_obj) -> dict:
+    """Pick the device sub-sector least recently featured in articles."""
+    import random
+    if not mem_obj:
+        return random.choice(DEVICE_SUBSECTORS)
+    try:
+        rows = mem_obj.conn.execute(
+            "SELECT metadata FROM content_items WHERE content_type='article' ORDER BY timestamp DESC LIMIT 30"
+        ).fetchall()
+        covered = {}
+        for row in rows:
+            if row["metadata"]:
+                try:
+                    m = json.loads(row["metadata"])
+                    sec = m.get("device_subsector", "")
+                    if sec:
+                        covered[sec] = covered.get(sec, 0) + 1
+                except Exception:
+                    pass
+        all_keys = [s["key"] for s in DEVICE_SUBSECTORS]
+        chosen_key = min(all_keys, key=lambda k: covered.get(k, 0))
+        return next(s for s in DEVICE_SUBSECTORS if s["key"] == chosen_key)
+    except Exception:
+        return random.choice(DEVICE_SUBSECTORS)
+
+
 # ── Topic curriculum ──────────────────────────────────────────────────────────
 # 10 distinct categories. select_topic rotates through them and avoids
 # recent coverage, preventing the "all CAPA all the time" pattern.
@@ -345,12 +390,15 @@ def select_topic(news_items: list, override: str = "") -> dict:
             "_override":  override.strip(),
         }
 
-    # Pick the topic category least covered so far (diversity enforcement)
-    category = _get_next_topic_category(mem)
-    cat_label   = category.get("label", "MedTech")
-    cat_seed    = category.get("prompt_seed", "")
-    cat_key     = category.get("key", "")
+    # Pick the topic category and device sub-sector least covered so far
+    category  = _get_next_topic_category(mem)
+    subsector = _get_next_subsector(mem)
+    cat_label    = category.get("label", "MedTech")
+    cat_seed     = category.get("prompt_seed", "")
+    cat_key      = category.get("key", "")
     cat_examples = category.get("examples", [])
+    sec_label    = subsector.get("label", "")
+    sec_key      = subsector.get("key", "")
     import random as _rnd
     example_hint = _rnd.choice(cat_examples) if cat_examples else ""
 
@@ -359,34 +407,40 @@ def select_topic(news_items: list, override: str = "") -> dict:
         avoid_note = f"\n\nCRITICAL — Do NOT suggest any topic similar to these recently published articles:\n" + \
                      "\n".join(f"- {t}" for t in recent[:10])
 
-    prompt = f"""You are the editorial director for MedTech Meridian — a Substack for QA/RA professionals, written by the founder of a San Diego MedTech consulting firm.
+    prompt = f"""You are the editorial director for MedTech Meridian — a Substack for QA/RA professionals, written by the founder of a SoCal MedTech consulting firm.
 
 ASSIGNED CATEGORY THIS WEEK: {cat_label}
-(The editorial calendar is rotating through topics to avoid repetition. This week MUST be in this category.)
+(The editorial calendar rotates categories to avoid repetition. This week MUST be in this category.)
+
+ASSIGNED DEVICE SUB-SECTOR: {sec_label}
+(The editorial calendar also rotates device sub-sectors to ensure coverage across all of MedTech — not just cardiac/CRM. All hypothetical company examples and case studies MUST be drawn from the {sec_label} sub-sector.)
 
 Category focus: {cat_seed}
-Example topics in this category (do not copy verbatim — use as inspiration only): {example_hint}
+Sub-sector context: {subsector.get("seed", "")}
+Example topics in this category (use as inspiration only, not verbatim): {example_hint}
 
 Recent regulatory news to weave in where relevant:
 {news_summary}
 {avoid_note}
 
-Your job: suggest ONE specific, compelling article topic within the {cat_label} category.
+Your job: suggest ONE specific, compelling article topic in the {cat_label} category, centered on the {sec_label} sub-sector.
 
 Requirements:
-- The title must be SPECIFIC — a promise to the reader, not a label (bad: "Understanding CAPA"; good: "The Reason Your CAPA Keeps Getting Rejected at FDA Inspection")
-- It must work for both a QA engineer with 5 years experience AND a college junior considering MedTech
+- The title must be SPECIFIC — a promise, not a label (bad: "Understanding CAPA"; good: "The CAPA Mistake That Keeps Triggering 483s in {sec_label}")
+- It must work for both a QA engineer with 5 years experience AND someone new to MedTech
 - It must be something the reader can't get from a Google search — genuine insight or a reframe
-- It must connect to the Southern California / San Diego MedTech corridor when possible
+- Hypothetical companies and case studies MUST be from the {sec_label} sub-sector (not cardiac/CRM unless that IS the assigned sub-sector)
+- Geographic texture from the broader US MedTech ecosystem is welcome; SoCal angle where it fits naturally
 
 Respond with JSON only — no markdown fences:
 {{
   "title": "Specific, compelling article title",
   "angle": "One sentence — the unique insight or reframe that makes this worth reading",
-  "hook": "The specific opening scene (a real device, real company, real moment) that pulls the reader in",
+  "hook": "The specific opening scene (a real device, real company, real moment from {sec_label}) that pulls the reader in",
   "key_points": ["specific point 1 with detail", "specific point 2 with detail", "specific point 3 with detail"],
   "why_now": "Why a QA/RA professional needs to read this THIS week",
-  "topic_category": "{cat_key}"
+  "topic_category": "{cat_key}",
+  "device_subsector": "{sec_key}"
 }}"""
 
     try:
@@ -408,8 +462,8 @@ Respond with JSON only — no markdown fences:
             if text.startswith("json"):
                 text = text[4:]
         result = json.loads(text.strip())
-        # Ensure category is recorded
         result.setdefault("topic_category", cat_key)
+        result.setdefault("device_subsector", sec_key)
         return result
     except Exception as e:
         log.warning(f"Topic selection failed: {e}. Using curriculum fallback.")
@@ -625,7 +679,8 @@ def main():
         keywords = topic.get('key_points', []) + [topic['title']]
         mem.register_content('content_agent', 'article', topic['title'],
             topic_keywords=keywords, status='draft', file_path=str(out_path),
-            metadata={"topic_category": topic.get("topic_category", "")})
+            metadata={"topic_category": topic.get("topic_category", ""),
+                      "device_subsector": topic.get("device_subsector", "")})
         mem.log_event('content_agent', 'draft_saved', topic['title'])
         mem.submit_for_review('content_agent', 'article', topic['title'], str(out_path))
 

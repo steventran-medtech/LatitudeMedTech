@@ -90,6 +90,8 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
 _SAFE_FILENAME = re.compile(r'^[\w\-. ]+$')
 _SAFE_ARG      = re.compile(r'^[\w\-. /:\[\]@#]+$')
 
+_MAX_BODY_BYTES = 10 * 1024 * 1024  # 10 MB hard limit on request bodies
+
 def _safe_filename(name: str) -> str:
     """Reject filenames with path traversal characters."""
     if not name or not _SAFE_FILENAME.match(name) or '..' in name or '/' in name or '\\' in name:
@@ -102,6 +104,61 @@ def _safe_arg(arg: str, max_len: int = 500) -> str:
         return ""
     sanitised = re.sub(r'[;&|`$<>{}]', '', arg)[:max_len]
     return sanitised.strip()
+
+def _extract_md_summary(path: "Path", max_chars: int = 220) -> str:
+    """Return the first substantive text line from a markdown file (skips frontmatter and headings)."""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if text.startswith("---"):
+            end = text.find("\n---", 3)
+            if end != -1:
+                text = text[end + 4:].strip()
+        for line in text.splitlines():
+            stripped = line.strip()
+            if stripped and not stripped.startswith("#") and not stripped.startswith("---"):
+                return stripped[:max_chars]
+    except Exception:
+        pass
+    return ""
+
+# ── Audit logging ─────────────────────────────────────────────────────────────
+
+_AUDIT_LOG = ATHENA / "logs" / "audit.log"
+_AUDIT_LOG.parent.mkdir(parents=True, exist_ok=True)
+
+def _audit(action: str, detail: str = "", request: "Request | None" = None) -> None:
+    """Append a one-line audit record to logs/audit.log (SOC II CC7.2)."""
+    ts      = datetime.now().isoformat(timespec="seconds")
+    origin  = request.headers.get("origin", "local") if request else "system"
+    try:
+        with open(_AUDIT_LOG, "a", encoding="utf-8") as f:
+            f.write(f"{ts}  {action:<30}  origin={origin}  {detail}\n")
+    except Exception:
+        pass
+
+# ── Database file protection (SOC II CC6.1) ───────────────────────────────────
+
+def _harden_db_permissions() -> None:
+    """Set restrictive file permissions on the SQLite database and key file."""
+    import stat
+    targets = [
+        ATHENA / "memory" / "latitude_memory.db",
+        _KEY_FILE,
+    ]
+    for p in targets:
+        if p.exists():
+            try:
+                p.chmod(stat.S_IRUSR | stat.S_IWUSR)
+            except Exception:
+                pass
+
+# ── Request body size limit middleware ────────────────────────────────────────
+class BodySizeLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > _MAX_BODY_BYTES:
+            return JSONResponse(status_code=413, content={"error": "Request body too large"})
+        return await call_next(request)
 
 # ── Security headers middleware ───────────────────────────────────────────────
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -127,6 +184,11 @@ app = FastAPI(title="Latitude MedTech", version=APP_VERSION,
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(BodySizeLimitMiddleware)
+
+# Harden file permissions on startup (SOC II CC6.1)
+_harden_db_permissions()
+_audit("server_start", f"version={APP_VERSION}")
 
 # ── Voice bridge ──────────────────────────────────────────────────────────────
 sys.path.insert(0, str(ATHENA / "voice"))
@@ -211,6 +273,7 @@ async def run_agent(agent_name: str, script: str, args: list = None, context: st
         await manager.broadcast({"type": "agent_log", "agent": agent_name, "line": f"[SKIPPED] {agent_name} already running"})
         return
     running_agents.add(agent_name)
+    _audit("agent_start", f"agent={agent_name} args={args or []}")
     msg = {"type": "agent_start", "agent": agent_name, "ts": datetime.now().isoformat()}
     if context:
         msg["context"] = context
@@ -233,6 +296,7 @@ async def run_agent(agent_name: str, script: str, args: list = None, context: st
     await proc.wait()
     running_agents.discard(agent_name)
     status = "success" if proc.returncode == 0 else "error"
+    _audit("agent_done", f"agent={agent_name} status={status} rc={proc.returncode}")
 
     # Parse the last few stdout lines for a structured JSON result (deck_agent outputs a
     # JSON summary as its final line: {status, path, filename, title, slide_count, deck_type})
@@ -811,8 +875,9 @@ class ISORequest(BaseModel):
     clause: Optional[str] = None
 
 @app.post("/api/agents/iso")
-async def trigger_iso(req: ISORequest, background_tasks: BackgroundTasks):
-    # Blank clause = generate the next ungenerated clause (never ALL)
+async def trigger_iso(req: ISORequest, background_tasks: BackgroundTasks, request: Request):
+    clause_detail = req.clause or "next"
+    _audit("agent_trigger", f"agent=iso_coach clause={clause_detail}", request)
     args = ["--clause", req.clause] if req.clause else ["--next"]
     background_tasks.add_task(run_agent, "iso_coach", "iso_coach_agent.py", args)
     return {"status": "started", "agent": "iso_coach"}
@@ -1201,39 +1266,47 @@ def generate_docx(title: str, content: str, doc_type: str) -> Path:
 
 @app.get("/api/documents")
 def list_documents():
-    # The document queue aggregates exported Word docs plus the markdown reports
-    # that agents (M&A, Consulting) write to their ops folders, so completed
-    # agent runs surface here instead of being stranded on disk.
+    # All agent output folders surface here so every deliverable is visible
+    # in the Documents hub — not stranded on disk.
     sources = [
-        ("documents",      ATHENA / 'documents',              '*.docx'),
-        ("ma_intelligence", ATHENA / 'ops' / 'ma_intelligence', '*.md'),
-        ("consulting",     ATHENA / 'ops' / 'consulting',      '*.md'),
+        ("documents",       ATHENA / "documents",               "*.docx", False),
+        ("ma_intelligence", ATHENA / "ops" / "ma_intelligence", "*.md",   True),
+        ("consulting",      ATHENA / "ops" / "consulting",      "*.md",   True),
+        ("marketing",       ATHENA / "ops" / "marketing",       "*.md",   True),
+        ("briefings",       ATHENA / "briefings",               "*.md",   True),
+        ("content",         ATHENA / "content" / "drafts",      "*.md",   False),
+        ("iso13485",        ATHENA / "coaching" / "iso13485",   "*.md",   False),
+        ("iso14971",        ATHENA / "coaching" / "iso14971",   "*.md",   False),
+        ("briefs",          ATHENA / "coaching" / "briefs",     "*.md",   False),
     ]
     items = []
-    for folder, base, pattern in sources:
+    for folder, base, pattern, include_summary in sources:
         if not base.exists():
             continue
         for f in base.glob(pattern):
-            items.append({
+            item = {
                 "filename": f.name,
                 "folder": folder,
                 "path": str(f),
                 "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
                 "mtime": f.stat().st_mtime,
-            })
+            }
+            if include_summary:
+                item["summary"] = _extract_md_summary(f)
+            items.append(item)
     items.sort(key=lambda d: d["mtime"], reverse=True)
     for d in items:
         d.pop("mtime", None)
-    return {"documents": items[:30]}
+    return {"documents": items[:50]}
 
 
 @app.get("/api/documents/open/{filename}")
-def open_document(filename: str):
-    docs_dir = ATHENA / 'documents'
-    f = docs_dir / filename
-    if not f.exists():
+def open_document(filename: str, folder: str = "documents"):
+    base = FOLDER_MAP.get(folder, ATHENA / "documents")
+    f = (base / _safe_filename(filename)).resolve()
+    if not str(f).startswith(str(base.resolve())) or not f.exists():
         return JSONResponse(status_code=404, content={"error": "Not found"})
-    subprocess.Popen(['start', '', str(f)], shell=True)
+    subprocess.Popen(["start", "", str(f)], shell=True)
     return {"status": "opened", "filename": filename}
 
 
@@ -1323,10 +1396,14 @@ def reset_settings():
 _HOME_ATHENA = ATHENA   # canonical code-tree root; agents write here
 FOLDER_MAP = {
     "briefings":       _HOME_ATHENA / "briefings",
-    "content/drafts":  _HOME_ATHENA / "content" / "drafts",
-    "coaching/briefs": _HOME_ATHENA / "coaching" / "briefs",
+    "content":         _HOME_ATHENA / "content" / "drafts",
+    "content/drafts":  _HOME_ATHENA / "content" / "drafts",   # legacy key
+    "briefs":          _HOME_ATHENA / "coaching" / "briefs",
+    "coaching/briefs": _HOME_ATHENA / "coaching" / "briefs",  # legacy key
     "documents":       _HOME_ATHENA / "documents",
     "iso13485":        _HOME_ATHENA / "coaching" / "iso13485",
+    "iso14971":        _HOME_ATHENA / "coaching" / "iso14971",
+    "marketing":       _HOME_ATHENA / "ops" / "marketing",
     "learning":        _HOME_ATHENA / "knowledge_base" / "learning",
     "hr":              _HOME_ATHENA / "ops" / "hr",
     "consulting":      _HOME_ATHENA / "ops" / "consulting",
@@ -1729,10 +1806,10 @@ def knowledge_growth(days: int = 90):
 def dashboard_history(days: int = 30):
     if not mem:
         return {"daily": []}
-    cutoff = (datetime.now() - __import__("datetime").timedelta(days=days)).strftime("%Y-%m-%d")
+    cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
     rows = mem.conn.execute(
-        "SELECT date, total_calls, total_tokens, total_cost FROM daily_summaries "
-        "WHERE date >= ? ORDER BY date ASC", (cutoff,)
+        "SELECT date, total_calls, total_tokens, total_cost, cache_hits "
+        "FROM daily_summaries WHERE date >= ? ORDER BY date ASC", (cutoff,)
     ).fetchall()
     return {"daily": [dict(r) for r in rows]}
 
@@ -1913,6 +1990,60 @@ async def shutdown_app(background_tasks: BackgroundTasks):
 
     background_tasks.add_task(_cleanup)
     return {"phrase": phrase, "status": "shutting_down"}
+
+
+# ── Security status endpoint (SOC II CC7.2 — system monitoring) ───────────────
+
+@app.get("/api/security/status")
+def security_status():
+    """Returns a summary of active security controls for monitoring purposes."""
+    import stat as _stat
+    def _file_perm(p: Path) -> str:
+        try:
+            mode = p.stat().st_mode
+            owner_r  = bool(mode & _stat.S_IRUSR)
+            owner_w  = bool(mode & _stat.S_IWUSR)
+            group_r  = bool(mode & _stat.S_IRGRP)
+            other_r  = bool(mode & _stat.S_IROTH)
+            return f"rw={owner_r and owner_w}, group_read={group_r}, other_read={other_r}"
+        except Exception:
+            return "unknown"
+
+    db_path  = ATHENA / "memory" / "latitude_memory.db"
+    key_path = _KEY_FILE
+    audit_lines = 0
+    try:
+        with open(_AUDIT_LOG, "r", encoding="utf-8") as f:
+            audit_lines = sum(1 for _ in f)
+    except Exception:
+        pass
+
+    return {
+        "controls": {
+            "security_headers":      True,
+            "cors_whitelist":        True,
+            "rate_limiting":         "120 req/min",
+            "request_body_limit":    f"{_MAX_BODY_BYTES // (1024*1024)} MB",
+            "path_traversal_guard":  True,
+            "shell_injection_guard": True,
+            "session_token":         True,
+            "audit_logging":         True,
+        },
+        "file_permissions": {
+            "database": _file_perm(db_path)  if db_path.exists()  else "missing",
+            "key_file":  _file_perm(key_path) if key_path.exists() else "missing",
+        },
+        "audit_log": {
+            "path":       str(_AUDIT_LOG),
+            "total_entries": audit_lines,
+        },
+        "gaps": [
+            "HTTPS not enabled (localhost deployment — Electron shell handles TLS boundary)",
+            "API key auth not enforced on all routes (Electron shell is trusted origin via CORS)",
+            "Database at rest not encrypted (SQLite; file permissions restrict access to current OS user)",
+        ],
+        "standard": "SOC II Type II relevant controls — CC6.1, CC6.6, CC6.7, CC7.2, A1.2",
+    }
 
 
 if __name__ == "__main__":

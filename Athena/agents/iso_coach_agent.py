@@ -309,11 +309,15 @@ def main():
     args = parser.parse_args()
 
     if args.clause:
-        # Generate one specific clause
-        if args.clause not in CLAUSES:
-            print(f"Clause {args.clause} not found. Available: {', '.join(CLAUSES.keys())}")
+        # Check both ISO 13485 and ISO 14971 clause maps
+        if args.clause in CLAUSES:
+            clauses_to_generate = [(args.clause, CLAUSES[args.clause])]
+        elif args.clause in CLAUSES_14971:
+            clauses_to_generate = [(args.clause, CLAUSES_14971[args.clause])]
+        else:
+            all_keys = list(CLAUSES.keys()) + list(CLAUSES_14971.keys())
+            print(f"Clause {args.clause} not found. Available: {', '.join(all_keys)}")
             sys.exit(1)
-        clauses_to_generate = [(args.clause, CLAUSES[args.clause])]
 
     elif args.next or True:
         # --next OR no args: find the first ungenerated clause and do just that one.

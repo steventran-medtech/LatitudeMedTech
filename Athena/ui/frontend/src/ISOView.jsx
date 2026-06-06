@@ -269,10 +269,12 @@ export default function ISOView({ runningAgents }) {
     });
   };
 
+  const folderOf = (filename) => filename.startsWith("14971_") ? "iso14971" : "iso13485";
+
   const deleteOne = async (filename) => {
     await fetch(`${API}/api/files/delete`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filename, folder: "iso13485" }),
+      body: JSON.stringify({ filename, folder: folderOf(filename) }),
     });
     if (selected === filename) { setSelected(null); setContent(""); setEditing(false); }
     ms.clear(); load();
@@ -283,7 +285,7 @@ export default function ISOView({ runningAgents }) {
     if (!window.confirm(`Delete ${ms.size} lesson(s)?`)) return;
     await fetch(`${API}/api/files/delete-bulk`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [...ms.checked].map(f => ({ folder: "iso13485", filename: f })) }),
+      body: JSON.stringify({ items: [...ms.checked].map(f => ({ folder: folderOf(f), filename: f })) }),
     });
     if (ms.has(selected)) { setSelected(null); setContent(""); setEditing(false); }
     ms.clear(); load();
@@ -300,25 +302,37 @@ export default function ISOView({ runningAgents }) {
         ISO 13485:2016 Quality Management · ISO 14971:2019 Risk Management
       </div>
 
-      {/* Generate — with full clause dropdown */}
+      {/* Generate — clause selector dropdown */}
       <div style={{ background: C.pearl, border: `1px solid ${C.mist}`, borderRadius: 8,
         padding: "14px 20px", marginBottom: 20 }}>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          {/* Free-text input with datalist autocomplete */}
-          <div style={{ flex: 1, position: "relative" }}>
-            <input value={clause} onChange={e => setClause(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && generateLesson()}
-              list="iso-clauses"
-              placeholder="Type or pick a clause — blank = next missing"
-              style={{ width: "100%", padding: "8px 12px", border: `1px solid ${C.mist}`,
-                borderRadius: 6, fontFamily: "Inter,sans-serif", fontSize: 13,
-                background: C.cloud, color: C.slate, outline: "none", boxSizing: "border-box" }}/>
-            <datalist id="iso-clauses">
-              {CLAUSES.map(([num, name]) => (
-                <option key={num} value={num}>{num} — {name}</option>
-              ))}
-            </datalist>
-          </div>
+          <select value={clause} onChange={e => setClause(e.target.value)}
+            style={{ flex: 1, padding: "8px 12px", border: `1px solid ${C.mist}`,
+              borderRadius: 6, fontFamily: "Inter,sans-serif", fontSize: 13,
+              background: C.cloud, color: C.slate, outline: "none", cursor: "pointer" }}>
+            <option value="">— Generate next missing clause —</option>
+            <optgroup label="ISO 13485:2016 — Quality Management System">
+              {CLAUSES_13485.map(([num, name]) => {
+                const done = lessons.some(l => l.clause === num);
+                return (
+                  <option key={num} value={num}>
+                    {done ? "✓ " : ""}§{num} — {name}
+                  </option>
+                );
+              })}
+            </optgroup>
+            <optgroup label="ISO 14971:2019 — Risk Management">
+              {CLAUSES_14971.map(([num, name]) => {
+                const dispNum = num.replace("14971.", "");
+                const done = lessons.some(l => l.clause === num);
+                return (
+                  <option key={num} value={num}>
+                    {done ? "✓ " : ""}§{dispNum} — {name}
+                  </option>
+                );
+              })}
+            </optgroup>
+          </select>
           <button onClick={generateLesson} disabled={running}
             style={{ padding: "8px 18px", background: running ? C.fog : C.navy, flexShrink: 0,
               color: "#fff", border: "none", borderRadius: 6, fontWeight: 700,
@@ -328,37 +342,6 @@ export default function ISOView({ runningAgents }) {
               : "Generate Next"}
           </button>
         </div>
-        {/* Quick-pick grid — ISO 13485 and ISO 14971 sections */}
-        {[
-          { label: "ISO 13485:2016 — QMS", clauses: CLAUSES_13485 },
-          { label: "ISO 14971:2019 — Risk", clauses: CLAUSES_14971 },
-        ].map(({ label, clauses }) => (
-          <div key={label} style={{ marginTop: 10 }}>
-            <div style={{
-              fontFamily: "Inter,sans-serif", fontSize: 8, fontWeight: 700,
-              letterSpacing: "0.14em", textTransform: "uppercase",
-              color: C.fog, marginBottom: 5,
-            }}>{label}</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-              {clauses.map(([num, title]) => {
-                const done = lessons.some(l => l.clause === num);
-                const isActive = clause === num;
-                return (
-                  <button key={num} onClick={() => setClause(num)} title={title}
-                    style={{
-                      padding: "3px 8px", borderRadius: 4, cursor: "pointer",
-                      fontFamily: "Inter,sans-serif", fontSize: 10, fontWeight: 600,
-                      background: isActive ? C.navy : done ? "#EEF6F5" : C.sand,
-                      color: isActive ? "#fff" : done ? C.teal : C.fog,
-                      border: `1px solid ${isActive ? C.navy : done ? C.teal + "44" : C.mist}`,
-                    }}>
-                    §{num.startsWith("14971.") ? num.replace("14971.", "") : num}{done ? " ✓" : ""}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
         {status && <div style={{ marginTop: 8, fontFamily: "Inter,sans-serif", fontSize: 11, color: C.teal }}>{status}</div>}
       </div>
 

@@ -53,8 +53,8 @@ const S = {
   app:{minHeight:"100vh",background:C.cloud,fontFamily:F.sans,color:C.slate},
   sidebar:{width:228,background:C.navy,display:"flex",flexDirection:"column",position:"fixed",top:0,left:0,bottom:0,zIndex:10},
   main:{marginLeft:228,minHeight:"100vh",display:"flex",flexDirection:"column"},
-  header:{background:C.pearl,borderBottom:`1px solid ${C.mist}`,padding:"14px 36px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:9,boxShadow:"0 1px 3px rgba(10,37,64,0.06)"},
-  content:{padding:"36px",flex:1},
+  header:{background:"rgba(255,255,255,0.92)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",borderBottom:`1px solid ${C.mist}`,padding:"15px 36px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:9,boxShadow:"0 1px 3px rgba(10,37,64,0.06)"},
+  content:{padding:"36px",flex:1,overflowX:"hidden"},
   card:{background:C.pearl,border:`1px solid ${C.mist}`,borderRadius:10,padding:"22px 26px",marginBottom:20,boxShadow:"0 1px 4px rgba(10,37,64,0.04)"},
   btn:(v="primary")=>({padding:"7px 18px",borderRadius:6,border:"none",cursor:"pointer",fontFamily:F.sans,fontSize:11,fontWeight:600,letterSpacing:"0.05em",textTransform:"uppercase",background:v==="primary"?C.navy:v==="teal"?C.teal:v==="warm"?C.gold:v==="red"?C.red:v==="ocean"?C.ocean:"transparent",color:v==="ghost"?C.fog:C.pearl,border:v==="ghost"?`1px solid ${C.mist}`:"none",transition:"opacity 0.15s"}),
   label:{fontFamily:F.sans,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:C.fog,marginBottom:6,display:"block"},
@@ -691,17 +691,29 @@ function fmtDur(s){
   return `${sec}s`;
 }
 
+const HISTORY_RANGES=[
+  {label:"Today",  days:1},
+  {label:"Week",   days:7},
+  {label:"1M",     days:30},
+  {label:"3M",     days:90},
+  {label:"1Y",     days:365},
+  {label:"5Y",     days:1825},
+];
+
 function Dashboard({data}){
   const [history,setHistory]=useState([]);
+  const [historyDays,setHistoryDays]=useState(30);
   const [ts,setTs]=useState(null);
-  const [hourlyDay,setHourlyDay]=useState("today");  // which day the hourly chart shows
+  const [hourlyDay,setHourlyDay]=useState("today");
   const [kbGrowth,setKbGrowth]=useState([]);
   const [kbTotal,setKbTotal]=useState(0);
   const [companyKb,setCompanyKb]=useState(null);
   const [sessions,setSessions]=useState([]);
   const [recentDecks,setRecentDecks]=useState([]);
   useEffect(()=>{
-    fetch(`${API}/api/dashboard/history?days=30`).then(r=>r.json()).then(d=>setHistory(d.daily||[])).catch(()=>{});
+    fetch(`${API}/api/dashboard/history?days=${historyDays}`).then(r=>r.json()).then(d=>setHistory(d.daily||[])).catch(()=>{});
+  },[historyDays]);
+  useEffect(()=>{
     fetch(`${API}/api/dashboard/knowledge-growth?days=90`).then(r=>r.json()).then(d=>{setKbGrowth(d.daily||[]);setKbTotal(d.total||0);}).catch(()=>{});
     fetch(`${API}/api/hr/skills`).then(r=>r.json()).then(d=>{
       const skills=Object.values(d.skills||{});
@@ -712,7 +724,6 @@ function Dashboard({data}){
     fetch(`${API}/api/sessions?limit=15`).then(r=>r.json()).then(d=>setSessions(d.sessions||[])).catch(()=>{});
     fetch(`${API}/api/decks`).then(r=>r.json()).then(d=>setRecentDecks((d.decks||[]).slice(0,5))).catch(()=>{});
   },[]);
-  // Refetch when the hourly day toggle changes (today/yesterday totals come back unchanged).
   useEffect(()=>{
     fetch(`${API}/api/dashboard/timeseries?day=${hourlyDay}`).then(r=>r.json()).then(setTs).catch(()=>{});
   },[hourlyDay]);
@@ -779,9 +790,21 @@ function Dashboard({data}){
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16,marginBottom:24}}>
         {stats.map(s=>(<div key={s.label} style={{...S.card,padding:"18px 20px",marginBottom:0}}><div style={{...S.stat,color:s.color}}>{s.value}</div><div style={S.statLabel}>{s.label}</div></div>))}
       </div>
+      {/* Time range selector for activity charts */}
+      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:12}}>
+        <span style={{fontFamily:"Helvetica,sans-serif",fontSize:10,color:C.muted,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",marginRight:4}}>Range</span>
+        {HISTORY_RANGES.map(r=>(
+          <button key={r.days} onClick={()=>setHistoryDays(r.days)}
+            style={{padding:"3px 12px",borderRadius:6,cursor:"pointer",
+              fontFamily:"Helvetica,sans-serif",fontSize:10,fontWeight:600,letterSpacing:"0.04em",
+              border:`1px solid ${historyDays===r.days?C.navy:C.mist}`,
+              background:historyDays===r.days?C.navy:"transparent",
+              color:historyDays===r.days?C.pearl:C.fog}}>{r.label}</button>
+        ))}
+      </div>
       {history.length>1&&(
         <div style={{...S.card,marginBottom:24}}>
-          <span style={S.label}>Activity over time — 30 days</span>
+          <span style={S.label}>Activity over time — {HISTORY_RANGES.find(r=>r.days===historyDays)?.label||`${historyDays}d`}</span>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:24,marginTop:16}}>
             <Sparkline data={history} valueKey="total_calls"  color={C.blue}  label="API Calls / day"/>
             <Sparkline data={history} valueKey="total_cost"   color={C.warm}  label="Spend (USD) / day"/>
@@ -1085,13 +1108,24 @@ function CoachingView({onGenerate}){
 }
 
 // ── Documents ──────────────────────────────────────────────────────────────
+const FOLDER_LABELS={
+  documents:"Word Doc", ma_intelligence:"M&A Intel", consulting:"Consulting",
+  marketing:"Marketing", briefings:"Briefing", content:"Article Draft",
+  iso13485:"ISO 13485", iso14971:"ISO 14971", briefs:"Coach Brief",
+};
+const FOLDER_COLORS={
+  documents:C.slate, ma_intelligence:"#1A6FA3", consulting:"#7B3FA6",
+  marketing:"#5B7FA6", briefings:"#1F7A6D", content:"#C4922A",
+  iso13485:"#1F7A6D", iso14971:"#1A6FA3", briefs:"#1F7A6D",
+};
+
 function DocumentsView(){
   const [docs,setDocs]=useState([]);
   const [viewing,setViewing]=useState(null);
   const ms=useMultiSelect();
   const load=()=>{fetch(`${API}/api/documents`).then(r=>r.json()).then(d=>setDocs(d.documents||[])).catch(()=>{});};
   useEffect(()=>{load();},[]);
-  const openDoc=(filename)=>{fetch(`${API}/api/documents/open/${filename}`).catch(()=>{});};
+  const openDoc=(filename,folder)=>{fetch(`${API}/api/documents/open/${encodeURIComponent(filename)}?folder=${folder||"documents"}`).catch(()=>{});};
   const deleteDoc=async(filename,folder)=>{
     await fetch(`${API}/api/files/delete`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({filename,folder:folder||"documents"})});
     ms.clear(); load();
@@ -1117,22 +1151,35 @@ function DocumentsView(){
         )}
       </div>
       {docs.length===0
-        ? <div style={{...S.card,color:C.muted,fontFamily:"Helvetica,sans-serif",fontSize:13}}>No documents yet. Export a draft or brief to Word.</div>
-        : docs.map(d=>(
-          <div key={d.filename} style={{...S.card,display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 20px",marginBottom:10,background:ms.checked.has(d.filename)?"#EBF3FB":undefined,border:ms.checked.has(d.filename)?`1px solid ${C.blue}44`:undefined}}>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <input type="checkbox" checked={ms.checked.has(d.filename)} onChange={()=>ms.toggle(d.filename)} style={{width:14,height:14,accentColor:C.blue}}/>
-              <div><div style={{fontFamily:"Helvetica,sans-serif",fontSize:13,color:C.black,fontWeight:500}}>{d.filename}</div><div style={{fontFamily:"Helvetica,sans-serif",fontSize:11,color:C.muted,marginTop:3}}>{d.modified?.slice(0,10)}</div></div>
+        ? <div style={{...S.card,color:C.muted,fontFamily:"Helvetica,sans-serif",fontSize:13}}>No documents yet. Run an agent or export a draft to Word.</div>
+        : docs.map(d=>{
+          const folderLabel=FOLDER_LABELS[d.folder]||d.folder;
+          const folderColor=FOLDER_COLORS[d.folder]||C.slate;
+          return(
+            <div key={d.filename} style={{...S.card,padding:"12px 18px",marginBottom:8,background:ms.checked.has(d.filename)?"#EBF3FB":undefined,border:ms.checked.has(d.filename)?`1px solid ${C.blue}44`:undefined}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                <div style={{display:"flex",alignItems:"flex-start",gap:10,flex:1,minWidth:0}}>
+                  <input type="checkbox" checked={ms.checked.has(d.filename)} onChange={()=>ms.toggle(d.filename)} style={{width:14,height:14,accentColor:C.blue,marginTop:2,flexShrink:0}}/>
+                  <div style={{minWidth:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                      <span style={{padding:"2px 8px",borderRadius:10,fontSize:9,fontWeight:700,fontFamily:"Helvetica,sans-serif",letterSpacing:"0.08em",textTransform:"uppercase",background:folderColor+"18",color:folderColor,border:`1px solid ${folderColor}33`}}>{folderLabel}</span>
+                      <span style={{fontFamily:"Helvetica,sans-serif",fontSize:12,color:C.black,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.filename}</span>
+                      <span style={{fontFamily:"Helvetica,sans-serif",fontSize:10,color:C.muted,flexShrink:0}}>{d.modified?.slice(0,10)}</span>
+                    </div>
+                    {d.summary&&<div style={{fontFamily:"Helvetica,sans-serif",fontSize:11,color:C.muted,marginTop:4,lineHeight:1.5,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{d.summary}</div>}
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:6,flexShrink:0,marginLeft:12}}>
+                  <button style={S.btn("teal")} onClick={()=>setViewing(d)}>View</button>
+                  {d.filename.toLowerCase().endsWith(".docx")&&(
+                    <button style={{...S.btn(),background:C.slate}} onClick={()=>openDoc(d.filename,d.folder)}>Open</button>
+                  )}
+                  <button style={{...S.btn("ghost"),color:C.red}} onClick={()=>deleteDoc(d.filename,d.folder)}>&#x2715;</button>
+                </div>
+              </div>
             </div>
-            <div style={{display:"flex",gap:8}}>
-              <button style={S.btn("teal")} onClick={()=>setViewing(d)}>View</button>
-              {d.filename.toLowerCase().endsWith(".docx")&&(
-                <button style={{...S.btn(),background:C.slate}} onClick={()=>openDoc(d.filename)}>Open in Word</button>
-              )}
-              <button style={{...S.btn("ghost"),color:C.red}} onClick={()=>deleteDoc(d.filename,d.folder)}>&#x2715;</button>
-            </div>
-          </div>
-        ))
+          );
+        })
       }
       {viewing&&<FileViewer folder={viewing.folder||"documents"} filename={viewing.filename} onClose={()=>setViewing(null)}/>}
     </div>
@@ -1548,6 +1595,288 @@ function VoiceStatusBadge({ voice, onNavigate }) {
         {label}
       </span>
     </div>
+  );
+}
+
+// ── Athena Global Panel ───────────────────────────────────────────────────────
+const PANEL_W = 284;
+
+function PanelStateRing({ state, level }) {
+  const cfg = VOICE_BADGE[state] ?? VOICE_BADGE.idle;
+  const isActive = !["idle","stopped"].includes(state);
+  const spin = ["loading","thinking"].includes(state);
+  return (
+    <div style={{ position:"relative", width:48, height:48, flexShrink:0 }}>
+      <div style={{ position:"absolute", inset:0, borderRadius:"50%",
+        border:`1px solid ${cfg.color}`, opacity: isActive?0.5:0.2,
+        animation: isActive?"orbBreath 3s ease-in-out infinite":"none" }}/>
+      <div style={{ position:"absolute", inset:3, borderRadius:"50%",
+        border:"1.5px solid transparent", borderTopColor:cfg.color, borderRightColor:cfg.color,
+        opacity: isActive?0.9:0.15,
+        animation: spin?"orbSpin 1.2s linear infinite":"none" }}/>
+      <div style={{ position:"absolute", inset:10, borderRadius:"50%",
+        border:`1px solid ${cfg.color}`, opacity: isActive?0.6:0.1,
+        boxShadow: isActive?`inset 0 0 8px ${cfg.color}33, 0 0 8px ${cfg.color}22`:"none" }}/>
+      <div style={{ position:"absolute", inset:18, borderRadius:"50%",
+        background: isActive?cfg.color:"#1C3352",
+        boxShadow: isActive?`0 0 8px ${cfg.color}`:"none",
+        transition:"background 0.3s" }}/>
+    </div>
+  );
+}
+
+function AthenaPanel({ voice, open, onToggle, onFullView, hidden }) {
+  const { running, state, level, lastYou, lastAthena, speakingLines, elapsed, startVoice, stopVoice } = voice;
+  const cfg   = VOICE_BADGE[state] ?? VOICE_BADGE.idle;
+  const label = state ? state.charAt(0).toUpperCase() + state.slice(1) : "Idle";
+  const fmtE  = (s) => `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+  const currentText = speakingLines.length > 0
+    ? speakingLines.map(l=>l.text).join(" ")
+    : lastAthena;
+
+  if (hidden) return null;
+
+  return (
+    <>
+      {/* Toggle tab — always on-screen */}
+      <button
+        onClick={onToggle}
+        title={open?"Close Athena panel":"Open Athena panel"}
+        style={{
+          position:"fixed",
+          right: open ? PANEL_W : 0,
+          top:"50%",
+          transform:"translateY(-50%)",
+          zIndex:1002,
+          width:22, height:84,
+          background:"linear-gradient(180deg,#0A2540 0%,#061928 100%)",
+          border:`1px solid rgba(26,111,163,0.35)`,
+          borderRight:"none",
+          borderRadius:"6px 0 0 6px",
+          cursor:"pointer",
+          display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+          gap:5, padding:0,
+          transition:"right 0.25s cubic-bezier(0.4,0,0.2,1)",
+          boxShadow:"-2px 0 12px rgba(10,37,64,0.18)",
+        }}
+      >
+        <div style={{
+          width:6, height:6, borderRadius:"50%",
+          background:cfg.color,
+          boxShadow: cfg.pulse?`0 0 6px ${cfg.color}`:"none",
+          animation: cfg.pulse?"athenaPing 1.4s ease-in-out infinite":"none",
+        }}/>
+        <div style={{
+          fontFamily:F.sans, fontSize:7, fontWeight:700, letterSpacing:"0.16em",
+          textTransform:"uppercase", color:"rgba(255,255,255,0.45)",
+          writingMode:"vertical-rl", textOrientation:"mixed", transform:"rotate(180deg)",
+        }}>
+          Athena
+        </div>
+      </button>
+
+      {/* Panel */}
+      <div style={{
+        position:"fixed",
+        right: open ? 0 : -PANEL_W,
+        top:0, bottom:0, width:PANEL_W,
+        background:"linear-gradient(160deg,#0A2540 0%,#061928 100%)",
+        borderLeft:`1px solid rgba(26,111,163,0.2)`,
+        zIndex:1001,
+        transition:"right 0.25s cubic-bezier(0.4,0,0.2,1)",
+        display:"flex", flexDirection:"column",
+        overflow:"hidden",
+        boxShadow: open?"-8px 0 36px rgba(10,37,64,0.4)":"none",
+      }}>
+        {/* Subtle HUD grid */}
+        <div style={{
+          position:"absolute", inset:0, opacity:0.025, pointerEvents:"none",
+          backgroundImage:`linear-gradient(#1A6FA3 1px,transparent 1px),linear-gradient(90deg,#1A6FA3 1px,transparent 1px)`,
+          backgroundSize:"40px 40px",
+        }}/>
+
+        {/* Corner accents */}
+        {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h],i)=>(
+          <div key={i} style={{
+            position:"absolute", width:32, height:32,
+            [v]:16, [h]:16,
+            borderTop:   v==="top"    ? "1px solid rgba(26,111,163,0.4)" : "none",
+            borderBottom:v==="bottom" ? "1px solid rgba(26,111,163,0.4)" : "none",
+            borderLeft:  h==="left"   ? "1px solid rgba(26,111,163,0.4)" : "none",
+            borderRight: h==="right"  ? "1px solid rgba(26,111,163,0.4)" : "none",
+            pointerEvents:"none",
+          }}/>
+        ))}
+
+        {/* Header */}
+        <div style={{
+          padding:"56px 18px 14px",
+          borderBottom:"1px solid rgba(26,111,163,0.12)",
+          display:"flex", alignItems:"center", justifyContent:"space-between",
+          flexShrink:0,
+        }}>
+          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+            <PanelStateRing state={state} level={level}/>
+            <div>
+              <div style={{ fontFamily:F.sans, fontSize:8, fontWeight:700,
+                letterSpacing:"0.2em", textTransform:"uppercase",
+                color:"rgba(26,111,163,0.75)", marginBottom:3 }}>
+                Latitude MedTech
+              </div>
+              <div style={{ fontFamily:F.serif, fontSize:15, fontWeight:400,
+                color:"#fff", letterSpacing:"0.06em" }}>
+                Athena
+              </div>
+            </div>
+          </div>
+          <div style={{ textAlign:"right" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:5, justifyContent:"flex-end",
+              marginBottom: running&&elapsed>0 ? 4 : 0 }}>
+              <div style={{ width:5, height:5, borderRadius:"50%",
+                background:cfg.color,
+                animation: cfg.pulse?"athenaPing 1.4s ease-in-out infinite":"none" }}/>
+              <span style={{ fontFamily:F.sans, fontSize:8, fontWeight:700,
+                letterSpacing:"0.12em", textTransform:"uppercase", color:cfg.color }}>
+                {label}
+              </span>
+            </div>
+            {running&&elapsed>0&&(
+              <div style={{ fontFamily:F.mono, fontSize:9, color:"rgba(196,146,42,0.75)",
+                letterSpacing:"0.05em" }}>
+                {fmtE(elapsed)}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Body */}
+        <div style={{ flex:1, overflowY:"auto", padding:"14px 18px",
+          display:"flex", flexDirection:"column", gap:10 }}>
+
+          {!running && (
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center",
+              justifyContent:"center", flex:1, gap:10, paddingTop:24 }}>
+              <div style={{ fontFamily:F.sans, fontSize:10,
+                color:"rgba(255,255,255,0.25)", textAlign:"center", lineHeight:1.7 }}>
+                Voice assistant is offline
+              </div>
+            </div>
+          )}
+
+          {running && !lastYou && !lastAthena && speakingLines.length===0 && (
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center",
+              justifyContent:"center", flex:1, gap:8, paddingTop:24 }}>
+              <div style={{ fontFamily:F.sans, fontSize:10,
+                color:"rgba(255,255,255,0.28)", textAlign:"center", letterSpacing:"0.03em",
+                lineHeight:1.7 }}>
+                {state==="listening" ? "Say 'Hi Athena' to activate" :
+                 state==="loading"   ? "Initialising models…" : "Listening…"}
+              </div>
+            </div>
+          )}
+
+          {lastYou && (
+            <div style={{
+              background:"rgba(10,37,64,0.55)",
+              border:"1px solid rgba(196,146,42,0.18)",
+              borderLeft:"2px solid rgba(196,146,42,0.75)",
+              borderRadius:"0 6px 6px 0",
+              padding:"9px 12px",
+            }}>
+              <div style={{ fontFamily:F.sans, fontSize:8, fontWeight:700,
+                letterSpacing:"0.14em", textTransform:"uppercase",
+                color:"#C4922A", marginBottom:5 }}>
+                You said
+              </div>
+              <div style={{ fontFamily:F.sans, fontSize:11, color:"#fff",
+                lineHeight:1.6, fontWeight:400 }}>
+                {lastYou.length>140 ? lastYou.slice(0,140)+"…" : lastYou}
+              </div>
+            </div>
+          )}
+
+          {currentText && (
+            <div style={{
+              background:"rgba(10,37,64,0.55)",
+              border:"1px solid rgba(31,122,109,0.18)",
+              borderLeft:"2px solid rgba(31,122,109,0.75)",
+              borderRadius:"0 6px 6px 0",
+              padding:"9px 12px",
+            }}>
+              <div style={{ fontFamily:F.sans, fontSize:8, fontWeight:700,
+                letterSpacing:"0.14em", textTransform:"uppercase",
+                color:"#1F7A6D", marginBottom:5 }}>
+                Athena
+              </div>
+              <div style={{ fontFamily:F.sans, fontSize:11, color:"#e0eaf2",
+                lineHeight:1.7, fontWeight:300 }}>
+                {currentText.length>200 ? currentText.slice(0,200)+"…" : currentText}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer controls */}
+        <div style={{
+          padding:"12px 18px",
+          borderTop:"1px solid rgba(26,111,163,0.12)",
+          display:"flex", gap:8, alignItems:"center", flexShrink:0,
+        }}>
+          {running ? (
+            <button onClick={stopVoice} style={{
+              flex:1, padding:"8px 10px",
+              background:"rgba(192,57,43,0.12)", border:"1px solid rgba(192,57,43,0.3)",
+              borderRadius:6, cursor:"pointer", fontFamily:F.sans, fontSize:9,
+              fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase",
+              color:"#C0392B", transition:"background 0.15s",
+            }}
+            onMouseEnter={e=>e.currentTarget.style.background="rgba(192,57,43,0.22)"}
+            onMouseLeave={e=>e.currentTarget.style.background="rgba(192,57,43,0.12)"}>
+              Turn Off
+            </button>
+          ) : (
+            <button onClick={startVoice} style={{
+              flex:1, padding:"8px 10px",
+              background:"rgba(26,111,163,0.12)", border:"1px solid rgba(26,111,163,0.3)",
+              borderRadius:6, cursor:"pointer", fontFamily:F.sans, fontSize:9,
+              fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase",
+              color:"#1A6FA3", transition:"background 0.15s",
+            }}
+            onMouseEnter={e=>e.currentTarget.style.background="rgba(26,111,163,0.22)"}
+            onMouseLeave={e=>e.currentTarget.style.background="rgba(26,111,163,0.12)"}>
+              Turn On
+            </button>
+          )}
+          <button onClick={onFullView} style={{
+            padding:"8px 10px",
+            background:"transparent", border:"1px solid rgba(255,255,255,0.1)",
+            borderRadius:6, cursor:"pointer", fontFamily:F.sans, fontSize:9,
+            fontWeight:500, color:"rgba(255,255,255,0.35)",
+            letterSpacing:"0.04em", whiteSpace:"nowrap",
+            transition:"all 0.15s",
+          }}
+          onMouseEnter={e=>{ e.currentTarget.style.color="rgba(255,255,255,0.65)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.22)"; }}
+          onMouseLeave={e=>{ e.currentTarget.style.color="rgba(255,255,255,0.35)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; }}>
+            Full View →
+          </button>
+        </div>
+
+        <style>{`
+          @keyframes athenaPing {
+            0%,100% { box-shadow: 0 0 0 0 rgba(26,111,163,0.4); }
+            50%      { box-shadow: 0 0 0 4px rgba(26,111,163,0.1); }
+          }
+          @keyframes orbBreath {
+            0%,100% { transform: scale(1);    opacity: 0.5; }
+            50%      { transform: scale(1.06); opacity: 0.8; }
+          }
+          @keyframes orbSpin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    </>
   );
 }
 
