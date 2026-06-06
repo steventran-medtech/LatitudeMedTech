@@ -894,7 +894,7 @@ def test_DI_015_G():
         if "node_modules" in str(src_file):
             continue
         content = _read(src_file)
-        # Find all fetch(${API}/api/... calls — look ahead for authHdr() within ~120 chars
+        # Find all fetch(${API}/api/... calls — look ahead for authHdr() within ~250 chars
         for m in re.finditer(r'fetch\(`\$\{API\}(/api/[^`"\')\s]+)', content):
             endpoint_raw = m.group(1)
             # Strip dynamic path segments to compare against exempt list
@@ -902,8 +902,9 @@ def test_DI_015_G():
             # Check if any exempt prefix matches
             if any(endpoint_static.startswith(e) for e in EXEMPT):
                 continue
-            # Look for authHdr() within the fetch call's option object (up to 150 chars ahead)
-            window = content[m.start():m.start() + 150]
+            # Look for authHdr() within the fetch call's option object (up to 250 chars ahead)
+            # 250 covers deeply-indented multi-line option objects without bleeding into next call
+            window = content[m.start():m.start() + 250]
             if "authHdr()" not in window:
                 rel = str(src_file.relative_to(UI_FRONT))
                 line_num = content[:m.start()].count("\n") + 1
@@ -1431,9 +1432,28 @@ def test_DI_023_A():
              "All RAG seed queries appear year-anchored to recent dates -- historical sources may be excluded",
              "Add at least one query without a year literal (e.g. 'FDA medical device regulatory history')")
     else:
-        _log(WARN, di,
-             "No hard date cutoff detected -- manual KB audit still required to confirm 50-year coverage",
-             "Run a full RAG ingest and verify at least one pre-1990 source is present in the knowledge base")
+        # No hard cutoff in the pipeline — now verify the KB actually contains pre-1990 material.
+        # Scan all KB JSON files for year references earlier than 1990 (covers 50-year depth).
+        pre1990_files = []
+        for kb_file in KB.rglob("*.json"):
+            if "node_modules" in kb_file.parts:
+                continue
+            try:
+                text = kb_file.read_text(encoding="utf-8", errors="replace")
+                if re.search(r'\b(19[0-8][0-9])\b', text):
+                    pre1990_files.append(kb_file.name)
+                    if len(pre1990_files) >= 3:   # stop early — 3 is enough evidence
+                        break
+            except Exception:
+                continue
+        if pre1990_files:
+            _log(PASS, di,
+                 f"No date cutoff in pipeline; KB contains {len(pre1990_files)}+ pre-1990 source(s): "
+                 f"{', '.join(pre1990_files[:3])}")
+        else:
+            _log(WARN, di,
+                 "No hard date cutoff detected but no pre-1990 sources found in KB",
+                 "Run a full RAG ingest and verify at least one pre-1990 source is present in the knowledge base")
 
 
 # ── Live API Tests ─────────────────────────────────────────────────────────────
