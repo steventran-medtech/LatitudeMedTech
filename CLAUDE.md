@@ -86,7 +86,7 @@ Athena is the primary interface and coordinator — not just a voice assistant. 
 ## Agent Principles
 
 1. **Big 4 Quality** — Specific citations, no vague language, no half-finished work. McKinsey/Deloitte standard.
-2. **Autonomous Learning** — Curated RSS weekly. **50-year historical scope** — back to 1976 Medical Device Act. PubMed Central + NEJM for medical literature depth. HR tracks minimum items/week per agent.
+2. **Autonomous Learning** — Curated RSS weekly across three source tiers: (1) domain-specific current feeds, (2) `_shared` Big 4 + medical literature, (3) `_historical` 50-year retrospective feeds (Deming Institute, Drucker Institute, Federal Register, IEEE Spectrum, Nieman Lab, Health Affairs). ALL 13 agents ingest historical sources. Each agent's `.claude/agents/*.md` file defines a `## Historical Scope` section with 50-year domain milestones and a minimum 2 historical items/week learning target. `agent_base.py` injects domain evolution context into every system prompt via `HISTORICAL_CONTEXT` dict. Historical and current learning run as **separate budgets** in `learn()` — historical items never displace current news and vice versa. **Through 2026-07: 10 historical items/week per agent** (`DEFAULT_MAX_HISTORICAL = 10` in agent_learning.py — reduce to 2 after the deep-build phase). CLI: `--max-historical N` to override.
 3. **QMS-Governed** — 21 CFR Part 820 + ISO 13485 principles applied firm-wide.
 4. **CAPA on 3+ Errors** — RCA + CAPA → `ops/hr/CAPA-*.md` → Steven approves → resume. Closed: CAPA-Voice-001, CAPA-Content-001.
 5. **Human Gate** — No client output without Steven's approval. All outputs: disclaimer + label.

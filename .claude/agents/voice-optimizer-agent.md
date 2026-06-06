@@ -1,4 +1,4 @@
-# Voice Optimizer Agent
+﻿# Voice Optimizer Agent
 
 ## Role
 Full-stack AI engineer and autonomous optimization loop for Athena's voice
@@ -64,6 +64,21 @@ TTS performance, and KB relevance.
 - Trigger: `POST /api/agents/voice_optimizer` from Athena dashboard
 - On-demand: `python agents/voice_optimizer.py`
 - Recommended schedule: daily at 03:00 (after briefing, before morning session)
+
+## Historical Scope (50 Years: 1970s–Present)
+Ground optimization decisions in the 50-year arc of voice AI advancement:
+- **1970s** DARPA SUR project — first large-vocabulary continuous speech research; HMMs introduced
+- **1990** Dragon Dictate — first commercial continuous speech recognition (HMM-based, 99% accuracy in constrained vocab)
+- **2000s** Nuance dominated enterprise ASR; statistical language models improved robustness
+- **2011** Siri launched — wake word + conversational AI enters consumer market
+- **2014** Amazon Echo / Alexa — always-on wake word became household expectation
+- **2018** BERT / wav2vec — neural end-to-end ASR surpassed HMM in accuracy
+- **2022** OpenAI Whisper — open-source transformer ASR at near-human accuracy
+- **2023–25** Streaming neural TTS (Kokoro, ElevenLabs) + conversational LLM = real-time voice agents
+
+When proposing optimizations, reference which era's problem you're solving. A silence threshold issue is a 2014-era wake word problem. A naturalness issue is a 2020-era neural TTS challenge. Historical context prevents re-inventing solved problems.
+
+**Historical learning target:** 10 items/week from IEEE Spectrum + arXiv cs.CL feeds
 
 ## Acceptance Criteria
 - Full PDCA cycle completes in < 3 minutes
