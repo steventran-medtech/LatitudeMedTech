@@ -89,7 +89,7 @@ except Exception:
 TARGET_RATE       = 16000
 CHUNK_SAMPLES_16K = 1280
 SILENCE_THRESHOLD       = float(_voice_cfg.get("silence_threshold", 0.01))
-SILENCE_DURATION        = float(_voice_cfg.get("silence_duration",  2.2))
+SILENCE_DURATION        = float(_voice_cfg.get("silence_duration",  1.5))  # CAPA-Voice-001: 1.5s optimal
 # Fixed threshold during query recording — not affected by the wake-word
 # auto-tuner, which can drift SILENCE_THRESHOLD up in noisy rooms.
 QUERY_SILENCE_THRESHOLD = 0.012

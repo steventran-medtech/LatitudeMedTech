@@ -1576,7 +1576,7 @@ def open_document(filename: str, folder: str = "documents"):
     f = (base / _safe_filename(filename)).resolve()
     if not str(f).startswith(str(base.resolve())) or not f.exists():
         return JSONResponse(status_code=404, content={"error": "Not found"})
-    subprocess.Popen(["start", "", str(f)], shell=True)
+    os.startfile(str(f))
     return {"status": "opened", "filename": filename}
 
 

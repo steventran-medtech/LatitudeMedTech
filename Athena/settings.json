@@ -10,7 +10,7 @@
                   "wake_word":  "alexa",
                   "wake_threshold":  0.5,
                   "silence_threshold":  0.005,
-                  "silence_duration":  2.5,
+                  "silence_duration":  1.5,
                   "max_record_sec":  30,
                   "whisper_model":  "base.en",
                   "tts_enabled":  true,
