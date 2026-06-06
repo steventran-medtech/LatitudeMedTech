@@ -1,0 +1,32 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "powershell",
+            "command": "$raw=[System.Console]::In.ReadToEnd();$data=$raw|ConvertFrom-Json;$fp=$data.tool_input.file_path;if($fp-and($fp-match'\\.(py|jsx?|json)$')-and($fp-notmatch'(dc_verify|design_control|venv|node_modules|\\.claude)')){Set-Location C:\\Users\\huann\\LatitudeMedTech;python design_control\\dc_verify.py 2>&1|Out-Null}",
+            "async": true,
+            "timeout": 60,
+            "statusMessage": "DC: verifying requirements..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "powershell",
+            "command": "Set-Location C:\\Users\\huann\\LatitudeMedTech;python design_control\\dc_verify.py;if($LASTEXITCODE-gt 0){@{systemMessage='[DC] Design Control: VERIFICATION FAILED - requirements not met. Run: python design_control\\dc_verify.py'}|ConvertTo-Json -Compress}",
+            "timeout": 120,
+            "statusMessage": "DC: final requirements check..."
+          }
+        ]
+      }
+    ]
+  }
+}
