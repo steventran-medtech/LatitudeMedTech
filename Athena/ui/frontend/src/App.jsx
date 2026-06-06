@@ -65,36 +65,51 @@ const S = {
   textarea:{width:"100%",padding:"10px 13px",border:`1px solid ${C.mist}`,borderRadius:7,fontFamily:F.mono,fontSize:12,lineHeight:1.65,background:C.pearl,color:C.slate,outline:"none",resize:"vertical",boxSizing:"border-box"},
 };
 
-// Navigation groups
-const NAV = [
-  // Athena Voice is the centrepiece — first item, own group
-  {id:"voice",     label:"Athena Voice",   group:"athena"},
-  // Work
-  {id:"briefing",  label:"Daily Briefing", group:"work"},
-  {id:"content",   label:"Content",        group:"work"},
-  {id:"coaching",  label:"Coaching",       group:"work"},
-  {id:"marketing", label:"Marketing",      group:"work"},
-  {id:"decks",     label:"Decks",          group:"work"},
-  {id:"iso",       label:"ISO 13485",      group:"work"},
-  {id:"documents", label:"Documents",      group:"work"},
-  // System
-  {id:"dashboard", label:"Dashboard",      group:"system"},
-  {id:"review",    label:"Review Queue",    group:"work"},
-  {id:"agents",    label:"Run Agents",     group:"system"},
-  {id:"hr",        label:"Workforce",      group:"system"},
-  {id:"tokens",    label:"Token Usage",    group:"system"},
-  {id:"settings",  label:"Settings",       group:"system"},
+// Navigation — voice is fixed first; all others are drag-reorderable
+const NAV_VOICE = {id:"voice", label:"Athena Voice", group:"athena"};
+const NAV_ITEMS = [
+  {id:"briefing",  label:"Daily Briefing",   group:"work"},
+  {id:"content",   label:"Content Drafts",   group:"work"},
+  {id:"coaching",  label:"Coaching",         group:"work"},
+  {id:"marketing", label:"Marketing",        group:"work"},
+  {id:"decks",     label:"Decks",            group:"work"},
+  {id:"iso",       label:"ISO Case Studies", group:"work"},
+  {id:"documents", label:"Documents",        group:"work"},
+  {id:"review",    label:"Review Queue",     group:"work"},
+  {id:"dashboard", label:"Dashboard",        group:"system"},
+  {id:"agents",    label:"Run Agents",       group:"system"},
+  {id:"hr",        label:"Workforce",        group:"system"},
+  {id:"tokens",    label:"Token Usage",      group:"system"},
+  {id:"settings",  label:"Settings",         group:"system"},
 ];
+const NAV = [NAV_VOICE, ...NAV_ITEMS];
 
-const NAV_GROUPS = [
-  {key:"athena",  label:""},          // Athena Voice — no group label, stands alone
-  {key:"work",    label:"Work"},
-  {key:"system",  label:"System"},
-];
+function _loadNavOrder() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("athena_nav_order") || "null");
+    if (Array.isArray(saved) && saved.length > 0) {
+      const valid   = saved.filter(id => NAV_ITEMS.some(n => n.id === id));
+      const missing = NAV_ITEMS.filter(n => !saved.includes(n.id)).map(n => n.id);
+      return [...valid, ...missing];
+    }
+  } catch {}
+  return NAV_ITEMS.map(n => n.id);
+}
 
-function Sidebar({active,setActive,runningAgents,pendingReview,version,onAbout,taskQueue}){
-  const grouped = NAV_GROUPS.map(g=>({...g, items: NAV.filter(n=>n.group===g.key)}));
-  const numRunning = runningAgents?.size || 0;
+function Sidebar({active,setActive,runningAgents,pendingReview,version,onAbout,taskQueue,navOrder,onReorder}){
+  const numRunning    = runningAgents?.size || 0;
+  const orderedItems  = navOrder.map(id => NAV_ITEMS.find(n => n.id === id)).filter(Boolean);
+  const [dragId,     setDragId]     = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
+
+  const handleDrop = (targetId) => {
+    if (!dragId || dragId === targetId) { setDragId(null); setDragOverId(null); return; }
+    const ids = navOrder.filter(id => id !== dragId);
+    const idx = ids.indexOf(targetId);
+    ids.splice(idx, 0, dragId);
+    onReorder(ids);
+    setDragId(null); setDragOverId(null);
+  };
   return(
     <div style={S.sidebar}>
       {/* Wordmark */}
@@ -106,63 +121,76 @@ function Sidebar({active,setActive,runningAgents,pendingReview,version,onAbout,t
 
       {/* Nav */}
       <nav style={{flex:1,padding:"16px 0",overflowY:"auto",minHeight:0}}>
-        {grouped.map(g=>(
-          <div key={g.key} style={{marginBottom:4}}>
-            <div style={{fontFamily:F.sans,fontSize:8,fontWeight:700,letterSpacing:"0.16em",textTransform:"uppercase",color:"rgba(255,255,255,0.28)",padding:"10px 22px 5px"}}>{g.label}</div>
-            {g.items.map(item=>{
-              const isActive = active===item.id;
-              const isAgents = item.id==="agents";
-              const isReview = item.id==="review";
-              const isVoice  = item.id==="voice";
-              return(
-                <button key={item.id} onClick={()=>setActive(item.id)} style={{
-                  display:"flex",alignItems:"center",justifyContent:"space-between",
-                  width:"100%",
-                  padding: isVoice ? "13px 22px" : "9px 22px",
-                  background: isVoice && isActive
-                    ? "rgba(26,111,163,0.25)"
-                    : isActive
-                    ? "rgba(255,255,255,0.1)"
-                    : isVoice ? "rgba(26,111,163,0.08)" : "transparent",
-                  border:"none",
-                  borderLeft: isActive
-                    ? isVoice ? "2px solid #1A6FA3" : "2px solid #C4922A"
-                    : "2px solid transparent",
-                  cursor:"pointer",fontFamily:F.sans,
-                  fontSize: isVoice ? 13 : 12,
-                  color: isVoice
-                    ? isActive ? "#FFFFFF" : "rgba(100,180,255,0.7)"
-                    : isActive ? "#FFFFFF" : "rgba(255,255,255,0.55)",
-                  fontWeight: isVoice ? 600 : isActive ? 500 : 400,
-                  textAlign:"left",
-                  transition:"all 0.12s",letterSpacing: isVoice ? "0.04em" : "0.01em",
-                  boxShadow: isVoice && isActive ? "inset 0 0 20px rgba(26,111,163,0.15)" : "none",
-                }}>
-                  <span>{item.label}</span>
-                  {/* Running agents badge on "Run Agents" nav item */}
-                  {isAgents && numRunning>0 && (
-                    <span style={{
-                      background:"#1A6FA3",color:"#fff",
-                      borderRadius:10,padding:"1px 6px",
-                      fontSize:9,fontWeight:700,letterSpacing:"0.04em",
-                      boxShadow:"0 0 6px #1A6FA366",
-                      animation:"badgePulse 2s ease-in-out infinite",
-                    }}>{numRunning}</span>
-                  )}
-                  {isReview && pendingReview>0 && (
-                    <span style={{
-                      background:"#C4922A",color:"#fff",
-                      borderRadius:10,padding:"1px 6px",
-                      fontSize:9,fontWeight:700,letterSpacing:"0.04em",
-                      boxShadow:"0 0 6px #C4922A66",
-                      animation:"badgePulse 2s ease-in-out infinite",
-                    }}>{pendingReview}</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        ))}
+        {/* Voice — fixed at top */}
+        {(()=>{
+          const isActive = active==="voice";
+          return(
+            <button onClick={()=>setActive("voice")} style={{
+              display:"flex",alignItems:"center",justifyContent:"space-between",
+              width:"100%", padding:"13px 22px",
+              background: isActive ? "rgba(26,111,163,0.25)" : "rgba(26,111,163,0.08)",
+              border:"none", borderLeft: isActive ? "2px solid #1A6FA3" : "2px solid transparent",
+              cursor:"pointer",fontFamily:F.sans,fontSize:13,
+              color: isActive ? "#FFFFFF" : "rgba(100,180,255,0.7)",
+              fontWeight:600,textAlign:"left",transition:"all 0.12s",letterSpacing:"0.04em",
+              boxShadow: isActive ? "inset 0 0 20px rgba(26,111,163,0.15)" : "none",
+            }}>
+              <span>Athena Voice</span>
+            </button>
+          );
+        })()}
+
+        {/* Draggable items — grip handle to reorder */}
+        <div style={{marginTop:8}}>
+          {orderedItems.map(item=>{
+            const isActive   = active===item.id;
+            const isAgents   = item.id==="agents";
+            const isReview   = item.id==="review";
+            const isDragging = dragId===item.id;
+            const isOver     = dragOverId===item.id && dragId!==item.id;
+            return(
+              <div key={item.id}
+                draggable
+                onDragStart={()=>setDragId(item.id)}
+                onDragEnd={()=>{setDragId(null);setDragOverId(null);}}
+                onDragOver={e=>{e.preventDefault();setDragOverId(item.id);}}
+                onDrop={()=>handleDrop(item.id)}
+                style={{borderTop:isOver?"2px solid #1A6FA3":"2px solid transparent",opacity:isDragging?0.4:1}}>
+                <div style={{display:"flex",alignItems:"center",paddingRight:6}}>
+                  <div title="Drag to reorder"
+                    style={{width:20,paddingLeft:8,flexShrink:0,cursor:"grab",
+                      color:"rgba(255,255,255,0.18)",fontSize:11,lineHeight:1,
+                      userSelect:"none",alignSelf:"stretch",display:"flex",alignItems:"center"}}>⠿</div>
+                  <button onClick={()=>setActive(item.id)} style={{
+                    display:"flex",alignItems:"center",justifyContent:"space-between",
+                    flex:1, padding:"9px 12px 9px 4px",
+                    background: isActive ? "rgba(255,255,255,0.1)" : "transparent",
+                    border:"none",
+                    borderLeft: isActive ? "2px solid #C4922A" : "2px solid transparent",
+                    cursor:"pointer",fontFamily:F.sans,fontSize:12,
+                    color: isActive ? "#FFFFFF" : "rgba(255,255,255,0.55)",
+                    fontWeight: isActive ? 500 : 400,
+                    textAlign:"left",transition:"all 0.12s",letterSpacing:"0.01em",
+                  }}>
+                    <span>{item.label}</span>
+                    {isAgents && numRunning>0 && (
+                      <span style={{background:"#1A6FA3",color:"#fff",borderRadius:10,
+                        padding:"1px 6px",fontSize:9,fontWeight:700,letterSpacing:"0.04em",
+                        boxShadow:"0 0 6px #1A6FA366",animation:"badgePulse 2s ease-in-out infinite",
+                      }}>{numRunning}</span>
+                    )}
+                    {isReview && pendingReview>0 && (
+                      <span style={{background:"#C4922A",color:"#fff",borderRadius:10,
+                        padding:"1px 6px",fontSize:9,fontWeight:700,letterSpacing:"0.04em",
+                        boxShadow:"0 0 6px #C4922A66",animation:"badgePulse 2s ease-in-out infinite",
+                      }}>{pendingReview}</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </nav>
 
       {/* Work queue */}
@@ -1077,7 +1105,7 @@ function CoachingView({onGenerate}){
   const allIds=briefs.map(b=>b.filename);
   return(
     <div>
-      <h2 style={{...S.h2,marginBottom:20}}>Client Analysis</h2>
+      <h2 style={{...S.h2,marginBottom:20}}>Coaching</h2>
       <div style={{...S.card,display:"flex",gap:12,alignItems:"center",marginBottom:20}}>
         <input value={client} onChange={e=>setClient(e.target.value)} onKeyDown={e=>e.key==="Enter"&&runBrief()} placeholder="Client name, LinkedIn URL, or topic" style={{...S.input,flex:1}}/>
         <button style={S.btn()} onClick={runBrief}>Generate Brief</button>
@@ -1141,7 +1169,7 @@ function DocumentsView(){
   return(
     <div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-        <h2 style={S.h2}>Generated Documents</h2>
+        <h2 style={S.h2}>Documents</h2>
         {ms.checked.size>0&&(
           <div style={{display:"flex",gap:8}}>
             <button onClick={ms.clear} style={{...S.btn("ghost"),fontSize:11}}>None</button>
