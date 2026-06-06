@@ -39,8 +39,6 @@ const CLAUSES_14971 = [
   ["14971.10",  "Production and Post-Production Activities"],
 ];
 
-// Combined for datalist autocomplete
-const CLAUSES = [...CLAUSES_13485, ...CLAUSES_14971];
 
 const C = {
   navy:   "#0A2540", ocean:  "#1A6FA3", gold:   "#C4922A",

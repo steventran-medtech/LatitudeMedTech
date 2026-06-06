@@ -182,10 +182,11 @@ def learn(agent_name: str, max_new: int = 10) -> Dict:
             if new_items >= max_new:
                 break
 
-    # Update agent health record
+    # Update agent health record — always stamp the timestamp so "0 new items"
+    # (all already seen) doesn't leave the agent stuck in red/yellow indefinitely.
     mem.upsert_agent_health(
         agent_name,
-        last_learning=datetime.now().isoformat() if new_items > 0 else None,
+        last_learning=datetime.now().isoformat(),
     )
 
     log.info(f"[{agent_name}] Done — {new_items} new items, {new_chunks} chunks")

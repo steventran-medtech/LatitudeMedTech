@@ -88,3 +88,9 @@ Athena/voice/wake_synth/*.pkl
 
 # Stray patch artifacts (leftover output from local diff/patch tooling)
 *.mypatch
+
+# Auto-generated RAG learning artifacts (agent feedback loops write these at runtime)
+Athena/knowledge_base/learning/
+# Tavily web-search cache (ephemeral, not source-controlled)
+Athena/knowledge_base/FDA/tavily_*.json
+Athena/knowledge_base/General/tavily_*.json

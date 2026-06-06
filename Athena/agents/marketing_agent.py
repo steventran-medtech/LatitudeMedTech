@@ -37,9 +37,17 @@ from textwrap import dedent
 import anthropic
 from dotenv import load_dotenv
 
-from pathconfig import ENV_FILE, LOGS_DIR, KB_DIR, MEMORY_DIR, OPS_DIR
+from pathconfig import ENV_FILE, LOGS_DIR, KB_DIR, MEMORY_DIR, OPS_DIR, AGENTS_DIR
+import sys as _sys
+_sys.path.insert(0, str(AGENTS_DIR))
 
 load_dotenv(ENV_FILE)
+
+try:
+    from memory import Memory as _Memory
+    _mem = _Memory()
+except Exception:
+    _mem = None
 
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
 MARKETING_DIR = OPS_DIR / "marketing"
@@ -389,6 +397,8 @@ def cmd_plan() -> str:
         encoding="utf-8"
     )
     log.info(f"Plan saved: {out_path}")
+    if _mem:
+        _mem.submit_for_review("marketing_agent", "plan", f"30-60-90 Marketing Plan — {CURRENT_DATE}", str(out_path))
     return result
 
 
@@ -425,6 +435,8 @@ def cmd_brief() -> str:
         encoding="utf-8"
     )
     log.info(f"Brief saved: {out_path}")
+    if _mem:
+        _mem.submit_for_review("marketing_agent", "brief", f"Marketing Brief — {CURRENT_DATE}", str(out_path))
     return result
 
 

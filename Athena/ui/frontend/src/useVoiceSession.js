@@ -11,11 +11,16 @@ export function useVoiceSession() {
   const [lastYou,      setLastYou]      = useState("");
   const [lastAthena,   setLastAthena]   = useState("");
   const [speakingLines, setSpeakingLines] = useState([]);
+  const [streamingText, setStreamingText] = useState("");  // live word-by-word accumulator
+  const [typedYou,      setTypedYou]      = useState("");  // character-by-character transcript
   const [log,        setLog]        = useState([]);
   const [status,     setStatus]     = useState(null);
   const [devices,    setDevices]    = useState([]);
   const [selDev,     setSelDev]     = useState("");
   const [elapsed,    setElapsed]    = useState(0);
+
+  const typedYouRef    = useRef("");
+  const animCancelRef  = useRef(0);   // increment to cancel in-flight transcript animation
 
   const wsRef        = useRef(null);
   const peakRef      = useRef(0);
@@ -85,11 +90,34 @@ export function useVoiceSession() {
         if (v > peakRef.current) peakRef.current = v;
         return;
       }
-      if (type === "thinking")  { setQuery(msg.query ?? ""); setSpeakingLines([]); }
-      if (type === "transcript") { setLastYou(msg.text ?? ""); setQuery(""); setSpeakingLines([]); queryCount.current += 1; }
-      if (type === "speaking" && msg.response === "…") setSpeakingLines([]);
+      if (type === "thinking")  { setQuery(msg.query ?? ""); setSpeakingLines([]); setStreamingText(""); }
+      if (type === "transcript") {
+        // Animate transcript character-by-character
+        const full = msg.text ?? "";
+        setLastYou(full);
+        setQuery("");
+        setSpeakingLines([]);
+        queryCount.current += 1;
+        // Reveal characters one at a time. Cancel any prior animation via generation counter.
+        const gen = ++animCancelRef.current;
+        typedYouRef.current = "";
+        setTypedYou("");
+        let i = 0;
+        const step = () => {
+          if (animCancelRef.current !== gen) return;   // superseded by newer transcript
+          if (i < full.length) {
+            typedYouRef.current = full.slice(0, i + 1);
+            setTypedYou(typedYouRef.current);
+            i++;
+            setTimeout(step, 18);
+          }
+        };
+        step();
+      }
+      if (type === "speaking_word") setStreamingText(prev => prev + (msg.word ?? ""));
+      if (type === "speaking" && msg.response === "…") { setSpeakingLines([]); setStreamingText(""); }
       if (type === "speaking_partial") setSpeakingLines(prev => [...prev, { id: Date.now() + Math.random(), text: msg.sentence ?? "" }]);
-      if (type === "speaking" && msg.response && msg.response !== "…") { setLastAthena(msg.response ?? ""); setSpeakingLines([]); }
+      if (type === "speaking" && msg.response && msg.response !== "…") { setLastAthena(msg.response ?? ""); setSpeakingLines([]); setStreamingText(""); }
       if (type === "loading")   setState("loading");
       if (type === "listening") setState("listening");
       if (type === "awake")     setState("awake");
@@ -135,8 +163,9 @@ export function useVoiceSession() {
   };
 
   return {
-    running, state, level, query, lastYou, lastAthena, speakingLines, log,
-    status, devices, selDev, setSelDev, elapsed, peakRef,
+    running, state, level, query, lastYou, lastAthena, speakingLines,
+    streamingText, typedYou,
+    log, status, devices, selDev, setSelDev, elapsed, peakRef,
     startVoice, stopVoice,
   };
 }

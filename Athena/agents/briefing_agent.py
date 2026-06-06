@@ -481,6 +481,8 @@ def main():
     if mem:
         mem.mark_briefing_items('briefing_agent', [i['link'] for i in all_items])
         mem.log_event('briefing_agent', 'briefing_generated', metadata={'items': len(all_items), 'brave': len(brave_items)})
+        briefing_title = f"MedTech Intelligence Briefing — {date_str}" + (f" ({override.strip()})" if override.strip() else "")
+        mem.submit_for_review('briefing_agent', 'briefing', briefing_title, str(out_path))
 
     print(f"""
 +--------------------------------------------------+
