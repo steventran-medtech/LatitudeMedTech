@@ -8,11 +8,12 @@
 $VENV_PY  = "$ATHENA\voice\venv\Scripts\python.exe"
 $SERVER   = "$ATHENA\ui\backend\server.py"
 $FRONT    = "$ATHENA\ui\frontend"
-$flagFile = "$ATHENA\ui\.athena_ready"
-$errFile  = "$ATHENA\ui\.athena_error"
+$flagFile  = "$ATHENA\ui\.athena_ready"
+$errFile   = "$ATHENA\ui\.athena_error"
+$abortFile = "$ATHENA\ui\.athena_abort"
 
 # Remove stale flag/error from any previous run
-foreach ($f in @($flagFile, $errFile)) { if (Test-Path $f) { Remove-Item $f -Force } }
+foreach ($f in @($flagFile, $errFile, $abortFile)) { if (Test-Path $f) { Remove-Item $f -Force } }
 
 # ── Duplicate-instance guard ────────────────────────────────────────────────
 # If Athena is already up, don't silently kill its backend and spawn a second
@@ -42,7 +43,7 @@ if (Test-AthenaRunning) {
                 Start-Process "http://localhost:3000"
             }
         }
-        New-Item -Path $flagFile -ItemType File -Force | Out-Null   # release the splash
+        New-Item -Path $abortFile -ItemType File -Force | Out-Null   # tell splash to close immediately
         exit 0
     }
     # User chose to restart: stop the existing instance cleanly first.
