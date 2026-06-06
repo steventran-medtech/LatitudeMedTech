@@ -95,9 +95,9 @@ function Test-AthenaRunning {
 # for the duration), toggle SW_MINIMIZE->SW_RESTORE so a minimized window pops
 # back, then SetForegroundWindow + BringWindowToTop, and detach.
 function Show-ExistingAthena {
-    if (-not (Test-Path $CHROME_PID_FILE)) { return }
+    if (-not (Test-Path $CHROME_PID_FILE)) { return $false }
     $savedPid = (Get-Content $CHROME_PID_FILE -ErrorAction SilentlyContinue | Select-Object -First 1) -as [int]
-    if (-not $savedPid) { return }
+    if (-not $savedPid) { return $false }
 
     Add-Type -Namespace Win32 -Name Fg -MemberDefinition @'
 [System.Runtime.InteropServices.DllImport("user32.dll")] public static extern bool SetForegroundWindow(System.IntPtr hWnd);
@@ -132,7 +132,7 @@ function Show-ExistingAthena {
             }
         } catch { }
     }
-    if (-not $hwnd -or $hwnd -eq [System.IntPtr]::Zero) { return }
+    if (-not $hwnd -or $hwnd -eq [System.IntPtr]::Zero) { return $false }
 
     try {
         if ([Win32.Fg]::IsIconic($hwnd)) { [Win32.Fg]::ShowWindow($hwnd, 6) | Out-Null }  # SW_MINIMIZE (settle state)
@@ -151,7 +151,9 @@ function Show-ExistingAthena {
         [Win32.Fg]::SetForegroundWindow($hwnd)  | Out-Null
         [Win32.Fg]::AttachThreadInput($cur, $tgtThread, $false) | Out-Null
         [Win32.Fg]::AttachThreadInput($cur, $fgThread, $false) | Out-Null
+        return $true
     } catch { }
+    return $false
 }
 
 # Modal Yes/No warning shown when a second launch is attempted while Athena is

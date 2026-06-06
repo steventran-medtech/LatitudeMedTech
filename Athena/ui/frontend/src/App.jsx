@@ -1919,6 +1919,8 @@ export default function App(){
   const [version,setVersion]=useState(null);
   const [aboutOpen,setAboutOpen]=useState(false);
   const [shuttingDown,setShuttingDown]=useState(false);
+  const [navOrder,setNavOrder]=useState(()=>_loadNavOrder());
+  const handleReorder=useCallback((ids)=>{setNavOrder(ids);localStorage.setItem("athena_nav_order",JSON.stringify(ids));},[]);
   const wsRef=useRef(null);
   const voice=useVoiceSession();
   const [taskQueue,setTaskQueue]=useState([]);
@@ -2110,7 +2112,7 @@ export default function App(){
   return(
     <div style={S.app}>
       <Toaster toasts={toasts}/>
-      <Sidebar active={active} setActive={setActive} runningAgents={runningAgents} pendingReview={pendingReview} version={version} onAbout={()=>setAboutOpen(true)} taskQueue={taskQueue}/>
+      <Sidebar active={active} setActive={setActive} runningAgents={runningAgents} pendingReview={pendingReview} version={version} onAbout={()=>setAboutOpen(true)} taskQueue={taskQueue} navOrder={navOrder} onReorder={handleReorder}/>
       <div style={S.main}>
         {/* Top bar */}
         <div style={S.header}>
