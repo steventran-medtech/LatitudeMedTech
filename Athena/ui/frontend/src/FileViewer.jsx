@@ -1,13 +1,12 @@
 /**
  * FileViewer — opens DOCX / PPTX / PDF via Google Drive.
  *
- * On first open the backend uploads the file to Google Drive and returns an
- * embed URL (Google Docs / Slides / Drive viewer).  Subsequent opens for the
- * same unchanged file are served from cache — zero re-upload cost.
+ * On first open the backend uploads the file to the user's Google Drive and
+ * returns an embed URL (Google Docs / Slides / Drive viewer).  Subsequent
+ * opens for the same unchanged file are served from cache — zero re-upload.
  *
- * Config required (Athena/voice/.env):
- *   GOOGLE_CREDENTIALS_PATH   — path to service-account credentials.json
- *   GOOGLE_DRIVE_FOLDER_ID    — Drive folder ID shared with the service account
+ * One-time setup: click "Connect Google Drive" → browser OAuth consent →
+ * drive_token.json saved locally.  No service account needed.
  */
 
 import { useEffect, useState } from "react";
@@ -24,23 +23,27 @@ const TYPE_META = {
 const DEFAULT_META = { label: "Document", bg: "#0A2540", icon: "F" };
 
 export default function FileViewer({ folder, filename, onClose }) {
-  const [embedUrl, setEmbedUrl] = useState("");
-  const [status,   setStatus]   = useState("loading"); // loading | ready | error | unconfigured
-  const [errorMsg, setErrorMsg] = useState("");
+  const [embedUrl,    setEmbedUrl]    = useState("");
+  const [status,      setStatus]      = useState("loading"); // loading | ready | error | unconfigured
+  const [errorMsg,    setErrorMsg]    = useState("");
+  const [needsAuth,   setNeedsAuth]   = useState(false);
+  const [connecting,  setConnecting]  = useState(false);
 
   const ext      = filename?.split(".").pop().toLowerCase();
   const meta     = TYPE_META[ext] || DEFAULT_META;
   const serveUrl = `${API}/api/files/serve/${folder}/${encodeURIComponent(filename || "")}`;
 
-  useEffect(() => {
+  const loadView = () => {
     if (!filename || !folder) return;
-    setStatus("loading"); setEmbedUrl(""); setErrorMsg("");
+    setStatus("loading"); setEmbedUrl(""); setErrorMsg(""); setNeedsAuth(false);
 
     fetch(`${API}/api/files/google-view/${folder}/${encodeURIComponent(filename)}`)
       .then(r => r.json())
       .then(data => {
         if (data.error === "not_configured") {
-          setStatus("unconfigured"); setErrorMsg(data.message);
+          setStatus("unconfigured");
+          setErrorMsg(data.message);
+          setNeedsAuth(!!data.needs_auth);
         } else if (data.url) {
           setEmbedUrl(data.url); setStatus("ready");
         } else {
@@ -48,7 +51,27 @@ export default function FileViewer({ folder, filename, onClose }) {
         }
       })
       .catch(e => { setStatus("error"); setErrorMsg(e.message); });
-  }, [folder, filename]);
+  };
+
+  const connectDrive = async () => {
+    setConnecting(true);
+    try {
+      const res = await fetch(`${API}/api/google/auth`, { method: "POST" });
+      const data = await res.json();
+      if (data.ok) {
+        // Re-attempt the view now that we have a token
+        loadView();
+      } else {
+        setErrorMsg(data.detail || "Authorization failed.");
+      }
+    } catch (e) {
+      setErrorMsg(e.message);
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  useEffect(() => { loadView(); }, [folder, filename]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div
@@ -148,20 +171,36 @@ export default function FileViewer({ folder, filename, onClose }) {
               <div style={{ fontSize: 32, marginBottom: 16 }}>☁️</div>
               <div style={{ fontSize: 15, fontWeight: 700, color: "#0A2540",
                 marginBottom: 10 }}>
-                Google Drive not configured
+                {needsAuth ? "Connect Google Drive" : "Google Drive not configured"}
               </div>
               <div style={{ fontSize: 12, color: "#7B90A0", lineHeight: 1.7,
                 marginBottom: 20 }}>
                 {errorMsg}
               </div>
-              <div style={{ fontSize: 11, color: "#aaa", lineHeight: 1.8,
-                background: "#F8FAFC", borderRadius: 6, padding: "12px 16px",
-                textAlign: "left" }}>
-                <strong>Setup:</strong><br />
-                1. Drop <code>credentials.json</code> into the Athena root folder<br />
-                2. Add <code>GOOGLE_DRIVE_FOLDER_ID=...</code> to <code>voice/.env</code><br />
-                3. Restart the backend
-              </div>
+
+              {needsAuth ? (
+                <button
+                  onClick={connectDrive}
+                  disabled={connecting}
+                  style={{
+                    padding: "10px 24px", borderRadius: 6, cursor: connecting ? "default" : "pointer",
+                    background: connecting ? "#ccc" : "#4285F4",
+                    border: "none", color: "#fff",
+                    fontFamily: F.sans, fontSize: 13, fontWeight: 600,
+                    marginBottom: 16,
+                  }}
+                >
+                  {connecting ? "Opening browser…" : "Connect Google Drive"}
+                </button>
+              ) : (
+                <div style={{ fontSize: 11, color: "#aaa", lineHeight: 1.8,
+                  background: "#F8FAFC", borderRadius: 6, padding: "12px 16px",
+                  textAlign: "left" }}>
+                  <strong>Setup:</strong><br />
+                  1. Save <code>client_secrets.json</code> to the Athena root folder<br />
+                  2. Restart the backend, then click 'Connect Google Drive'
+                </div>
+              )}
             </div>
           )}
 

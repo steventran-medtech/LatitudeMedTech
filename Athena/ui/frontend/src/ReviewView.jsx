@@ -4,7 +4,6 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { authHdr } from "./api.js";
-import mammoth from "mammoth";
 
 const API = "http://localhost:8000";
 
@@ -161,7 +160,7 @@ function renderMarkdown(md) {
 }
 
 function ReviewViewer({ itemId, title, onClose, editState, onEdit, readOnly = false }) {
-  const [state, setState] = useState({ loading: true, ext: "", content: "", html: "", error: "" });
+  const [state, setState] = useState({ loading: true, ext: "", content: "", html: "", error: "", embedUrl: "" });
   const [instruction, setInstruction] = useState("");
   // Edit lifecycle is owned by the parent (ReviewView) so it survives closing the
   // modal. We derive the in-flight flag and status message from the parent's state.
@@ -176,13 +175,14 @@ function ReviewViewer({ itemId, title, onClose, editState, onEdit, readOnly = fa
       const d = await r.json();
       if (signal?.aborted) return;
       if (d.ext === "md" || d.ext === "txt") {
-        setState({ loading: false, ext: d.ext, content: d.content || "", html: "", error: "" });
-      } else if (d.ext === "docx") {
-        const buf = await fetch(`${API}/api/review/${itemId}/serve`).then(r => r.arrayBuffer());
-        const res = await mammoth.convertToHtml({ arrayBuffer: buf });
-        if (!signal?.aborted) setState({ loading: false, ext: "docx", content: "", html: res.value, error: "" });
+        setState({ loading: false, ext: d.ext, content: d.content || "", html: "", error: "", embedUrl: "" });
+      } else if (d.ext === "docx" || d.ext === "pptx" || d.ext === "pdf") {
+        const gv = await fetch(`${API}/api/review/${itemId}/google-view`).then(r => r.json());
+        if (signal?.aborted) return;
+        const url = gv.url || `${API}/api/review/${itemId}/serve`;
+        setState({ loading: false, ext: d.ext, content: "", html: "", error: "", embedUrl: url });
       } else {
-        setState({ loading: false, ext: d.ext, content: "", html: "", error: "" });
+        setState({ loading: false, ext: d.ext, content: "", html: "", error: "", embedUrl: "" });
       }
     } catch (err) {
       if (!signal?.aborted) setState({ loading: false, ext: "", content: "", html: "",
@@ -266,13 +266,10 @@ function ReviewViewer({ itemId, title, onClose, editState, onEdit, readOnly = fa
           {!state.loading && !state.error && editable && (
             <div style={{ maxWidth: 720, margin: "0 auto" }}>{renderMarkdown(state.content)}</div>
           )}
-          {!state.loading && state.ext === "docx" && (
-            <div style={{ maxWidth: 760, margin: "0 auto" }}
-              dangerouslySetInnerHTML={{ __html: state.html }} />
-          )}
-          {!state.loading && state.ext === "pdf" && (
-            <iframe src={serveUrl} title={title}
-              style={{ width: "100%", height: "100%", border: "none" }} />
+          {!state.loading && state.embedUrl && (
+            <iframe src={state.embedUrl} title={title}
+              style={{ width: "100%", height: "100%", border: "none" }}
+              allow="autoplay" />
           )}
         </div>
         {/* Edit-with-prompt footer (markdown/text only) */}
