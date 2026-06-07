@@ -373,6 +373,34 @@ def test_DI_002_J():
     _log(PASS, di, "ReviewView.jsx has no duplicate import declarations")
     return True
 
+
+def test_DI_002_K():
+    """DI-002-K: ReviewView.jsx Approved-tab conditional closes with )))} not ))}"""
+    di = "DI-002-K"
+    if _skip_if_filtered(di): return
+    # ARRANGE
+    f = UI_FRONT / "ReviewView.jsx"
+    assert f.exists(), (
+        f"FAIL {di}: ReviewView.jsx not found at expected path\n"
+        "Fix: Confirm Athena/ui/frontend/src/ReviewView.jsx exists"
+    )
+    # ACT — check the Approved-tab map expression closes correctly
+    content = _read(f)
+    # The Approved tab uses: {tab === "approved" && (ternary ? (...) : approvedDocs.map(doc => (...))))}
+    # Must close with )))}: arrow-fn paren + map call + outer ternary paren + JSX expression
+    import re as _re
+    # Look for the map(doc => pattern followed eventually by )))
+    has_correct_close = ")))}" in content
+    # ASSERT — must have )))}, not just ))}
+    assert has_correct_close, (
+        f"FAIL {di}: ReviewView.jsx does not contain '))))}}' — Approved-tab conditional "
+        "is missing a closing paren, causing a Vite parse error\n"
+        "Fix: Change the '))}' at the end of the Approved-tab map block to ')))}'  "
+        "(closes: arrow-fn return paren + .map() call + outer ternary paren + JSX expr)"
+    )
+    _log(PASS, di, "ReviewView.jsx Approved-tab conditional closes with )))}")
+    return True
+
 # ── UN-003 / Knowledge Base ────────────────────────────────────────────────────
 
 def test_DI_003_A():
@@ -2989,7 +3017,7 @@ def main():
     test_DI_001_C(); test_DI_001_D()
     test_DI_002_A(); test_DI_002_B(); test_DI_002_C(); test_DI_002_D()
     test_DI_002_E(); test_DI_002_F(); test_DI_002_G()
-    test_DI_002_H(); test_DI_002_I(); test_DI_002_J()
+    test_DI_002_H(); test_DI_002_I(); test_DI_002_J(); test_DI_002_K()
 
     _section("UN-003 Knowledge Base")
     test_DI_003_A(); test_DI_003_B(); test_DI_003_C(); test_DI_003_D()

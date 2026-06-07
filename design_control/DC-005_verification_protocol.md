@@ -1,5 +1,5 @@
 # DC-005 — Verification Protocol
-**Document:** DC-005 · Version 2.1 · 2026-06-07  
+**Document:** DC-005 · Version 2.2 · 2026-06-07  
 **Approved by:** Steven Tran
 
 ---
@@ -95,6 +95,10 @@ Fail action: Replace the old nav entries with `id:'queue'` in `App.jsx` NAV_ITEM
 **test_DI_002_J** — No duplicate imports in ReviewView.jsx  
 Check: Every `import` statement in `ReviewView.jsx` is unique; no identifier is imported twice.  
 Fail action: Remove the duplicate import line. A duplicate import causes a Vite build failure that prevents the entire Document Queue from loading (P0).
+
+**test_DI_002_K** — Approved-tab JSX closes with `)))}` not `))}` 
+Check: `ReviewView.jsx` contains `)))}` — the four-token sequence that correctly closes the Approved-tab ternary: arrow-fn return paren + `.map()` call + outer ternary paren + JSX expression.  
+Fail action: Find the Approved-tab map block ending and change `))}` to `)))}`. A missing paren causes a Vite parse error at the next JSX expression (P0).
 
 ---
 ### DI-003 — Knowledge Base

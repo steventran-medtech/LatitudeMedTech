@@ -1,5 +1,5 @@
 # DC-002 — Design Inputs
-**Document:** DC-002 · Version 3.2 · 2026-06-07  
+**Document:** DC-002 · Version 3.3 · 2026-06-07  
 **Approved by:** Steven Tran
 
 Design inputs are specific, verifiable requirements derived from the user
@@ -41,6 +41,7 @@ Each entry:
 | DI-002-H | UN-002 | `AGENT_TAB` in `App.jsx` shall map every agent ID to a valid NAV_ITEMS tab ID — no retired values ("review" or "documents") shall appear as target values; `coaching_brief` → "coaching"; `consulting_agent`, `ma_intelligence_agent`, `sow_agent`, `regulatory_strategy_agent` → "queue" | `App.jsx` AGENT_TAB string search | P1 | VERIFIED |
 | DI-002-I | UN-002 | `WorkQueuePanel` in `App.jsx` shall use `"queue"` (not `"review"`) as the routing target for tasks with `status === "awaiting_review"` | `App.jsx` WorkQueuePanel routing logic string search | P1 | VERIFIED |
 | DI-002-J | UN-002 | `ReviewView.jsx` shall contain no duplicate import declarations — each imported identifier shall appear at most once; duplicate imports cause a Vite build failure that prevents the Document Queue from loading | `dc_verify.py` `test_DI_002_J` scans all import lines in `ReviewView.jsx` for repeated identical statements | P0 | VERIFIED |
+| DI-002-K | UN-002 | The Approved-tab conditional expression in `ReviewView.jsx` shall be closed by the exact token sequence `)))}` — closing the map-callback paren, the `.map()` call, the outer ternary paren, and the JSX expression; a missing paren causes a Vite parse error that prevents the Document Queue from loading | `dc_verify.py` `test_DI_002_K` asserts `)))}` appears in `ReviewView.jsx` after the Approved-tab `.map(doc =>` pattern | P0 | VERIFIED |
 
 ### UN-003 — Knowledge Base
 
