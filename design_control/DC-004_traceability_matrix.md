@@ -98,11 +98,12 @@ column are open findings requiring immediate remediation.
 | UN-019 | | DI-019-B | Float-right percentage label per Spectrum design | `start_splash.hta` `id="pct"` + `pctEl.innerText` + `float:right` CSS | `test_DI_019_B` | VERIFIED |
 | UN-019 | | DI-019-C | Bar advances through real loading stages; reaches 100% only on `.athena_ready`; splash closes only after `stepVal >= 99.5` | `start_splash.hta` `PollChromeReady` + `readyToClose` + `stepVal >= 99.5` gate | `test_DI_019_C` | VERIFIED |
 | UN-019 | | DI-019-F | Smooth loading — asymptotic easing + minimum per-frame floor in Tick | `start_splash.hta` Tick asymptotic factor + `If inc <` floor | `test_DI_019_F` | VERIFIED |
-| UN-019 | | DI-019-G | Splash→Chrome gap < 3 seconds | `start_athena.ps1` `Start-Sleep` ≤ 2500 ms | `test_DI_019_G` | VERIFIED |
+| UN-019 | | DI-019-G | Splash→Chrome gap < 3 seconds | `start_athena.ps1` polls `.athena_splash_done` at 200ms; max gap < 400ms | `test_DI_019_G` | VERIFIED |
 | UN-019 | | DI-019-H | Bar never stalls > 1 s; cap ≤ 98 + mathematical bound `(99.5−cap)/floor×16 ms < 1000 ms` | `start_splash.hta` floors; cap ≤ 98; `Int()` display; computed bound | `test_DI_019_H` | VERIFIED |
 | UN-019 | | DI-019-I | Athena title `.name` font-size is 101px in both splash files | `start_splash.hta` `font-size:101px`; `electron/main.js` clamp(61px,7vw,101px) | `test_DI_019_I` | VERIFIED |
 | UN-019 | | DI-019-J | `#dots` cycles `.` / `..` / `...` via VBScript `TickDots` at ≤ 500 ms/state; hidden on done | `start_splash.hta` `TickDots` sub; `setInterval("TickDots", N)` N ≤ 500; `dotsEl.style.display = "none"` | `test_DI_019_J` | VERIFIED |
 | UN-019 | | DI-019-K | `$modelTimeout` polling loop absent from `start_athena.ps1`; voice models load async after Chrome open | `start_athena.ps1` | `test_DI_019_K` | OPEN |
+| UN-019 | | DI-019-L | Chrome opens only after `CloseSplash` sub writes `.athena_splash_done`; `start_athena.ps1` polls before Chrome launch; no fixed 2500ms sleep | `start_splash.hta` `CloseSplash` sub; `start_athena.ps1` poll loop | `test_DI_019_L` | OPEN |
 | UN-020 | Document review & approval | DI-020-A | All reviewable agents call submit_for_review() | `agents/` source grep for `submit_for_review` | `test_DI_020_A` | VERIFIED |
 | UN-020 | | DI-020-B | Review queue GET fetch sends authHdr() | `ReviewView.jsx` `load()` contains `authHdr()` | `test_DI_020_B` | VERIFIED |
 | UN-020 | | DI-020-C | Review history GET fetch sends authHdr() | `ReviewView.jsx` `loadHistory()` contains `authHdr()` | `test_DI_020_C` | VERIFIED |
@@ -145,11 +146,11 @@ column are open findings requiring immediate remediation.
 
 | Metric | Count |
 |---|---|
-| Total user needs | 33 |
-| Total design inputs | 104 |
+| Total user needs | 34 |
+| Total design inputs | 117 |
 | Design inputs with VERIFIED tests | 100 |
-| Design inputs with PARTIAL coverage | 7 |
-| Design inputs with OPEN gap | 8 |
+| Design inputs with PARTIAL coverage | 8 |
+| Design inputs with OPEN gap | 9 |
 | Design inputs with WAIVED status | 0 |
 
 **PARTIAL items** require manual verification currently; automated tests are
@@ -170,6 +171,4 @@ Items with OPEN or PARTIAL status that are tracked as formal findings:
 | TG-006 | DI-009-A | Deck section completeness check requires PPTX inspection; manual-only | Steven | Phase 3 |
 | TG-007 | DI-010-C | No automated check that ISO standard files are excluded from RAG ingestion | Steven | Phase 3 |
 | TG-008 | DI-015-F | Session auth guard is present but coverage of all non-health routes not automated | Steven | Phase 3 |
-| TG-009 | DI-030-A | Pitch deck exec_summary gap — code fix required in deck_agent.py `_DECK_GUIDES["pitch"]` | Steven | Current |
-| TG-010 | DI-030-B | McKinsey quality directive check — verifies all 6 deliverable agent files | Steven | Current |
-| TG-011 | DI-030-C | Latitude brand identity check — verifies agent_base.py injection | Steven | Current |
+| TG-009 | DI-030-A/B/C | CLOSED — DI-030-A/B/C promoted to VERIFIED by CO-010/CO-011 (DI-030-D/E publication format + DI-034 engineering integrity) | — | CLOSED |

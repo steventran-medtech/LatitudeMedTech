@@ -1,5 +1,5 @@
 # DC-002 — Design Inputs
-**Document:** DC-002 · Version 2.9 · 2026-06-07  
+**Document:** DC-002 · Version 3.1 · 2026-06-07  
 **Approved by:** Steven Tran
 
 Design inputs are specific, verifiable requirements derived from the user
@@ -38,6 +38,8 @@ Each entry:
 | DI-002-E | UN-002 | Approved items shall be surfaced exclusively under the Approved filter of the Document Queue tab; the Approved filter fetches from `GET /api/documents` which gates on `status='approved'` via `get_approved_reviews()` | `ReviewView.jsx` Approved tab calls `fetch(${API}/api/documents)` | P0 | VERIFIED |
 | DI-002-F | UN-002 | The Document Queue tab shall provide three mutually-exclusive filter states: Pending (awaiting review), Approved (finalized), Rejected (declined) | `ReviewView.jsx` uses `useState("pending")` as initial tab state; tabs array contains keys "pending", "approved", "rejected" | P0 | VERIFIED |
 | DI-002-G | UN-002 | `App.jsx` NAV_ITEMS shall contain `id:"queue"` (the Document Queue entry) and shall not contain `id:"documents"` or `id:"review"` (both retired nav entries) | `App.jsx` NAV_ITEMS string search | P0 | VERIFIED |
+| DI-002-H | UN-002 | `AGENT_TAB` in `App.jsx` shall map every agent ID to a valid NAV_ITEMS tab ID — no retired values ("review" or "documents") shall appear as target values; `coaching_brief` → "coaching"; `consulting_agent`, `ma_intelligence_agent`, `sow_agent`, `regulatory_strategy_agent` → "queue" | `App.jsx` AGENT_TAB string search | P1 | VERIFIED |
+| DI-002-I | UN-002 | `WorkQueuePanel` in `App.jsx` shall use `"queue"` (not `"review"`) as the routing target for tasks with `status === "awaiting_review"` | `App.jsx` WorkQueuePanel routing logic string search | P1 | VERIFIED |
 
 ### UN-003 — Knowledge Base
 
@@ -95,6 +97,7 @@ Each entry:
 | DI-007-C | UN-007 | Banned phrases shall be enforced at prompt level | Banned phrase list present in content agent system prompt | P0 | VERIFIED |
 | DI-007-D | UN-007 | Non-Latin characters shall be removed from titles before storage | `clean_title()` strips non-ASCII characters | P0 | VERIFIED |
 | DI-007-E | UN-007 | YAML frontmatter shall be stripped before content is rendered in the UI | `renderInline` / MarkdownView strips YAML frontmatter | P0 | VERIFIED |
+| DI-007-F | UN-007 | Navigation tab for MedTech Meridian content shall use `label:"MedTech Meridian Drafts"` in `NAV_ITEMS` and `ContentView` h2 shall read "MedTech Meridian Drafts" — the retired label "Content Drafts" shall not appear in either location | `App.jsx` NAV_ITEMS and ContentView h2 string search | P1 | VERIFIED |
 
 ### UN-008 — Marketing Pipeline
 
@@ -223,11 +226,12 @@ Each entry:
 | DI-019-B | UN-019 | Splash screen shall display a percentage label floated right above the progress bar track, styled per Adobe Spectrum progress bar guidelines | `id="pct"` element present in `start_splash.hta` HTML; `pctEl.innerText` assigned in VBScript Tick sub; `.pct-text` CSS includes `float:right` | P2 | VERIFIED |
 | DI-019-C | UN-019 | The splash screen progress bar shall advance through discrete stages tied to actual application loading state — the bar target shall not reach 100% until the `.athena_ready` flag file is detected, and the splash shall close automatically only after the bar has visually reached 100% | `start_splash.hta` contains a `PollChromeReady` (or equivalent) routine that sets `targetVal = 100` only after detecting `.athena_ready`; a `readyToClose` flag triggers `window.close()` only after `stepVal >= 99.5` (99.9 displays as "100%" via `CInt` rounding — exact `= 100` would never fire) | P0 | VERIFIED |
 | DI-019-F | UN-019 | Splash progress bar shall load smoothly per standard UI/UX best practices — the Tick animation loop shall use asymptotic easing with a guaranteed minimum per-frame increment so the bar is always visibly moving while behind its target | `start_splash.hta` Tick sub contains asymptotic expression `(targetVal - stepVal) * 0.N` and minimum floor `If inc < N Then inc = N` | P2 | VERIFIED |
-| DI-019-G | UN-019 | The interval between splash screen close and Chrome opening shall be less than 3 seconds | `start_athena.ps1` `Start-Sleep -Milliseconds` value is ≤ 2500 | P2 | VERIFIED |
+| DI-019-G | UN-019 | The interval between splash screen close and Chrome opening shall be less than 3 seconds | `start_athena.ps1` polls for `.athena_splash_done` at 200ms intervals; the maximum gap from splash-done signal to Chrome launch is < 400ms (200ms poll + process launch overhead), well within 3 seconds | P2 | VERIFIED |
 | DI-019-H | UN-019 | The progress bar shall not remain at any single whole-number percentage for more than 1 second due to animation algorithm constraints — enforced by: (a) a minimum per-frame increment floor in the Tick loop, (b) a minimum per-poll advancement floor in PollChromeReady, (c) a PollChromeReady cap ≤ 98 so that `Int()` display can never show "100%" while loading is incomplete, and (d) a mathematical proof that the Tick easing can traverse from the cap to the 99.5 close-trigger in < 1000 ms: `(99.5 − cap) ÷ min_floor × 16 ms < 1000 ms` | `start_splash.hta` Tick floor; PollChromeReady floor + cap ≤ 98; `Int(stepVal)` display; computed `(99.5 − cap) / min_floor * 16 < 1000` | P2 | VERIFIED |
 | DI-019-I | UN-019 | The splash screen "Athena" title (`.name`) font-size shall be 101px — `start_splash.hta` fixed value and `electron/main.js` clamp maximum shall both equal 101px | `start_splash.hta` `.name` CSS contains `font-size:101px`; `electron/main.js` `.name` CSS clamp is `clamp(61px,7vw,101px)` | P2 | VERIFIED |
 | DI-019-J | UN-019 | The `#dots` element shall cycle its displayed text through a one-dot (`.`), two-dot (`..`), and three-dot (`...`) sequence at a fixed interval of ≤ 500 ms per state, driven by a VBScript timer (not CSS animation), while loading is in progress; the dots shall be hidden when loading completes | `start_splash.hta` contains a `TickDots` sub using 3-state cycling; `setInterval("TickDots", N)` with N ≤ 500; `dotsEl.style.display = "none"` on completion | P2 | VERIFIED |
 | DI-019-K | UN-019 | The Athena startup sequence shall not gate Chrome opening on voice model readiness — the `$modelTimeout` polling loop that blocks `.athena_ready` on `models_ready = true` from `/api/voice/status` shall be absent from `start_athena.ps1`; voice models shall preload asynchronously after Chrome opens; on warm start (Python env active, all model files present on disk), the total time from launch invocation to Chrome window opening shall be less than 10 seconds | `start_athena.ps1` does not contain `$modelTimeout` variable | P1 | OPEN |
+| DI-019-L | UN-019 | Chrome shall not open until the splash screen confirms its progress bar has reached 100% by writing a `.athena_splash_done` signal file; `start_splash.hta` shall contain a `CloseSplash` sub that writes the signal file before calling `window.close()`; `start_athena.ps1` shall poll for this file (up to 6000ms timeout) before launching Chrome and shall not use a fixed sleep as the sole gating mechanism | Static: `start_splash.hta` contains `CloseSplash` sub that writes `.athena_splash_done` before `window.close()`; `start_athena.ps1` contains `athena_splash_done` poll loop; `Start-Sleep -Milliseconds 2500` is absent from the Chrome-launch path | P0 | OPEN |
 
 ---
 

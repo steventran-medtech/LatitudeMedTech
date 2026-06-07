@@ -25,6 +25,26 @@ record of what changed between each version. Keep them in lock-step — see
 
 ## [Unreleased]
 
+### CO-013 (splash-done-signal) — UN-019: Splash 100% guaranteed before Chrome opens (DI-019-L)
+
+- **start_splash.hta**: Added `CloseSplash` sub that writes `.athena_splash_done` before `window.close()`; `Tick` sub now calls `window.setTimeout "CloseSplash"` instead of `window.setTimeout "window.close()"`.
+- **start_athena.ps1**: Replaced `Start-Sleep -Milliseconds 2500` race condition with a 200ms polling loop waiting for `.athena_splash_done` (max 6s timeout); flag cleaned up at startup.
+- **DI-019-G** verification method updated: gap now signal-bounded to < 400ms.
+- **dc_verify.py**: `test_DI_019_G` updated; `test_DI_019_L` (P0) added; 109/109 PASSED.
+
+### CO-012 — UN-007 + UN-002: Tab rename + AGENT_TAB routing fix
+
+### Changed
+- **UN-007, UN-002 / CO-012** Renamed "Content Drafts" tab to "MedTech Meridian Drafts" (NAV_ITEMS + ContentView h2); fixed AGENT_TAB — coaching_brief→"coaching", consulting_agent/ma_intelligence_agent/sow_agent/regulatory_strategy_agent→"queue"; fixed WorkQueuePanel awaiting_review routing target from "review"→"queue" (DI-007-F, DI-002-H, DI-002-I)
+
+### CO-011 — UN-034 Engineering Process Integrity (Formal Registration + Test Correction)
+
+- **DI-034-A (corrected)**: `test_DI_034_A` rewritten to verify `CLAUDE.md` contains the co-commit rule phrase "must also update at least one design control document" — prior test incorrectly checked `qms_simulator_agent.py` for `submit_for_review(` (CO-010 artifact)
+- **DI-034-B–F (confirmed VERIFIED)**: Auth Centralization Standard, voice_bridge.py Boundary, Progress Bar Specification, App.jsx Responsibility Scope, CLAUDE.md Update Policy — all CLAUDE.md section checks confirmed correct
+- **DC-004 v2.9 coverage summary corrected**: 34 UNs, 116 DIs total, 100 VERIFIED, 8 PARTIAL, 8 OPEN; stale TG-009/010/011 entries collapsed to CLOSED
+- **DC-005 v2.0**: DI-034-A–F test procedure entries added (check phrase / section presence in CLAUDE.md; fail action documents remediation step)
+- **DC-006**: CO-011 formally registered; Next available → CO-012
+
 ### CO-010 — UN-033 Voice Latency + UN-034 Engineering Integrity + UN-030 Publication Format
 
 - **DI-033-A/B/C (VERIFIED)**: `_voice_loop` shares one `sd.InputStream` per query cycle; `_listen_for_wake` and `_record_query` accept `stream` parameter — eliminates 200–500 ms Windows MME close/reopen gap after wake detection

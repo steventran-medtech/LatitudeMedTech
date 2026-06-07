@@ -1,5 +1,5 @@
 # DC-005 — Verification Protocol
-**Document:** DC-005 · Version 1.9 · 2026-06-07  
+**Document:** DC-005 · Version 2.0 · 2026-06-07  
 **Approved by:** Steven Tran
 
 ---
@@ -338,6 +338,11 @@ Check: `start_athena.ps1` does NOT contain `$modelTimeout` — confirming the mo
 Warm-start definition: Python venv active, all model files present on disk (no first-run download), Vite build cache valid.  
 Fail action: Remove the `$modelTimeout` while-loop from `start_athena.ps1`. The `$session.models_ready` assignment used for session logging may remain; only the polling loop and `$modelTimeout` variable must be absent.
 
+**test_DI_019_L** — Chrome opens only after splash writes `.athena_splash_done` signal  
+Preconditions: `start_splash.hta` and `start_athena.ps1` on disk.  
+Check: (1) `start_splash.hta` contains a `CloseSplash` sub. (2) `start_splash.hta` contains `athena_splash_done` write inside `CloseSplash`. (3) `start_athena.ps1` contains `athena_splash_done` poll loop. (4) `Start-Sleep -Milliseconds 2500` is absent from the Chrome-launch gate path in `start_athena.ps1`.  
+Fail action: (1) Add `Sub CloseSplash` to `start_splash.hta` that runs `fso.CreateTextFile ".../athena_splash_done"` then `window.close()`. (2) Change `window.setTimeout "window.close()", 100` in the `Tick` sub to `window.setTimeout "CloseSplash", 100`. (3) Replace `Start-Sleep -Milliseconds 2500` in `start_athena.ps1` with a while-loop polling `$splashDoneFile` at 200ms intervals with a 6000ms timeout.
+
 ---
 
 ### DI-023 — Historical Data Depth
@@ -411,6 +416,35 @@ Fail action: Change `def _record_query()` to `def _record_query(stream)` and rem
 **test_DI_033_C** — `_voice_loop` opens one `sd.InputStream` and passes it to both functions  
 Check: `voice_bridge.py` `_voice_loop` function body contains `with sd.InputStream(` context manager; the calls `_listen_for_wake(oww, stream)` and `_record_query(stream)` both use the shared stream variable.  
 Fail action: Add `with sd.InputStream(device=INPUT_DEVICE, ...) as stream:` inside the `_voice_loop` main while loop; update call sites to `_listen_for_wake(oww, stream)` and `_record_query(stream)`.
+
+---
+
+### DI-034 — Engineering Process Integrity (CO-011)
+
+**test_DI_034_A** — `CLAUDE.md` contains the co-commit rule  
+Check: `CLAUDE.md` contains the phrase "must also update at least one design control document".  
+Fail action: Add the Co-Commit Rule to the Engineering Integrity Standards section of `CLAUDE.md`; the phrase must appear verbatim in the rule text.
+
+**test_DI_034_B** — `CLAUDE.md` contains the Auth Centralization Standard section  
+Check: `CLAUDE.md` contains the heading or label "Auth Centralization Standard".  
+Fail action: Add an "Auth Centralization Standard" subsection to the Engineering Integrity Standards section of `CLAUDE.md`; it must declare that all auth logic lives in `AuthMiddleware` and `auth_utils.py`.
+
+**test_DI_034_C** — `CLAUDE.md` contains the `voice_bridge.py` Boundary section  
+Check: `CLAUDE.md` contains the heading or label "voice_bridge.py Boundary".  
+Fail action: Add a "voice_bridge.py Boundary" subsection to the Engineering Integrity Standards section of `CLAUDE.md`; it must declare that `voice_bridge.py` owns all audio I/O.
+
+**test_DI_034_D** — `CLAUDE.md` documents the forward-only progress bar constraint  
+Check: `CLAUDE.md` contains the heading or label "Progress Bar Specification".  
+Fail action: Add a "Progress Bar Specification" subsection to the Engineering Integrity Standards section of `CLAUDE.md`; it must declare that the splash bar moves forward only.
+
+**test_DI_034_E** — `CLAUDE.md` contains the `App.jsx` Responsibility Scope section  
+Check: `CLAUDE.md` contains the heading or label "App.jsx Responsibility Scope".  
+Fail action: Add an "App.jsx Responsibility Scope" subsection to the Engineering Integrity Standards section of `CLAUDE.md`; it must enumerate what `App.jsx` owns and must not own.
+
+**test_DI_034_F** — `CLAUDE.md` contains the CLAUDE.md Update Policy section  
+Check: `CLAUDE.md` contains the heading or label "CLAUDE.md Update Policy".  
+Fail action: Add a "CLAUDE.md Update Policy" subsection to the Engineering Integrity Standards section of `CLAUDE.md`; it must state when this file must be updated.
+
 ## CAPA Trigger
 
 If `dc_verify.py` produces 3 or more FAIL results in a single run, open a CAPA:

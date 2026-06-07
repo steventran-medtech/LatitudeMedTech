@@ -254,6 +254,8 @@ Update this file's version line (date + vN) in the same final commit.
 
 | Date | Change | DC Reference |
 |---|---|---|
+| 2026-06-07 | CO-013 (UN-019): Splash 100% guaranteed before Chrome opens — `CloseSplash` sub in `start_splash.hta` writes `.athena_splash_done` before `window.close()`; `start_athena.ps1` polls for signal file at 200ms (6s max) before Chrome launch; fixed `Start-Sleep -Milliseconds 2500` race condition | DI-019-L (new), DI-019-G (verification updated) |
+| 2026-06-07 | CO-012 (UN-007, UN-002): renamed "Content Drafts" → "MedTech Meridian Drafts" (NAV_ITEMS + ContentView h2); fixed AGENT_TAB — coaching_brief→"coaching", 4 agents→"queue"; fixed WorkQueuePanel awaiting_review routing "review"→"queue" | DI-007-F, DI-002-H, DI-002-I |
 | 2026-06-07 | CO-010 (UN-033/UN-034): Voice stream sharing (DI-033-A/B/C VERIFIED); PUBLICATION_FORMAT_GUIDE in agent_base.py (DI-030-D); Output Format Standard in 8 persona files (DI-030-E); Engineering Integrity Standards in CLAUDE.md (DI-034-A–F); Version 0.6.0 | DI-033-A/B/C, DI-030-D/E, DI-034-A–F |
 | 2026-06-07 | UN-003, UN-023 (CO-003): RAG reviewable reports + 50-year QARA knowledge — rich ingestion report with `## Newly Ingested Documents` table; 7 historical Tavily queries; `tm_yday` deterministic rotation; QARA RSS sources in `learning_sources.py` | DI-003-C, DI-003-D, DI-023-B, DI-023-C |
 | 2026-06-07 | CO-006 (UN-032/UN-023): Consulting Agent `learn()` now generates `consulting_learning_<ts>.md` report + submits to review queue after every run; `HISTORICAL_CONSULTING_SOURCES` + `HISTORICAL_CONSULTING_KNOWLEDGE` (7 eras, 1970s–2020s) added to KB | DI-032-A, DI-032-B, DI-023-D |
@@ -268,7 +270,7 @@ Update this file's version line (date + vN) in the same final commit.
 | 2026-06-07 | Version 0.5.6 — async startup, warm-start under 10 s |  |
 | 2026-06-07 | CO-005 (UN-002): Document Queue tab merged Documents + Review Queue into Pending/Approved/Rejected three-filter view; App.jsx NAV_ITEMS consolidated to id:queue | DI-002-E, DI-002-F, DI-002-G |
 | 2026-06-07 | CO-010 (UN-033): `_voice_loop` shares one `sd.InputStream` per query cycle between `_listen_for_wake` and `_record_query` — eliminates 200-500 ms Windows MME close/reopen gap after wake detection | DI-033-A, DI-033-B, DI-033-C |
-| 2026-06-07 | CO-011 (UN-007, UN-002): renamed "Content Drafts" → "MedTech Meridian Drafts" (NAV_ITEMS + ContentView h2); fixed AGENT_TAB — coaching_brief→"coaching", 4 agents→"queue"; fixed WorkQueuePanel awaiting_review routing "review"→"queue" | DI-007-F, DI-002-H, DI-002-I |
+| 2026-06-07 | CO-011 (UN-034): Engineering Process Integrity — test_DI_034_A corrected (CLAUDE.md co-commit rule check); DI-034-B–F confirmed; DC-004 coverage summary corrected (34 UNs, 116 DIs); DC-005 v2.0 DI-034 procedures added; Version 0.6.1 | DI-034-A–F |
 | 2026-06-06 | DI-019-J (C2): splash `#dots` now cycles `.`/`..`/`...` via VBScript `TickDots` at 400 ms/state; CSS `dotFlash` wave removed | DI-019-J |
 
 ---

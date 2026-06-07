@@ -290,6 +290,58 @@ def test_DI_002_G():
     return True
 
 
+
+def test_DI_002_H():
+    """DI-002-H: AGENT_TAB maps all agents to valid NAV_ITEMS tab IDs — no retired tab IDs"""
+    import re as _re
+    di = "DI-002-H"
+    if _skip_if_filtered(di): return
+    f = UI_FRONT / "App.jsx"
+    if not f.exists():
+        _log(FAIL, di, "App.jsx not found", str(f)); return
+    content = _read(f)
+    m = _re.search(r'const AGENT_TAB\s*=\s*\{([^}]+)\}', content, _re.DOTALL)
+    if not m:
+        _log(FAIL, di, "AGENT_TAB constant not found in App.jsx",
+             "Fix: ensure 'const AGENT_TAB = { ... }' exists in App.jsx"); return
+    body = m.group(1)
+    failures = []
+    if '"review"' in body: failures.append('AGENT_TAB contains "review" — retired tab ID')
+    if '"documents"' in body: failures.append('AGENT_TAB contains "documents" — retired tab ID')
+    if not _re.search(r'coaching_brief\s*:\s*"coaching"', body): failures.append('coaching_brief does not map to "coaching"')
+    if not _re.search(r'consulting_agent\s*:\s*"queue"', body): failures.append('consulting_agent does not map to "queue"')
+    if not _re.search(r'ma_intelligence_agent\s*:\s*"queue"', body): failures.append('ma_intelligence_agent does not map to "queue"')
+    if not _re.search(r'sow_agent\s*:\s*"queue"', body): failures.append('sow_agent does not map to "queue"')
+    if not _re.search(r'regulatory_strategy_agent\s*:\s*"queue"', body): failures.append('regulatory_strategy_agent does not map to "queue"')
+    if not failures:
+        _log(PASS, di, "AGENT_TAB maps all agents to valid NAV_ITEMS tab IDs")
+    else:
+        _log(FAIL, di, "DI-002-H: " + "; ".join(failures),
+             'Fix: set coaching_brief->"coaching", 4 agents->"queue" in AGENT_TAB')
+    return True
+
+
+def test_DI_002_I():
+    """DI-002-I: WorkQueuePanel uses 'queue' (not 'review') as awaiting_review routing target"""
+    import re as _re
+    di = "DI-002-I"
+    if _skip_if_filtered(di): return
+    f = UI_FRONT / "App.jsx"
+    if not f.exists():
+        _log(FAIL, di, "App.jsx not found", str(f)); return
+    content = _read(f)
+    broken = _re.search(r'status\s*===\s*"awaiting_review"\s*\?\s*"review"', content)
+    fixed  = _re.search(r'status\s*===\s*"awaiting_review"\s*\?\s*"queue"', content)
+    if broken:
+        _log(FAIL, di, 'WorkQueuePanel still uses "review" as awaiting_review routing target',
+             'Fix: change routing to "queue" in App.jsx WorkQueuePanel')
+    elif not fixed:
+        _log(FAIL, di, 'WorkQueuePanel awaiting_review routing target not found',
+             'Fix: ensure `status === "awaiting_review" ? "queue"` exists in App.jsx')
+    else:
+        _log(PASS, di, 'WorkQueuePanel routes awaiting_review to "queue"')
+    return True
+
 # ── UN-003 / Knowledge Base ────────────────────────────────────────────────────
 
 def test_DI_003_A():
@@ -611,6 +663,31 @@ def test_DI_007_E():
     else:
         _log(FAIL, di, "renderInline/MarkdownView not found in App.jsx",
              "Content rendering component missing — YAML frontmatter will appear raw")
+
+
+def test_DI_007_F():
+    """DI-007-F: Content tab labeled 'MedTech Meridian Drafts' in NAV_ITEMS and ContentView h2"""
+    di = "DI-007-F"
+    if _skip_if_filtered(di): return
+    f = UI_FRONT / "App.jsx"
+    if not f.exists():
+        _log(FAIL, di, "App.jsx not found", str(f)); return
+    content = _read(f)
+    has_nav = 'label:"MedTech Meridian Drafts"' in content
+    has_h2  = '>MedTech Meridian Drafts<' in content
+    old_nav = 'label:"Content Drafts"' in content
+    old_h2  = '>Content Drafts<' in content
+    failures = []
+    if not has_nav: failures.append('NAV_ITEMS missing label:"MedTech Meridian Drafts"')
+    if not has_h2:  failures.append('ContentView h2 missing ">MedTech Meridian Drafts<"')
+    if old_nav: failures.append('label:"Content Drafts" still present — must be renamed')
+    if old_h2:  failures.append('">Content Drafts<" still in ContentView h2 — must be renamed')
+    if not failures:
+        _log(PASS, di, 'Content tab and ContentView h2 both read "MedTech Meridian Drafts"')
+    else:
+        _log(FAIL, di, "DI-007-F: " + "; ".join(failures),
+             'Fix: rename label:"Content Drafts"->"MedTech Meridian Drafts" in NAV_ITEMS and h2')
+    return True
 
 
 # ── UN-009 / Slide Decks ───────────────────────────────────────────────────────
@@ -1408,25 +1485,21 @@ def test_DI_019_F():
 
 
 def test_DI_019_G():
-    """DI-019-G: PS1 launcher delay between .athena_ready flag and Chrome open is <= 5000ms"""
+    """DI-019-G: Splash-to-Chrome gap < 3s — enforced by .athena_splash_done poll at 200ms intervals"""
     di = "DI-019-G"
     if _skip_if_filtered(di): return
     f = ATHENA / "ui" / "start_athena.ps1"
-    if not f.exists():
-        _log(FAIL, di, "start_athena.ps1 not found", str(f))
-        return
+    assert f.exists(), (
+        f"FAIL {di}: start_athena.ps1 not found at {f}\n"
+        "Fix: Confirm Athena/ui/start_athena.ps1 exists"
+    )
     content = _read(f)
-    m = re.search(r'Start-Sleep\s+-Milliseconds\s+(\d+)', content)
-    if not m:
-        _log(FAIL, di, "No Start-Sleep -Milliseconds found in start_athena.ps1",
-             "Launcher must sleep briefly after writing .athena_ready before opening Chrome")
-        return
-    ms = int(m.group(1))
-    if ms <= 2500:
-        _log(PASS, di, f"Chrome launch delay is {ms}ms (<= 2500ms; splash-to-Chrome gap < 3s)")
-    else:
-        _log(FAIL, di, f"Chrome launch delay is {ms}ms -- exceeds 2500ms maximum",
-             "Reduce Start-Sleep -Milliseconds in start_athena.ps1 to <= 2500 (DI-019-G: < 3s gap)")
+    assert "athena_splash_done" in content, (
+        f"FAIL {di}: start_athena.ps1 does not poll .athena_splash_done before launching Chrome\n"
+        "Fix: Add a polling loop for $splashDoneFile = '.athena_splash_done' before the Chrome "
+        "Start-Process call in start_athena.ps1 (DI-019-G: < 3s gap; DI-019-L: signal-based gate)"
+    )
+    _log(PASS, di, "start_athena.ps1 polls .athena_splash_done — splash-to-Chrome gap bounded to < 400ms")
 
 
 def test_DI_019_H():
@@ -1658,6 +1731,59 @@ def test_DI_019_K():
     )
 
     _log(PASS, di, "No $modelTimeout polling loop — .athena_ready fires on backend+frontend ready; voice models load async")
+    return True
+
+
+def test_DI_019_L():
+    """DI-019-L: Chrome opens only after splash writes .athena_splash_done; no fixed 2500ms sleep gate"""
+    di = "DI-019-L"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    hta = ATHENA / "ui" / "start_splash.hta"
+    ps1 = ATHENA / "ui" / "start_athena.ps1"
+
+    assert hta.exists(), (
+        f"FAIL {di}: start_splash.hta not found at {hta}\n"
+        "Fix: Confirm Athena/ui/start_splash.hta exists"
+    )
+    assert ps1.exists(), (
+        f"FAIL {di}: start_athena.ps1 not found at {ps1}\n"
+        "Fix: Confirm Athena/ui/start_athena.ps1 exists"
+    )
+
+    # ACT
+    hta_content = _read(hta)
+    ps1_content = _read(ps1)
+
+    # ASSERT 1 — HTA has CloseSplash sub
+    assert "CloseSplash" in hta_content, (
+        f"FAIL {di}: CloseSplash sub not found in start_splash.hta\n"
+        "Fix: Add 'Sub CloseSplash' that writes .athena_splash_done then calls window.close(); "
+        "change Tick's window.setTimeout call to 'CloseSplash' instead of 'window.close()'"
+    )
+
+    # ASSERT 2 — HTA CloseSplash writes .athena_splash_done
+    assert "athena_splash_done" in hta_content, (
+        f"FAIL {di}: .athena_splash_done write not found in start_splash.hta\n"
+        "Fix: Add fso.CreateTextFile '.../athena_splash_done' inside the CloseSplash sub before window.close()"
+    )
+
+    # ASSERT 3 — PS1 polls for .athena_splash_done
+    assert "athena_splash_done" in ps1_content, (
+        f"FAIL {di}: start_athena.ps1 does not poll .athena_splash_done before Chrome launch\n"
+        "Fix: Add a while-loop polling $splashDoneFile (200ms interval, 6000ms max) before Start-Process chrome"
+    )
+
+    # ASSERT 4 — old fixed sleep is gone from the Chrome-launch gate path
+    assert "Start-Sleep -Milliseconds 2500" not in ps1_content, (
+        f"FAIL {di}: start_athena.ps1 still uses fixed Start-Sleep -Milliseconds 2500 as the Chrome-launch gate\n"
+        "Fix: Remove 'Start-Sleep -Milliseconds 2500' and replace with the .athena_splash_done polling loop"
+    )
+
+    _log(PASS, di,
+         "CloseSplash sub present in HTA; .athena_splash_done written before close; "
+         "PS1 polls for done-signal; fixed 2500ms sleep removed")
     return True
 
 
@@ -2527,22 +2653,22 @@ def test_DI_030_E():
     return True
 
 
-# ── UN-034 / All-Agent Review Queue Submission (CO-010) ──────────────────────
+# ── UN-034 / Engineering Process Integrity (CO-011) ────────────────────────────
 
 def test_DI_034_A():
-    """DI-034-A: qms_simulator_agent.py calls submit_for_review() after bundle generation"""
+    """DI-034-A: CLAUDE.md shall contain the co-commit rule phrase"""
     di = "DI-034-A"
     if _skip_if_filtered(di): return
-    f = AGENTS / "qms_simulator_agent.py"
+    f = ROOT / "CLAUDE.md"
     if not f.exists():
-        _log(FAIL, di, "qms_simulator_agent.py not found", str(f))
+        _log(FAIL, di, "CLAUDE.md not found", str(f))
         return
-    content = _read(f)
-    if "submit_for_review(" not in content:
-        _log(FAIL, di, "submit_for_review() not called in qms_simulator_agent.py",
-             "Add _MEM.submit_for_review() call in run() after bundle index is written")
+    if "must also update at least one design control document" not in _read(f):
+        _log(FAIL, di,
+             "CLAUDE.md missing co-commit rule phrase 'must also update at least one design control document'",
+             "Add co-commit rule to Engineering Integrity Standards section of CLAUDE.md")
         return
-    _log(PASS, di, "qms_simulator_agent.py contains submit_for_review() call")
+    _log(PASS, di, "CLAUDE.md contains the co-commit rule")
     return True
 
 
@@ -2832,6 +2958,7 @@ def main():
     test_DI_001_C(); test_DI_001_D()
     test_DI_002_A(); test_DI_002_B(); test_DI_002_C(); test_DI_002_D()
     test_DI_002_E(); test_DI_002_F(); test_DI_002_G()
+    test_DI_002_H(); test_DI_002_I()
 
     _section("UN-003 Knowledge Base")
     test_DI_003_A(); test_DI_003_B(); test_DI_003_C(); test_DI_003_D()
@@ -2843,6 +2970,7 @@ def main():
 
     _section("UN-007/008/009 Content, Marketing & Decks")
     test_DI_007_B(); test_DI_007_C(); test_DI_007_D(); test_DI_007_E()
+    test_DI_007_F()
     test_DI_009_B(); test_DI_009_C()
 
     _section("UN-010/011/012 Regulatory Intelligence")
@@ -2868,7 +2996,7 @@ def main():
     test_DI_019_A(); test_DI_019_B(); test_DI_019_C()
     test_DI_019_D(); test_DI_019_E()
     test_DI_019_F(); test_DI_019_G(); test_DI_019_H(); test_DI_019_I(); test_DI_019_J()
-    test_DI_019_K()
+    test_DI_019_K(); test_DI_019_L()
 
     _section("UN-020 Document Review & Approval")
     test_DI_020_A(); test_DI_020_B(); test_DI_020_C(); test_DI_020_D(); test_DI_020_E()
@@ -2901,7 +3029,7 @@ def main():
     _section("UN-032 Consulting Learning Visibility")
     test_DI_consulting_032_A(); test_DI_consulting_032_B()
 
-    _section("UN-034 All-Agent Review Queue Submission (CO-010)")
+    _section("UN-034 Engineering Process Integrity (CO-011)")
     test_DI_034_A()
     test_DI_034_B(); test_DI_034_C()
     test_DI_034_D(); test_DI_034_E(); test_DI_034_F()
