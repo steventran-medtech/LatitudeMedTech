@@ -56,6 +56,11 @@ _Changes landed on `main` but not yet stamped into a numbered release go here._
   `_listen_for_wake` blocks) and mid-listen race (event checked per audio chunk inside the function).
   `triggerListen` added to `useVoiceSession` hook; PTT endpoint added to `qa_test.py` route list.
 
+### Changed
+- **Splash title font size (DI-019-I):** Athena `.name` title on the splash screen increased from
+  100px to 101px (1pt). Applied to both `Athena/ui/start_splash.hta` (fixed value) and
+  `Athena/electron/main.js` (clamp min/max bumped from 60/100px to 61/101px).
+
 ### Fixed
 - **Google Drive connect response key (C4):** `FileViewer.jsx` `connectDrive` was checking
   `data.ok` but `server.py` now returns `{started: true}` (async OAuth refactor). Fixed to

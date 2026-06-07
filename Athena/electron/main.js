@@ -128,12 +128,12 @@ function createSplash() {
   }
   #content{position:absolute;bottom:0;left:0;right:0;padding:0 72px 56px;z-index:2}
   .eyebrow{font-size:15px;letter-spacing:.28em;color:#C4922A;text-transform:uppercase;font-weight:700;margin-bottom:12px;text-shadow:0 1px 8px rgba(0,0,0,.7)}
-  .name{font-size:clamp(60px,7vw,100px);font-weight:200;letter-spacing:.04em;color:#EDE6D8;line-height:1;margin-bottom:12px;text-shadow:0 2px 24px rgba(0,0,0,.85),0 0 48px rgba(0,0,0,.4)}
+  .name{font-size:clamp(61px,7vw,101px);font-weight:200;letter-spacing:.04em;color:#EDE6D8;line-height:1;margin-bottom:12px;text-shadow:0 2px 24px rgba(0,0,0,.85),0 0 48px rgba(0,0,0,.4)}
   .tagline{font-size:20px;letter-spacing:.18em;color:rgba(220,210,195,.75);text-transform:uppercase;margin-bottom:36px;text-shadow:0 1px 8px rgba(0,0,0,.6)}
   .status-text{font-size:17px;color:rgba(220,210,195,.65);letter-spacing:.04em}
   .dot{display:inline-block;font-size:17px;color:rgba(196,146,42,.85);animation:dotFlash 1.4s ease-in-out infinite both}
   .dot1{animation-delay:0s}.dot2{animation-delay:.2s}.dot3{animation-delay:.4s}
-  #bar-wrap{position:absolute;bottom:0;left:0;width:100%;height:5px;background:#1a3a58;overflow:hidden;z-index:3}
+  #bar-wrap{position:absolute;bottom:0;left:0;width:100%;height:10px;background:#1a3a58;overflow:hidden;z-index:3}
   #bar{height:100%;width:0%;
     background:linear-gradient(90deg,rgba(196,146,42,.4),rgba(232,184,75,1),rgba(196,146,42,.4));
     background-size:300% auto;
@@ -274,14 +274,14 @@ app.whenReady().then(async () => {
     backendProc = spawnHidden(VENV_PY, [SERVER_PY], path.join(ROOT, "ui", "backend"), "backend");
     await waitForHttp(BACKEND_URL + "/");
     log("Backend ready.");
-    setSplashStatus(splash, "Backend ready — launching interface", 70);
+    setSplashStatus(splash, "Backend ready — launching interface", 50);
 
     log("Starting frontend…");
     // Use vite.cmd directly — avoids spawning a CMD host window
     const viteBin = fs.existsSync(VITE_BIN) ? VITE_BIN
       : path.join(FRONTEND_DIR, "node_modules", ".bin", "vite");
     frontendProc = spawnHidden(viteBin, [], FRONTEND_DIR, "frontend");
-    setSplashStatus(splash, "Loading the interface", 80);
+    setSplashStatus(splash, "Loading the interface", 65);
     await waitForHttp(FRONTEND_URL, 20000);
     log("Frontend ready.");
     setSplashStatus(splash, "Welcome back. Athena is ready.", 100);
