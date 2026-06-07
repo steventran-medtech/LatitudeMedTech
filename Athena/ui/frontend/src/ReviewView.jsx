@@ -4,6 +4,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { authHdr } from "./api.js";
+import FileViewer from "./FileViewer.jsx";
 
 const API = "http://localhost:8000";
 
@@ -360,9 +361,11 @@ export default function ReviewView({ reviewRefreshToken = 0 }) {
   // modal) so a revision keeps showing progress in the queue after the preview closes.
   const [edits, setEdits] = useState({});          // id -> { status, msg, content, ext, at }
 
-  const [tab,       setTab]       = useState("queue");   // "queue" | "history"
+  const [tab,       setTab]       = useState("pending");  // "pending" | "approved" | "rejected"
   const [histItems, setHistItems] = useState([]);
-  const [reopening, setReopening] = useState({});        // id -> true while in-flight
+  const [reopening, setReopening] = useState({});         // id -> true while in-flight
+  const [approvedDocs,    setApprovedDocs]    = useState([]);
+  const [viewingApproved, setViewingApproved] = useState(null);
 
   const load = () => {
     fetch(`${API}/api/review/pending`, { headers: authHdr() }).then(r => r.json())
@@ -375,7 +378,19 @@ export default function ReviewView({ reviewRefreshToken = 0 }) {
   };
 
   useEffect(() => { load(); }, []);
-  useEffect(() => { if (tab === "history") loadHistory(); }, [tab]);
+  const loadApproved = () => {
+    fetch(`${API}/api/documents`, { headers: authHdr() }).then(r => r.json())
+      .then(d => setApprovedDocs(d.documents || [])).catch(() => {});
+  };
+
+  const openDoc = (filename, folder) => {
+    fetch(`${API}/api/documents/open/${encodeURIComponent(filename)}?folder=${folder || "documents"}`, { headers: authHdr() }).catch(() => {});
+  };
+
+  useEffect(() => {
+    if (tab === "rejected") loadHistory();
+    if (tab === "approved") loadApproved();
+  }, [tab]);
   // Reload queue whenever a new agent delivers review items (token increments on agent_done).
   useEffect(() => { if (reviewRefreshToken > 0) load(); }, [reviewRefreshToken]);
 
@@ -432,10 +447,10 @@ export default function ReviewView({ reviewRefreshToken = 0 }) {
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
         <div>
           <h2 style={{ fontSize:"1.15rem", fontWeight:700, color:C.navy, margin:0 }}>
-            Review Queue
+            Document Queue
           </h2>
           <p style={{ fontFamily:"Inter,sans-serif", fontSize:"0.78rem", color:C.fog, margin:"4px 0 0" }}>
-            Approve or reject agent outputs before they're delivered to clients.
+            Review pending outputs and browse approved and rejected documents.
           </p>
         </div>
         <div style={{ display:"flex", gap:8, fontFamily:"Inter,sans-serif" }}>
@@ -455,14 +470,14 @@ export default function ReviewView({ reviewRefreshToken = 0 }) {
 
       {/* Tabs */}
       <div style={{ display:"flex", gap:0, marginBottom:20, borderBottom:`1px solid ${C.mist}` }}>
-        {[["queue","Pending"], ["history","History"]].map(([key, label]) => (
+        {[["pending","Pending"], ["approved","Approved"], ["rejected","Rejected"]].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} style={{
             padding:"7px 20px", background:"transparent", border:"none",
             borderBottom: tab === key ? `2px solid ${C.ocean}` : "2px solid transparent",
             fontFamily:"Inter,sans-serif", fontSize:12.5, fontWeight: tab === key ? 700 : 500,
             color: tab === key ? C.ocean : C.fog,
             cursor:"pointer", marginBottom:-1, transition:"color 0.15s",
-          }}>{label}{key === "queue" && (stats.pending||0) > 0 &&
+          }}>{label}{key === "pending" && (stats.pending||0) > 0 &&
             <span style={{ marginLeft:6, background:C.gold, color:"#fff", fontSize:9,
               fontWeight:700, padding:"1px 6px", borderRadius:8 }}>{stats.pending}</span>}
           </button>
@@ -470,7 +485,7 @@ export default function ReviewView({ reviewRefreshToken = 0 }) {
       </div>
 
       {/* ── Pending Queue ── */}
-      {tab === "queue" && (items.length === 0 ? (
+      {tab === "pending" && (items.length === 0 ? (
         <div style={{ padding:"52px 0", textAlign:"center",
           border:`1px dashed ${C.mist}`, borderRadius:10,
           fontFamily:"Inter,sans-serif", color:C.fog }}>
@@ -584,89 +599,142 @@ export default function ReviewView({ reviewRefreshToken = 0 }) {
         );
       }))}
 
-      {/* ── History ── */}
-      {tab === "history" && (histItems.length === 0 ? (
+      {/* -- Approved -- */}
+      {tab === "approved" && (approvedDocs.length === 0 ? (
         <div style={{ padding:"52px 0", textAlign:"center",
           border:`1px dashed ${C.mist}`, borderRadius:10,
           fontFamily:"Inter,sans-serif", color:C.fog }}>
-          <div style={{ fontSize:14, fontWeight:600, color:C.navy, marginBottom:4 }}>No history yet</div>
-          <div style={{ fontSize:12 }}>Approved and rejected documents will appear here.</div>
+          <div style={{ fontSize:14, fontWeight:600, color:C.navy, marginBottom:4 }}>No approved documents</div>
+          <div style={{ fontSize:12 }}>Approved outputs will appear here once you review pending items.</div>
         </div>
-      ) : histItems.map(item => {
-        const typeColor  = TYPE_COLOR[item.item_type] || C.fog;
-        const typeLabel  = TYPE_LABEL[item.item_type] || item.item_type;
-        const agentLabel = AGENT_LABEL[item.agent] || item.agent;
-        const approved   = item.status === "approved";
-        const statusCol  = approved ? C.teal : C.red;
-        const whenLabel  = friendlyDate(item.reviewed_at || item.timestamp);
-        return (
-          <div key={item.id} style={{
-            background: C.pearl, border:`1px solid ${C.mist}`,
-            borderLeft: `3px solid ${statusCol}`,
-            borderRadius:"0 10px 10px 0", padding:"16px 22px",
-            marginBottom:10, opacity: reopening[item.id] ? 0.5 : 1,
-            transition:"opacity 0.2s",
-          }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
-              <div style={{ flex:1 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" }}>
-                  <span style={{ fontFamily:"Inter,sans-serif", fontSize:10, fontWeight:600,
-                    background: statusCol + "18", color: statusCol,
-                    padding:"3px 9px", borderRadius:5 }}>
-                    {approved ? "✓ Approved" : "✕ Rejected"}
-                  </span>
-                  <span style={{ fontFamily:"Inter,sans-serif", fontSize:10, fontWeight:600,
-                    background: typeColor + "18", color: typeColor,
-                    padding:"3px 9px", borderRadius:5 }}>{typeLabel}</span>
-                  <span style={{ fontFamily:"Inter,sans-serif", fontSize:11, color:C.fog }}>
-                    {agentLabel}
-                  </span>
-                  <span style={{ fontFamily:"Inter,sans-serif", fontSize:11, color:C.fog, opacity:0.7 }}>
-                    · Reviewed {whenLabel}
-                  </span>
-                </div>
-                <div
-                  onClick={() => setViewing({ id: item.id, title: item.title, readOnly: true })}
-                  title="Click to read"
-                  style={{ fontFamily:"Inter,sans-serif", fontWeight:600, fontSize:15,
-                    color:C.ocean, lineHeight:1.4, cursor:"pointer",
-                    textDecoration:"underline", textDecorationColor:C.mist, textUnderlineOffset:3 }}>
-                  {item.title}
-                </div>
-                {item.notes && (
-                  <div style={{ fontFamily:"Inter,sans-serif", fontSize:11.5, color:C.fog,
-                    marginTop:6, fontStyle:"italic", borderLeft:`2px solid ${C.mist}`,
-                    paddingLeft:10 }}>
-                    {item.notes}
-                  </div>
-                )}
-              </div>
-              {/* Reopen button */}
-              <button
-                onClick={() => reopen(item.id)}
-                disabled={!!reopening[item.id]}
-                title="Move back to pending queue"
-                style={{
-                  flexShrink:0, padding:"6px 14px", background:"transparent",
-                  border:`1px solid ${C.ocean}55`, borderRadius:6,
-                  color: C.ocean, cursor: reopening[item.id] ? "not-allowed" : "pointer",
-                  fontFamily:"Inter,sans-serif", fontSize:11, fontWeight:600, whiteSpace:"nowrap",
-                }}>
-                {reopening[item.id] ? "Moving…" : "↩ Reopen"}
-              </button>
+      ) : approvedDocs.map(doc => (
+        <div key={doc.filename} style={{
+          background: C.pearl, border:`1px solid ${C.mist}`,
+          borderLeft:`3px solid ${C.teal}`,
+          borderRadius:"0 10px 10px 0", padding:"14px 22px",
+          marginBottom:10, display:"flex", justifyContent:"space-between", alignItems:"center", gap:12,
+        }}>
+          <div style={{ flex:1 }}>
+            <div style={{ fontFamily:"Inter,sans-serif", fontWeight:600, fontSize:14, color:C.navy, marginBottom:4 }}>
+              {doc.title || doc.filename}
+            </div>
+            <div style={{ fontFamily:"Inter,sans-serif", fontSize:11, color:C.fog }}>
+              {doc.filename}
             </div>
           </div>
-        );
-      }))}
+          <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+            <button
+              onClick={() => setViewingApproved({ folder: doc.folder || "documents", filename: doc.filename })}
+              style={{
+                padding:"6px 14px", background:"transparent",
+                border:`1px solid ${C.ocean}55`, borderRadius:6,
+                color:C.ocean, cursor:"pointer",
+                fontFamily:"Inter,sans-serif", fontSize:11, fontWeight:600,
+              }}>
+              View
+            </button>
+            {doc.filename.endsWith(".docx") && (
+              <button
+                onClick={() => openDoc(doc.filename, doc.folder || "documents")}
+                style={{
+                  padding:"6px 14px", background:"transparent",
+                  border:`1px solid ${C.fog}44`, borderRadius:6,
+                  color:C.fog, cursor:"pointer",
+                  fontFamily:"Inter,sans-serif", fontSize:11, fontWeight:600,
+                }}>
+                Open
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
 
-      {/* Refresh */}
+      {/* -- Rejected -- */}
+      {tab === "rejected" && (() => {
+        const rejected = histItems.filter(i => i.status === "rejected");
+        return rejected.length === 0 ? (
+          <div style={{ padding:"52px 0", textAlign:"center",
+            border:`1px dashed ${C.mist}`, borderRadius:10,
+            fontFamily:"Inter,sans-serif", color:C.fog }}>
+            <div style={{ fontSize:14, fontWeight:600, color:C.navy, marginBottom:4 }}>No rejected documents</div>
+            <div style={{ fontSize:12 }}>Rejected outputs will appear here.</div>
+          </div>
+        ) : rejected.map(item => {
+          const typeColor  = TYPE_COLOR[item.item_type] || C.fog;
+          const typeLabel  = TYPE_LABEL[item.item_type] || item.item_type;
+          const agentLabel = AGENT_LABEL[item.agent] || item.agent;
+          const whenLabel  = friendlyDate(item.reviewed_at || item.timestamp);
+          return (
+            <div key={item.id} style={{
+              background: C.pearl, border:`1px solid ${C.mist}`,
+              borderLeft:`3px solid ${C.red}`,
+              borderRadius:"0 10px 10px 0", padding:"16px 22px",
+              marginBottom:10, opacity: reopening[item.id] ? 0.5 : 1,
+              transition:"opacity 0.2s",
+            }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" }}>
+                    <span style={{ fontFamily:"Inter,sans-serif", fontSize:10, fontWeight:600,
+                      background:C.red+"18", color:C.red,
+                      padding:"3px 9px", borderRadius:5 }}>Rejected</span>
+                    <span style={{ fontFamily:"Inter,sans-serif", fontSize:10, fontWeight:600,
+                      background: typeColor + "18", color: typeColor,
+                      padding:"3px 9px", borderRadius:5 }}>{typeLabel}</span>
+                    <span style={{ fontFamily:"Inter,sans-serif", fontSize:11, color:C.fog }}>
+                      {agentLabel}
+                    </span>
+                    <span style={{ fontFamily:"Inter,sans-serif", fontSize:11, color:C.fog, opacity:0.7 }}>
+                      Reviewed {whenLabel}
+                    </span>
+                  </div>
+                  <div
+                    onClick={() => setViewing({ id: item.id, title: item.title, readOnly: true })}
+                    title="Click to read"
+                    style={{ fontFamily:"Inter,sans-serif", fontWeight:600, fontSize:15,
+                      color:C.ocean, lineHeight:1.4, cursor:"pointer",
+                      textDecoration:"underline", textDecorationColor:C.mist, textUnderlineOffset:3 }}>
+                    {item.title}
+                  </div>
+                  {item.notes && (
+                    <div style={{ fontFamily:"Inter,sans-serif", fontSize:11.5, color:C.fog,
+                      marginTop:6, fontStyle:"italic", borderLeft:`2px solid ${C.mist}`,
+                      paddingLeft:10 }}>
+                      {item.notes}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => reopen(item.id)}
+                  disabled={!!reopening[item.id]}
+                  title="Move back to pending queue"
+                  style={{
+                    flexShrink:0, padding:"6px 14px", background:"transparent",
+                    border:`1px solid ${C.ocean}55`, borderRadius:6,
+                    color:C.ocean, cursor: reopening[item.id] ? "not-allowed" : "pointer",
+                    fontFamily:"Inter,sans-serif", fontSize:11, fontWeight:600, whiteSpace:"nowrap",
+                  }}>
+                  {reopening[item.id] ? "Moving..." : "Reopen"}
+                </button>
+              </div>
+            </div>
+          );
+        });
+      })()}
+
+            {/* Refresh */}
       <div style={{ textAlign:"right", marginTop:16 }}>
-        <button onClick={tab === "queue" ? load : loadHistory} style={{
+        <button onClick={tab==="pending" ? load : tab==="approved" ? loadApproved : loadHistory} style={{
           padding:"5px 12px", background:"transparent",
           border:`1px solid ${C.mist}`, borderRadius:6,
           fontFamily:"Inter,sans-serif", fontSize:11, color:C.fog, cursor:"pointer",
         }}>Refresh</button>
       </div>
+
+      {viewingApproved && (
+        <FileViewer folder={viewingApproved.folder} filename={viewingApproved.filename}
+          onClose={() => setViewingApproved(null)} />
+      )}
 
       {viewing && (
         <ReviewViewer itemId={viewing.id} title={viewing.title} onClose={() => setViewing(null)}

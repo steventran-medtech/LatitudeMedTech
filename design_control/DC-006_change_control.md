@@ -12,14 +12,14 @@ Every CO gets a unique ID at kickoff. Assign the next available CO-NNN here befo
 |---|---|---|---|---|---|---|
 | CO-001 | 2026-06-05 | C2 | — | chore/add-change-order-skill | — | MERGED |
 | CO-002 | 2026-06-07 | C3 | 2 | feat/co-002-change-order-overlap-models-co-ids | — | MERGED |
-| CO-003 | 2026-06-07 | C2 | 3 | feat/co-003-un-003-023-rag-reports-historical | DI-003-C, DI-003-D, DI-023-B, DI-023-C | OPEN |
+| CO-003 | 2026-06-07 | C2 | 3 | feat/co-003-un-003-023-rag-reports-historical | DI-003-C, DI-003-D, DI-023-B, DI-023-C | MERGED (PR #89) |
 
 | CO-004 | 2026-06-07 | C2 | 2 | feat/co-004-un-031-tab-singleton | DI-031-A, DI-031-B | OPEN |
 | CO-005 | 2026-06-07 | C3 | 3 | chore/co-005-un-002-document-queue | DI-002-E (mod), DI-002-F, DI-002-G | OPEN |
 | CO-006 | 2026-06-07 | C2 | 2 | feat/co-006-consulting-learning-reports | DI-032-A, DI-032-B, DI-023-D | OPEN |
 
 | CO-007 | 2026-06-07 | C3 | 1 | chore/co-007-intro-exit-variations | — | MERGED |
-| CO-008 | 2026-06-07 | C3 | 3 | feat/co-008-un-019-startup-under-10s | DI-019-K (new) | OPEN |
+| CO-008 | 2026-06-07 | C3 | 3 | feat/co-008-un-019-startup-under-10s | DI-019-K (new) | MERGED (1a7525b, PR #91) |
 
 **Status values:** OPEN · MERGED · ABANDONED  
 **Next available ID:** CO-009
