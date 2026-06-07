@@ -1,5 +1,5 @@
 # DC-004 — Requirements Traceability Matrix (RTM)
-**Document:** DC-004 · Version 1.9 · 2026-06-06  
+**Document:** DC-004 · Version 2.1 · 2026-06-06  
 **Approved by:** Steven Tran
 
 This is the single source of truth for end-to-end coverage. Every user need
@@ -85,8 +85,11 @@ column are open findings requiring immediate remediation.
 | UN-018 | Client lifecycle | DI-018-A | Client creation returns ID; db errors return 500 JSON | `server.py` create_client | `test_DI_018_A` | VERIFIED |
 | UN-018 | | DI-018-B | Intake form required-field validation (name, email, tier) | `ClientsView.jsx` IntakeForm | `test_DI_018_B` | VERIFIED |
 | UN-019 | Startup experience | DI-019-A | Progress bar absolutely positioned full-width at bottom | `start_splash.hta` `.bar-wrap` CSS | `test_DI_019_A` | VERIFIED |
-| UN-019 | | DI-019-B | No numeric percentage text during loading | `start_splash.hta` — no `#pct` element or `pctEl.innerText` | `test_DI_019_B` | VERIFIED |
-| UN-019 | | DI-019-C | Bar advances through real loading stages; reaches 100% only on `.athena_ready`; splash closes only after bar visually completes | `start_splash.hta` `PollChromeReady` + `readyToClose` + `stepVal >= 100` gate | `test_DI_019_C` | VERIFIED |
+| UN-019 | | DI-019-B | Float-right percentage label per Spectrum design | `start_splash.hta` `id="pct"` + `pctEl.innerText` + `float:right` CSS | `test_DI_019_B` | VERIFIED |
+| UN-019 | | DI-019-C | Bar advances through real loading stages; reaches 100% only on `.athena_ready`; splash closes only after `stepVal >= 99.5` | `start_splash.hta` `PollChromeReady` + `readyToClose` + `stepVal >= 99.5` gate | `test_DI_019_C` | VERIFIED |
+| UN-019 | | DI-019-F | Smooth loading — asymptotic easing + minimum per-frame floor in Tick | `start_splash.hta` Tick asymptotic factor + `If inc <` floor | `test_DI_019_F` | VERIFIED |
+| UN-019 | | DI-019-G | Splash→Chrome gap < 3 seconds | `start_athena.ps1` `Start-Sleep` ≤ 2500 ms | `test_DI_019_G` | VERIFIED |
+| UN-019 | | DI-019-H | Bar never stalls > 1 s; cap ≤ 98 + mathematical bound `(99.5−cap)/floor×16 ms < 1000 ms` | `start_splash.hta` floors; cap ≤ 98; `Int()` display; computed bound | `test_DI_019_H` | VERIFIED |
 | UN-020 | Document review & approval | DI-020-A | All reviewable agents call submit_for_review() | `agents/` source grep for `submit_for_review` | `test_DI_020_A` | VERIFIED |
 | UN-020 | | DI-020-B | Review queue GET fetch sends authHdr() | `ReviewView.jsx` `load()` contains `authHdr()` | `test_DI_020_B` | VERIFIED |
 | UN-020 | | DI-020-C | Review history GET fetch sends authHdr() | `ReviewView.jsx` `loadHistory()` contains `authHdr()` | `test_DI_020_C` | VERIFIED |
@@ -100,13 +103,13 @@ column are open findings requiring immediate remediation.
 
 ---
 
-## Coverage Summary (v1.9)
+## Coverage Summary (v2.0)
 
 | Metric | Count |
 |---|---|
 | Total user needs | 27 |
-| Total design inputs | 75 |
-| Design inputs with VERIFIED tests | 68 |
+| Total design inputs | 78 |
+| Design inputs with VERIFIED tests | 71 |
 | Design inputs with PARTIAL coverage | 7 |
 | Design inputs with OPEN gap | 0 |
 | Design inputs with WAIVED status | 0 |

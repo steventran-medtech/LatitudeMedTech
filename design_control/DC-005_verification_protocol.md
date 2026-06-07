@@ -1,5 +1,5 @@
 # DC-005 — Verification Protocol
-**Document:** DC-005 · Version 1.0 · 2026-06-05  
+**Document:** DC-005 · Version 1.2 · 2026-06-06  
 **Approved by:** Steven Tran
 
 ---
@@ -267,6 +267,39 @@ Check: `sessions.jsonl` appears in `voice_bridge.py` (the log write call).
 
 **test_DI_017_B** — Athena sessions log path referenced  
 Check: `athena_sessions.jsonl` appears in `stop_athena.ps1`.
+
+---
+
+### DI-019 — Startup Splash Screen
+
+**test_DI_019_A** — Bar positioned at bottom edge  
+Check: `.bar-wrap` in `start_splash.hta` has `position:absolute`, `bottom`, and `left`/`right` spanning full width.  
+Fail action: Restore absolute positioning on `.bar-wrap` in `start_splash.hta`.
+
+**test_DI_019_B** — Spectrum percentage label  
+Check: `start_splash.hta` contains an element with `id="pct"`, a `pctEl.innerText` assignment in VBScript, and `float:right` in `.pct-text` CSS.  
+Fail action: Add the `#pct` element, Tick VBScript assignment, and `float:right` CSS per Adobe Spectrum progress bar guidelines.
+
+**test_DI_019_C** — Milestone-gated close  
+Check: `start_splash.hta` has a `PollChromeReady` routine that sets `targetVal = 100` on `.athena_ready`; `readyToClose` flag gates `window.close()` until `stepVal >= 99.5`.  
+Fail action: Restore `PollChromeReady`, `readyToClose = True`, and the `stepVal >= 99.5` close-gate in `start_splash.hta`.
+
+**test_DI_019_F** — Smooth asymptotic easing  
+Check: `start_splash.hta` Tick sub contains an asymptotic easing expression `(targetVal - stepVal) * 0.N` and a minimum floor `If inc < N Then inc = N`.  
+Fail action: Restore the asymptotic factor and minimum floor in the Tick Sub so the bar always advances visibly. Removing either causes the bar to stall or jump.
+
+**test_DI_019_G** — Splash-to-Chrome gap < 3 s  
+Check: `start_athena.ps1` `Start-Sleep -Milliseconds` value is ≤ 2500.  
+Fail action: Reduce `Start-Sleep -Milliseconds` in `start_athena.ps1` to ≤ 2500. Values > 2500 produce a blank-screen gap exceeding the 3-second product requirement (accounting for ~500 ms of splash close animation).
+
+**test_DI_019_H** — No stall > 1 s; mathematical bound + premature 100% prevention  
+Check five conditions in `start_splash.hta`:  
+1. Tick sub has `If inc < N Then inc = N` floor — parse `min_floor` value.  
+2. PollChromeReady has `If adv < N Then adv = N` floor.  
+3. PollChromeReady cap `If targetVal > CAP` where CAP ≤ 98.  
+4. Tick display uses `Int(stepVal)` not `CInt(stepVal)`.  
+5. Mathematical bound: `(99.5 − cap) / min_floor × 16 ms < 1000 ms` — proves Tick can traverse from the cap to the 99.5 close-trigger in under 1 second at worst-case minimum frame rate.  
+Fail action: Missing floors → stalling. Cap > 98 → premature "100%" for minutes during model loading. Mathematical bound failure → bar provably cannot close within 1 s even with correct guards. Restore all five conditions in `start_splash.hta`.
 
 ---
 

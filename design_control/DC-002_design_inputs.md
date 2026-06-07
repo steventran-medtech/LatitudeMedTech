@@ -1,5 +1,5 @@
 # DC-002 — Design Inputs
-**Document:** DC-002 · Version 1.8 · 2026-06-06  
+**Document:** DC-002 · Version 2.2 · 2026-06-06  
 **Approved by:** Steven Tran
 
 Design inputs are specific, verifiable requirements derived from the user
@@ -213,8 +213,12 @@ Each entry:
 | ID | Source | Requirement Statement | Verification | Priority | Status |
 |---|---|---|---|---|---|
 | DI-019-A | UN-019 | Splash screen progress bar shall be absolutely positioned at the bottom edge of the window spanning its full width, with no side padding | `.bar-wrap` in `start_splash.hta` has `position:absolute; bottom:0; left:0; right:0` | P2 | VERIFIED |
-| DI-019-B | UN-019 | Splash screen shall not display numeric percentage text during startup loading | No `id="pct"` element and no `pctEl.innerText` assignment in `start_splash.hta` | P2 | VERIFIED |
-| DI-019-C | UN-019 | The splash screen progress bar shall advance through discrete stages tied to actual application loading state — the bar target shall not reach 100% until the `.athena_ready` flag file is detected, and the splash shall close automatically only after the bar has visually reached 100% | `start_splash.hta` contains a `PollChromeReady` (or equivalent) routine that sets `targetVal = 100` only after detecting `.athena_ready`; a `readyToClose` flag triggers `window.close()` only after `stepVal >= 100` | P0 | VERIFIED |
+| DI-019-B | UN-019 | Splash screen shall display a percentage label floated right above the progress bar track, styled per Adobe Spectrum progress bar guidelines | `id="pct"` element present in `start_splash.hta` HTML; `pctEl.innerText` assigned in VBScript Tick sub; `.pct-text` CSS includes `float:right` | P2 | VERIFIED |
+| DI-019-C | UN-019 | The splash screen progress bar shall advance through discrete stages tied to actual application loading state — the bar target shall not reach 100% until the `.athena_ready` flag file is detected, and the splash shall close automatically only after the bar has visually reached 100% | `start_splash.hta` contains a `PollChromeReady` (or equivalent) routine that sets `targetVal = 100` only after detecting `.athena_ready`; a `readyToClose` flag triggers `window.close()` only after `stepVal >= 99.5` (99.9 displays as "100%" via `CInt` rounding — exact `= 100` would never fire) | P0 | VERIFIED |
+| DI-019-F | UN-019 | Splash progress bar shall load smoothly per standard UI/UX best practices — the Tick animation loop shall use asymptotic easing with a guaranteed minimum per-frame increment so the bar is always visibly moving while behind its target | `start_splash.hta` Tick sub contains asymptotic expression `(targetVal - stepVal) * 0.N` and minimum floor `If inc < N Then inc = N` | P2 | VERIFIED |
+| DI-019-G | UN-019 | The interval between splash screen close and Chrome opening shall be less than 3 seconds | `start_athena.ps1` `Start-Sleep -Milliseconds` value is ≤ 2500 | P2 | VERIFIED |
+| DI-019-H | UN-019 | The progress bar shall not remain at any single whole-number percentage for more than 1 second due to animation algorithm constraints — enforced by: (a) a minimum per-frame increment floor in the Tick loop, (b) a minimum per-poll advancement floor in PollChromeReady, (c) a PollChromeReady cap ≤ 98 so that `Int()` display can never show "100%" while loading is incomplete, and (d) a mathematical proof that the Tick easing can traverse from the cap to the 99.5 close-trigger in < 1000 ms: `(99.5 − cap) ÷ min_floor × 16 ms < 1000 ms` | `start_splash.hta` Tick floor; PollChromeReady floor + cap ≤ 98; `Int(stepVal)` display; computed `(99.5 − cap) / min_floor * 16 < 1000` | P2 | VERIFIED |
+| DI-019-I | UN-019 | The splash screen "Athena" title (`.name`) font-size shall be 101px — `start_splash.hta` fixed value and `electron/main.js` clamp maximum shall both equal 101px | `start_splash.hta` `.name` CSS contains `font-size:101px`; `electron/main.js` `.name` CSS clamp is `clamp(61px,7vw,101px)` | P2 | OPEN |
 
 ---
 

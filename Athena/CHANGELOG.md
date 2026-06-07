@@ -44,6 +44,10 @@ record of what changed between each version. Keep them in lock-step — see
 
 _Changes landed on `main` but not yet stamped into a numbered release go here._
 
+### Changed
+- **DI-019-G (C3):** Splash-to-Chrome gap tightened from < 5 s to < 3 s — `start_athena.ps1` `Start-Sleep` reduced 3500 ms → 2500 ms; `test_DI_019_G` threshold updated to ≤ 2500 ms.
+- **DI-019-H (C3):** Anti-stall bound now mathematically proven — `test_DI_019_H` computes `(99.5 − cap) / min_floor × 16 ms < 1000 ms` to verify bar can close from cap to 99.5% in < 1 s; DC-002 v2.1 / DC-004 v2.1 / DC-005 v1.2 updated.
+
 ### Added
 - **Voice PTT — Press to Listen (UN-020-V / DI-020-V):** Manual push-to-talk button added to
   the Voice HUD. When Athena is in Listening state a "Press to Listen" button appears below the

@@ -149,8 +149,8 @@ $session.startup_secs = [math]::Round(((Get-Date) - $sessionStart).TotalSeconds,
 $session | ConvertTo-Json -Compress | Out-File $SESSION_STATE -Encoding utf8
 New-Item -Path $flagFile -ItemType File -Force | Out-Null
 
-# Splash runs at 5%/sec; from ~95% to 100% + 300ms close = ~1.3s.
-# 2.5s gives comfortable headroom on slower machines.
+# Splash detects the flag, animates from cap (~97%) to 100%, and closes in ~1s.
+# 2.5s sleep gives the splash ~1.5s of margin before Chrome opens (DI-019-G: < 3s gap).
 Start-Sleep -Milliseconds 2500
 
 # ── Open Chrome ────────────────────────────────────────────────────────────
