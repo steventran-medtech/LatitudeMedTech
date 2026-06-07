@@ -1,5 +1,5 @@
 # DC-001 — Intended Use & User Needs
-**Document:** DC-001 · Version 1.2 · 2026-06-05  
+**Document:** DC-001 · Version 1.3 · 2026-06-06  
 **Approved by:** Steven Tran
 
 ---
@@ -97,6 +97,7 @@ These are the enumerated, controlled user needs for Athena v0.5 (Alpha).
 | UN-007 | Draft MedTech Meridian articles (Substack/LinkedIn) that meet McKinsey/BCG editorial quality, with cited claims | P0 |
 | UN-008 | Track and manage my marketing outreach pipeline across Southern California targets at zero cash budget | P1 |
 | UN-009 | Generate branded PPTX slide decks for consulting proposals on demand | P1 |
+| UN-030 | Receive all Athena agent deliverables — slide decks, briefings, regulatory assessments, and SOW documents — structured following the McKinsey pyramid principle (conclusion-first, SCQA narrative, exec summary leading every multi-section document) and clearly attributed to Latitude MedTech LLC with an authoritative San Diego MedTech voice, so that every output is client-presentation-ready without reformatting | P1 |
 
 ### Regulatory Intelligence
 

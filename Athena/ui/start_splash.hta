@@ -27,14 +27,6 @@
     0%   { background-position:-300% center; }
     100% { background-position: 300% center; }
   }
-  @-ms-keyframes dotFlash {
-    0%, 80%, 100% { opacity:0.15; }
-    40%           { opacity:1.0; }
-  }
-  @keyframes dotFlash {
-    0%, 80%, 100% { opacity:0.15; }
-    40%           { opacity:1.0; }
-  }
   html { width:100%; height:100%; }
   body {
     width:100%; height:100%;
@@ -142,17 +134,11 @@
     color:rgba(220,210,195,0.65);
     letter-spacing:0.04em;
   }
-.dot {
-    display:inline-block;
+  #dots {
     font-size:17px;
     color:rgba(196,146,42,0.85);
     letter-spacing:0.01em;
-    -ms-animation: dotFlash 1.4s ease-in-out infinite both;
-    animation:     dotFlash 1.4s ease-in-out infinite both;
   }
-  .dot1 { -ms-animation-delay:0.0s; animation-delay:0.0s; }
-  .dot2 { -ms-animation-delay:0.2s; animation-delay:0.2s; }
-  .dot3 { -ms-animation-delay:0.4s; animation-delay:0.4s; }
 </style>
 </head>
 <body>
@@ -166,7 +152,7 @@
     <div class="tagline">Advancing Human Intelligence</div>
     <div class="status-row">
       <span class="pct-text" id="pct">0%</span>
-      <span class="status-text" id="status">Starting up</span><span id="dots"><span class="dot dot1">.</span><span class="dot dot2">.</span><span class="dot dot3">.</span></span>
+      <span class="status-text" id="status">Starting up</span><span id="dots">.</span>
     </div>
   </div>
   <div class="bar-wrap"><div class="bar-fill" id="bar"></div></div>
@@ -176,6 +162,7 @@ Dim bar, statusEl, dotsEl, pctEl, stepVal, targetVal, timer_id, poll_id, abort_i
 Dim BACKEND, FRONTEND, MAX_WAIT
 Dim dragging, dragLastX, dragLastY
 Dim msgIdx, currentPhase, msgTimer_id, bkMsgs, feMsgs, rdMsgs
+Dim dotState, dots_id
 BACKEND  = "http://127.0.0.1:8000/"
 FRONTEND = "http://localhost:3000"
 MAX_WAIT = 60
@@ -199,6 +186,8 @@ Sub Window_OnLoad
   timer_id = window.setInterval("Tick",        16)
   poll_id  = window.setInterval("PollBackend", 800)
   abort_id = window.setInterval("PollAbort",   300)
+  dotState = 0
+  dots_id  = window.setInterval("TickDots",   400)
 
   bkMsgs = Split("Initializing,Loading FastAPI server,Connecting to database,Registering API routes,Loading Memory agent,Initializing coaching orchestrator,Loading Kokoro voice engine,Warming up TTS pipeline", ",")
   feMsgs = Split("Starting Vite dev server,Resolving module dependencies,Compiling React components,Bundling frontend assets", ",")
@@ -282,6 +271,15 @@ End Sub
 Sub SetStatus(msg, newTarget)
   statusEl.innerText = msg
   If newTarget > targetVal Then targetVal = newTarget
+End Sub
+
+Sub TickDots
+  dotState = (dotState + 1) Mod 3
+  Select Case dotState
+    Case 0: dotsEl.innerText = "."
+    Case 1: dotsEl.innerText = ".."
+    Case 2: dotsEl.innerText = "..."
+  End Select
 End Sub
 
 Sub RotateMsg
@@ -386,6 +384,7 @@ Sub PollChromeReady
     statusEl.innerText = "Welcome back. Athena is ready."
     targetVal = 100
     On Error Resume Next
+    window.clearInterval dots_id
     dotsEl.style.display = "none"
     On Error Resume Next
     window.clearInterval poll_id
@@ -410,6 +409,7 @@ Sub PollAbort
     window.clearInterval abort_id
     window.clearInterval poll_id
     window.clearInterval timer_id
+    window.clearInterval dots_id
     window.close()
   End If
 End Sub

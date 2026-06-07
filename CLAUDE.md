@@ -1,5 +1,5 @@
 # Athena — Standing Orders
-**Version:** 2026-06-06 v13 · Aligned with `ATHENA_ARCHITECTURE_v2.md` (Constitution)
+**Version:** 2026-06-06 v14 · Aligned with `ATHENA_ARCHITECTURE_v2.md` (Constitution)
 **Authority:** Steven Tran, CEO/Managing Partner, Latitude MedTech
 **Purpose:** What Claude reads and operates by before every Athena session. Update after every session. Target: ≤230 lines, every line current.
 
@@ -216,6 +216,17 @@ Update this file's version line (date + vN) in the same final commit.
 **OneDrive defense:** Commit immediately after every edit. For multi-file work use an isolated worktree at `C:\Dev\lmt-wt` (outside OneDrive sync tree). After any edit, re-read the file to confirm it persisted.
 
 **Application versioning:** Bump `Athena/VERSION.json` + add entry to `Athena/CHANGELOG.md` whenever a meaningful feature/fix ships. Run `ops/release.ps1 -Version x.y.z` to stamp and tag. Backend must restart to reflect version change in UI.
+
+---
+
+## Recent Changes
+
+| Date | Change | DC Reference |
+|---|---|---|
+| 2026-06-06 | UN-028: VAD aggressiveness raised to 2; VAD-only silence detection; greeting routed through `_notification_queue` to eliminate startup echo | DI-028-A/B/C/D |
+| 2026-06-06 | UN-029: `_device_monitor_loop` polls system default mic every 3 s; `_device_changed` Event triggers stream reopen on headphone/speaker switch | DI-029-A/B/C |
+| 2026-06-06 | DI-004-E (C3): `SILENCE_DURATION` tuned to 0.5 s; requirement range updated to [0.4, 0.65] s | DI-004-E |
+| 2026-06-06 | Version 0.5.3 — voice/noise discrimination + audio device detection |  |
 
 ---
 

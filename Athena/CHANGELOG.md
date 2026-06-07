@@ -44,6 +44,10 @@ record of what changed between each version. Keep them in lock-step — see
 
 _Changes landed on `main` but not yet stamped into a numbered release go here._
 
+### Added
+- **DI-019-J (C2):** Splash screen `#dots` element now cycles sequentially (`.` → `..` → `...`) via VBScript `TickDots` timer at 400 ms/state — matching Claude Code's in-progress indicator pattern. Replaces CSS `dotFlash` wave animation. `test_DI_019_J` added to `dc_verify.py`.
+- **UN-030 (C2): McKinsey/Latitude Brand Formatting Standard** — Formal DC trace for cross-cutting deliverable formatting quality: DI-030-A (exec_summary in all 6 deck types, including pitch which was missing it), DI-030-B (McKinsey/Big-4 quality directive verified across all 6 deliverable agents), DI-030-C (Latitude MedTech LLC brand identity via agent_base.py). Three new `test_DI_030_A/B/C` verification tests. DC-001 v1.3 / DC-002 v2.4 / DC-003 v1.3 / DC-004 v2.4 / DC-005 v1.5 updated.
+
 ### Changed
 - **DI-019-G (C3):** Splash-to-Chrome gap tightened from < 5 s to < 3 s — `start_athena.ps1` `Start-Sleep` reduced 3500 ms → 2500 ms; `test_DI_019_G` threshold updated to ≤ 2500 ms.
 - **DI-019-H (C3):** Anti-stall bound now mathematically proven — `test_DI_019_H` computes `(99.5 − cap) / min_floor × 16 ms < 1000 ms` to verify bar can close from cap to 99.5% in < 1 s; DC-002 v2.1 / DC-004 v2.1 / DC-005 v1.2 updated.
@@ -90,10 +94,27 @@ _Changes landed on `main` but not yet stamped into a numbered release go here._
   bottom edge of the splash window (no side padding). Numeric percentage counter removed. UN-019
   and DI-019-A/B added to DC-001/002/003/004; `test_DI_019_A` and `test_DI_019_B` added to
   `dc_verify.py`.
-- **Voice silence duration (C3 — DI-004-E):** `SILENCE_DURATION` reduced from 1.5 s to 0.8 s
-  in both `settings.json` and `voice_bridge.py` default. Reduces Athena's post-speech pause
-  by ~700 ms. Value is at the DC-006 floor (0.8 s) and remains within the safe range [0.8, 2.0].
-  DI-004-E requirement statement and `test_DI_004_E` updated accordingly.
+- **Voice silence duration (C3 — DI-004-E):** `SILENCE_DURATION` further tuned to 0.5 s in
+  `settings.json` (code default 0.65 s). Requirement range updated to [0.4, 0.65] s. Reduces
+  Athena's post-speech pause; `test_DI_004_E` checks the new range.
+
+### Fixed
+- **UN-028-A — Startup echo:** Athena's greeting was played via direct TTS while the mic was
+  open, causing the intro phrase to be transcribed as a user command. Fix: `_speak_phrase_greeting`
+  in `server.py` now routes the greeting through `_notification_queue`; the voice loop drains the
+  queue before ever opening the mic, then handles cooldown normally. A 0.5 s sleep on voice loop
+  startup ensures the greeting arrives before the first drain (DI-028-C, DI-028-D).
+- **UN-028-B — 5-second silence wait:** `_vad_query` aggressiveness was 1, classifying ambient
+  noise as speech and preventing silence from accumulating. Fix: `_vad_query` aggressiveness
+  raised to 2; post-speech silence counter now uses VAD alone (RMS AND-gate removed) so the
+  counter increments immediately after speech stops (DI-028-A, DI-028-B).
+
+### Added
+- **UN-029 — Audio device detection:** `_device_monitor_loop` polls the system default input
+  device every 3 s. When the device changes (e.g., headphones plugged in or removed),
+  `_apply_device` updates sampling parameters, `_device_changed` Event signals `_listen_for_wake`
+  to break and reopen the stream with the new device, and a `device_changed` WebSocket event is
+  emitted to the UI (DI-029-A, DI-029-B, DI-029-C).
 
 ---
 
