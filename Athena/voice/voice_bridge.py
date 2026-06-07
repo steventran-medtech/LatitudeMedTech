@@ -46,9 +46,9 @@ try:
     import webrtcvad as _webrtcvad
     # Two VAD instances:
     #   _vad_wake  — aggressiveness 2: stricter, filters keyboard/ambient during wake-word phase
-    #   _vad_query — aggressiveness 1: more permissive, avoids cutting off soft syllables mid-command
+    #   _vad_query — aggressiveness 2: matches wake; correctly rejects ambient noise as non-speech
     _vad_wake  = _webrtcvad.Vad(2)
-    _vad_query = _webrtcvad.Vad(1)
+    _vad_query = _webrtcvad.Vad(2)   # UN-028: raised from 1; aggressiveness 1 let ambient noise stall silence detection
     _vad       = _vad_wake   # default (wake phase)
     _VAD_FRAME = 480          # 30 ms @ 16 kHz — exact frame size required by webrtcvad
 except ImportError:
@@ -177,6 +177,34 @@ _UP   = TARGET_RATE  // _g
 _DOWN = DEVICE_RATE  // _g
 CHUNK_NATIVE = int(CHUNK_SAMPLES_16K * DEVICE_RATE / TARGET_RATE)
 
+# ── Audio device hot-swap (UN-029) ────────────────────────────────────────────
+
+def _apply_device(idx, rate, name, ch):
+    """Update global audio device parameters when the system default input changes."""
+    global INPUT_DEVICE, DEVICE_RATE, DEVICE_NAME, DEVICE_CH, _g, _UP, _DOWN, CHUNK_NATIVE
+    INPUT_DEVICE = idx; DEVICE_RATE = rate; DEVICE_NAME = name; DEVICE_CH = ch
+    _g = gcd(TARGET_RATE, DEVICE_RATE)
+    _UP = TARGET_RATE // _g; _DOWN = DEVICE_RATE // _g
+    CHUNK_NATIVE = int(CHUNK_SAMPLES_16K * DEVICE_RATE / TARGET_RATE)
+
+def _device_monitor_loop():
+    """Poll system default mic every 3 s; signal _listen_for_wake to reopen on change."""
+    while True:
+        time.sleep(3.0)
+        try:
+            new_idx, new_rate, new_name, new_ch = _select_input_device()
+            if new_name != DEVICE_NAME:
+                _apply_device(new_idx, new_rate, new_name, new_ch)
+                _device_changed.set()
+                _emit("device_changed", device=new_name, device_rate=new_rate)
+                print(f"[voice] Input device changed → {new_name} @ {new_rate} Hz", flush=True)
+        except Exception:
+            pass
+
+def _start_device_monitor():
+    t = threading.Thread(target=_device_monitor_loop, daemon=True, name="athena-device-monitor")
+    t.start()
+
 # ── Conversation history persistence ─────────────────────────────────────────
 _HISTORY_FILE = ATHENA / "voice" / ".athena_history.json"
 _HISTORY_MAX  = 40   # keep last 40 messages (~20 turns)
@@ -217,9 +245,10 @@ class VS:
     AWAKE = "awake"; THINKING = "thinking"; SPEAKING = "speaking"
     STOPPED = "stopped"
 
-_state     = VS.IDLE
-_active    = False
-_ptt_event = threading.Event()   # set by POST /api/voice/listen to bypass wake-word
+_state          = VS.IDLE
+_active         = False
+_ptt_event      = threading.Event()   # set by POST /api/voice/listen to bypass wake-word
+_device_changed = threading.Event()   # set by device monitor when input device changes (UN-029)
 
 def _consume_ptt() -> bool:
     """Check and consume the PTT event in one place.  Returns True if PTT was pending.
@@ -913,6 +942,9 @@ def _listen_for_wake(oww_model):
                                 channels=DEVICE_CH, dtype="int16",
                                 blocksize=CHUNK_NATIVE) as stream:
                 while _active:
+                    if _device_changed.is_set():        # UN-029: reopen stream with new device
+                        _device_changed.clear()
+                        break
                     chunk, _ = stream.read(CHUNK_NATIVE)
                     mono = _to_mono_float(chunk)
                     rs   = _resample(mono)
@@ -981,22 +1013,20 @@ def _record_query():
             _emit("level", level=round(min(1.0, rms * 8), 3))
             frames.append(rs)
 
-            # Use the permissive (aggressiveness=1) VAD so soft syllables are
-            # not misclassified as silence mid-sentence.
+            # aggressiveness=2 VAD correctly rejects ambient noise; no RMS gate needed.
             is_speech = _chunk_is_speech(rs, _vad_query)
 
-            if rms >= QUERY_SILENCE_THRESHOLD and is_speech:
+            if is_speech:
                 speech_seen        += 1
                 silence             = 0
                 pre_speech_silence  = 0   # reset both on confirmed speech
             elif speech_seen >= MIN_SPEECH_CHUNKS:
-                # Post-speech: only count silence once BOTH indicators agree,
-                # so one ambiguous frame doesn't prematurely end the recording.
-                if rms < QUERY_SILENCE_THRESHOLD and not is_speech:
+                # Post-speech: VAD alone determines silence — RMS AND-gate removed (UN-028).
+                if not is_speech:
                     silence += 1
             else:
                 # Pre-speech: count toward false-positive bail-out only.
-                if rms < QUERY_SILENCE_THRESHOLD and not is_speech:
+                if not is_speech:
                     pre_speech_silence += 1
                     if pre_speech_silence >= PRE_SPEECH_SIL_CHUNKS:
                         frames = []   # discard — no speech detected, likely false positive
@@ -1458,6 +1488,7 @@ def _voice_loop():
     oww     = _oww_model
     whisper = _whisper_model
     history = _load_history()
+    _start_device_monitor()   # UN-029: detect headphone/speaker switches
 
     if oww is None:
         _state = VS.STOPPED
@@ -1468,6 +1499,9 @@ def _voice_loop():
 
     _state = VS.LISTENING
     _emit("listening", message=f"Say '{WAKE_PHRASE.title()}' to activate")
+
+    # Brief pause so any startup greeting queued by server arrives before first drain (UN-028)
+    time.sleep(0.5)
 
     while _active:
         # Deliver queued agent-completion notifications before the next listen cycle.

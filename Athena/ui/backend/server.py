@@ -2806,20 +2806,22 @@ def _speak_phrase(text: str):
 
 
 def _speak_phrase_greeting(text: str):
-    """Greeting TTS: waits for voice bridge model load then speaks via Kokoro.
+    """Queue startup greeting into the voice loop's notification queue (UN-028).
 
-    Blocks on _models_ready (set when Whisper + OWW + Kokoro are all hot) so
-    the greeting plays in the same voice as all other Athena responses.
-    Falls back to Windows SAPI if models never come up within 150 s.
-    Runs in a background executor so the greet endpoint returns immediately.
+    Routes through _voice_queue so the greeting plays AFTER the mic opens and
+    with proper post-response cooldown — prevents the intro phrase being recorded
+    as a user command.  Falls back to direct TTS only if voice bridge unavailable.
     """
-    import time
+    if VOICE_AVAILABLE and _voice_queue is not None:
+        _voice_queue.append(text)
+        print("[voice] greeting: queued for voice loop", flush=True)
+        return
     if VOICE_AVAILABLE:
         try:
             from voice_bridge import _models_ready, _speak_sentence
             _models_ready.wait(timeout=150)
             _speak_sentence(text)
-            print("[voice] greeting: played via Kokoro", flush=True)
+            print("[voice] greeting: played via Kokoro (direct fallback)", flush=True)
             return
         except Exception as exc:
             print(f"[voice] _speak_phrase_greeting bridge failed: {exc!r}", flush=True)
