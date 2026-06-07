@@ -25,6 +25,9 @@ record of what changed between each version. Keep them in lock-step — see
 
 ## [Unreleased]
 
+### Changed
+- **UN-019 / CO-008** Async startup — removed `$modelTimeout` blocking poll from `start_athena.ps1`; Chrome now opens as soon as backend + frontend are HTTP-ready; voice models continue preloading in background thread; warm-start time drops from up to 180 s to under 10 s (DI-019-K)
+
 ### Added
 - **UN-031 / CO-004** Browser tab singleton guard (`tabGuard.js`): prevents two Athena tabs from running simultaneously in the same Chrome session — second tab shows a blocking overlay and never mounts React (DI-031-A, DI-031-B)
 - **UN-032 / CO-006** Consulting Agent learning visibility: `learn()` now generates a `consulting_learning_<ts>.md` report after every run listing all newly ingested items (source, URL, category, chunk count) and submits it to the Human Review Queue for approval/rejection/editing (DI-032-A, DI-032-B)

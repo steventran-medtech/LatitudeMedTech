@@ -97,6 +97,7 @@ column are open findings requiring immediate remediation.
 | UN-019 | | DI-019-H | Bar never stalls > 1 s; cap ≤ 98 + mathematical bound `(99.5−cap)/floor×16 ms < 1000 ms` | `start_splash.hta` floors; cap ≤ 98; `Int()` display; computed bound | `test_DI_019_H` | VERIFIED |
 | UN-019 | | DI-019-I | Athena title `.name` font-size is 101px in both splash files | `start_splash.hta` `font-size:101px`; `electron/main.js` clamp(61px,7vw,101px) | `test_DI_019_I` | VERIFIED |
 | UN-019 | | DI-019-J | `#dots` cycles `.` / `..` / `...` via VBScript `TickDots` at ≤ 500 ms/state; hidden on done | `start_splash.hta` `TickDots` sub; `setInterval("TickDots", N)` N ≤ 500; `dotsEl.style.display = "none"` | `test_DI_019_J` | VERIFIED |
+| UN-019 | | DI-019-K | `$modelTimeout` polling loop absent from `start_athena.ps1`; voice models load async after Chrome open | `start_athena.ps1` | `test_DI_019_K` | OPEN |
 | UN-020 | Document review & approval | DI-020-A | All reviewable agents call submit_for_review() | `agents/` source grep for `submit_for_review` | `test_DI_020_A` | VERIFIED |
 | UN-020 | | DI-020-B | Review queue GET fetch sends authHdr() | `ReviewView.jsx` `load()` contains `authHdr()` | `test_DI_020_B` | VERIFIED |
 | UN-020 | | DI-020-C | Review history GET fetch sends authHdr() | `ReviewView.jsx` `loadHistory()` contains `authHdr()` | `test_DI_020_C` | VERIFIED |
@@ -129,10 +130,10 @@ column are open findings requiring immediate remediation.
 | Metric | Count |
 |---|---|
 | Total user needs | 32 |
-| Total design inputs | 98 |
+| Total design inputs | 99 |
 | Design inputs with VERIFIED tests | 80 |
 | Design inputs with PARTIAL coverage | 7 |
-| Design inputs with OPEN gap | 11 |
+| Design inputs with OPEN gap | 12 |
 | Design inputs with WAIVED status | 0 |
 
 **PARTIAL items** require manual verification currently; automated tests are
