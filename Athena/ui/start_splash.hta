@@ -95,7 +95,7 @@
     text-shadow:0 1px 8px rgba(0,0,0,0.7);
   }
   .name {
-    font-size:100px;
+    font-size:101px;
     font-weight:200;
     letter-spacing:0.04em;
     color:#EDE6D8;
@@ -113,24 +113,29 @@
   }
   .bar-wrap {
     position:absolute;
-    bottom:0; left:0;
-    width:100%; height:5px;
+    bottom:16px; left:72px; right:72px;
+    height:10px;
     background:#1a3a58;
-    overflow:hidden;
+    border-radius:9999px;
     z-index:3;
   }
   .bar-fill {
     height:100%; width:0%;
-    background: linear-gradient(90deg,
-      rgba(196,146,42,0.4),
-      rgba(232,184,75,1.0),
-      rgba(196,146,42,0.4)
-    );
-    background-size:300% auto;
-    -ms-animation: shimmer 2.4s linear infinite;
-    animation:     shimmer 2.4s linear infinite;
+    background: #E8B84B;
+    border-radius:9999px;
     -ms-transition: width 0.5s ease;
     transition:    width 0.5s ease;
+  }
+  .status-row {
+    width:100%;
+    margin-bottom:8px;
+  }
+  .pct-text {
+    float:right;
+    font-size:15px;
+    color:rgba(232,184,75,0.9);
+    letter-spacing:0.04em;
+    font-weight:600;
   }
   .status-text {
     font-size:17px;
@@ -159,14 +164,18 @@
     <div class="eyebrow">Latitude MedTech</div>
     <div class="name">Athena</div>
     <div class="tagline">Advancing Human Intelligence</div>
-    <span class="status-text" id="status">Starting up</span><span id="dots"><span class="dot dot1">.</span><span class="dot dot2">.</span><span class="dot dot3">.</span></span>
+    <div class="status-row">
+      <span class="pct-text" id="pct">0%</span>
+      <span class="status-text" id="status">Starting up</span><span id="dots"><span class="dot dot1">.</span><span class="dot dot2">.</span><span class="dot dot3">.</span></span>
+    </div>
   </div>
   <div class="bar-wrap"><div class="bar-fill" id="bar"></div></div>
 
 <script language="VBScript">
-Dim bar, statusEl, dotsEl, stepVal, targetVal, timer_id, poll_id, abort_id, waited, readyToClose
+Dim bar, statusEl, dotsEl, pctEl, stepVal, targetVal, timer_id, poll_id, abort_id, waited, readyToClose
 Dim BACKEND, FRONTEND, MAX_WAIT
 Dim dragging, dragLastX, dragLastY
+Dim msgIdx, currentPhase, msgTimer_id, bkMsgs, feMsgs, rdMsgs
 BACKEND  = "http://127.0.0.1:8000/"
 FRONTEND = "http://localhost:3000"
 MAX_WAIT = 60
@@ -183,12 +192,21 @@ Sub Window_OnLoad
   Set bar      = document.getElementById("bar")
   Set statusEl = document.getElementById("status")
   Set dotsEl   = document.getElementById("dots")
+  Set pctEl    = document.getElementById("pct")
   stepVal      = 0
   targetVal    = 0
   readyToClose = False
-  timer_id = window.setInterval("Tick",       200)
+  timer_id = window.setInterval("Tick",        16)
   poll_id  = window.setInterval("PollBackend", 800)
   abort_id = window.setInterval("PollAbort",   300)
+
+  bkMsgs = Split("Initializing,Loading FastAPI server,Connecting to database,Registering API routes,Loading Memory agent,Initializing coaching orchestrator,Loading Kokoro voice engine,Warming up TTS pipeline", ",")
+  feMsgs = Split("Starting Vite dev server,Resolving module dependencies,Compiling React components,Bundling frontend assets", ",")
+  rdMsgs = Split("Loading workspace settings,Connecting voice pipeline,Preparing Athena interface,Launching in Chrome", ",")
+  currentPhase = "backend"
+  msgIdx = 0
+  msgTimer_id = window.setInterval("RotateMsg", 2000)
+  RotateMsg
   ' Pin splash above Chrome as soon as the HTA window is ready.
   window.setTimeout "MakeTopmost", 400
 
@@ -225,11 +243,12 @@ Sub Window_OnLoad
   img.style.top    = Int((ph - newH) / 2) & "px"
   img.style.display = "block"
 
-  ' ── Force bar-wrap to full pixel width (IE quirks % can collapse) ─────────
+  ' ── Force bar-wrap pixel width for IE quirks (left/right % can collapse) ──
   Err.Clear
   Dim barWrap
   Set barWrap = document.getElementById("bar").parentNode
-  barWrap.style.width = pw & "px"
+  barWrap.style.width = (pw - 144) & "px"
+  barWrap.style.left = "72px"
 End Sub
 
 Sub CancelEvent
@@ -265,17 +284,48 @@ Sub SetStatus(msg, newTarget)
   If newTarget > targetVal Then targetVal = newTarget
 End Sub
 
+Sub RotateMsg
+  Select Case currentPhase
+    Case "backend"
+      If msgIdx <= UBound(bkMsgs) Then
+        statusEl.innerText = bkMsgs(msgIdx)
+        msgIdx = msgIdx + 1
+      End If
+    Case "frontend"
+      If msgIdx <= UBound(feMsgs) Then
+        statusEl.innerText = feMsgs(msgIdx)
+        msgIdx = msgIdx + 1
+      End If
+    Case "chrome"
+      If msgIdx <= UBound(rdMsgs) Then
+        statusEl.innerText = rdMsgs(msgIdx)
+        msgIdx = msgIdx + 1
+      End If
+  End Select
+End Sub
+
 Sub Tick
-  ' Creep stepVal toward targetVal 1% per tick (200ms) = 5%/sec — never overshoot.
   If stepVal < targetVal Then
-    stepVal = stepVal + 1
+    Dim inc
+    If stepVal >= 50 Then
+      ' Fast asymptotic tracking — closes 2.5% of remaining gap per frame
+      ' so stepVal stays close to targetVal and the bar closes instantly on done.
+      inc = (targetVal - stepVal) * 0.025
+      If inc < 0.05 Then inc = 0.05
+    Else
+      inc = 0.04
+    End If
+    stepVal = stepVal + inc
     If stepVal > targetVal Then stepVal = targetVal
     bar.style.width = stepVal & "%"
+    On Error Resume Next
+    pctEl.innerText = Int(stepVal) & "%"
   End If
-  ' Close only after the bar has visually reached 100%.
-  If readyToClose And stepVal >= 100 Then
+  ' Close once the bar is visually at 100%. Use >= 99.5 rather than 100 to
+  ' avoid CInt rounding (99.9 displays as "100%" but fails an exact >= 100 check).
+  If readyToClose And stepVal >= 99.5 Then
     window.clearInterval timer_id
-    window.setTimeout "window.close()", 300
+    window.setTimeout "window.close()", 100
   End If
 End Sub
 
@@ -295,12 +345,13 @@ Sub PollBackend
   xhr.setTimeouts 500, 500, 500, 500
   xhr.send
   If Err.Number = 0 And xhr.status = 200 Then
-    SetStatus "Backend ready - launching interface", 90
+    currentPhase = "frontend"
+    msgIdx = 0
+    If targetVal < 50 Then targetVal = 50
     window.clearInterval poll_id
     poll_id = window.setInterval("PollFrontend", 800)
   Else
-    ' Nudge the bar slowly while waiting (target 85)
-    SetStatus "Warming up the backend", 85
+    If targetVal < 15 Then targetVal = 15
   End If
   On Error Resume Next
   Err.Clear
@@ -314,26 +365,39 @@ Sub PollFrontend
   xhr.setTimeouts 500, 500, 500, 500
   xhr.send
   If Err.Number = 0 And xhr.status = 200 Then
-    SetStatus "Opening in Chrome", 95
+    currentPhase = "chrome"
+    msgIdx = 0
+    If targetVal < 80 Then targetVal = 80
     window.clearInterval poll_id
     poll_id = window.setInterval("PollChromeReady", 500)
   Else
-    SetStatus "Loading the interface", 90
+    If targetVal < 65 Then targetVal = 65
   End If
   On Error Resume Next
   Err.Clear
 End Sub
 
 Sub PollChromeReady
-  Dim fso
+  Dim fso, adv
   Set fso = CreateObject("Scripting.FileSystemObject")
   If fso.FileExists("C:\Users\huann\LatitudeMedTech\Athena\ui\.athena_ready") Then
-    SetStatus "Welcome back. Athena is ready.", 100
+    currentPhase = "done"
+    window.clearInterval msgTimer_id
+    statusEl.innerText = "Welcome back. Athena is ready."
+    targetVal = 100
     On Error Resume Next
     dotsEl.style.display = "none"
     On Error Resume Next
-    window.clearInterval poll_id   ' stop polling — Tick keeps running
-    readyToClose = True            ' Tick will close once stepVal reaches 100
+    window.clearInterval poll_id
+    readyToClose = True
+  ElseIf targetVal < 97 Then
+    ' Close 3% of remaining gap per poll (every 500ms). Organic deceleration —
+    ' never hits 100% display before .athena_ready fires (cap at 97 keeps
+    ' CInt/Int from rounding to 100 prematurely regardless of model load time).
+    adv = (100 - targetVal) * 0.03
+    If adv < 0.05 Then adv = 0.05
+    targetVal = targetVal + adv
+    If targetVal > 97 Then targetVal = 97
   End If
 End Sub
 

@@ -1328,6 +1328,39 @@ def test_DI_019_H():
              "Restore all five guards: Tick floor, PollChromeReady floor, cap<=98, Int() display, (99.5-cap)/floor*16<1000")
 
 
+def test_DI_019_I():
+    """DI-019-I: Splash .name font-size is 101px in start_splash.hta and clamp(61px,7vw,101px) in electron/main.js"""
+    di = "DI-019-I"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    hta      = ATHENA / "ui" / "start_splash.hta"
+    electron = ATHENA / "electron" / "main.js"
+
+    # ACT + ASSERT — HTA (T1: constant value check)
+    if not hta.exists():
+        _log(FAIL, di, "start_splash.hta not found", str(hta))
+        return
+    hta_ok = "font-size:101px" in _read(hta)
+
+    # ACT + ASSERT — Electron (T1: constant value check)
+    if not electron.exists():
+        _log(FAIL, di, "electron/main.js not found", str(electron))
+        return
+    electron_ok = "font-size:clamp(61px,7vw,101px)" in _read(electron)
+
+    if hta_ok and electron_ok:
+        _log(PASS, di, ".name font-size is 101px in both start_splash.hta and electron/main.js")
+    else:
+        issues = []
+        if not hta_ok:
+            issues.append("start_splash.hta .name font-size is not 101px")
+        if not electron_ok:
+            issues.append("electron/main.js .name clamp max is not 101px")
+        _log(FAIL, di, "; ".join(issues),
+             "Set font-size:101px on .name in start_splash.hta; set font-size:clamp(61px,7vw,101px) on .name in electron/main.js")
+
+
 # ── UN-020 / Document Review & Approval ──────────────────────────────────────
 
 def test_DI_020_A():
@@ -1807,7 +1840,7 @@ def main():
     _section("UN-019 Startup Experience")
     test_DI_019_A(); test_DI_019_B(); test_DI_019_C()
     test_DI_019_D(); test_DI_019_E()
-    test_DI_019_F(); test_DI_019_G(); test_DI_019_H()
+    test_DI_019_F(); test_DI_019_G(); test_DI_019_H(); test_DI_019_I()
 
     _section("UN-020 Document Review & Approval")
     test_DI_020_A(); test_DI_020_B(); test_DI_020_C(); test_DI_020_D(); test_DI_020_E()

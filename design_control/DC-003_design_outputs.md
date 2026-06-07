@@ -220,8 +220,9 @@ Athena/
 
 | Design Output | File | Symbol / Route | Implements |
 |---|---|---|---|
-| Startup splash HTA | `Athena/ui/start_splash.hta` | `.bar-wrap` CSS; `#pct` + `pctEl` + `float:right`; `PollChromeReady` + `readyToClose`; asymptotic `Tick`; `Int()` display; cap=97; `adv`/`inc` floors | DI-019-A, DI-019-B, DI-019-C, DI-019-F, DI-019-H |
+| Startup splash HTA | `Athena/ui/start_splash.hta` | `.bar-wrap` CSS; `#pct` + `pctEl` + `float:right`; `PollChromeReady` + `readyToClose`; asymptotic `Tick`; `Int()` display; cap=97; `adv`/`inc` floors; `.name` font-size 101px | DI-019-A, DI-019-B, DI-019-C, DI-019-F, DI-019-H, DI-019-I |
 | Chrome launch delay | `Athena/ui/start_athena.ps1` | `Start-Sleep -Milliseconds 2500` after `.athena_ready` write | DI-019-G |
+| Electron splash | `Athena/electron/main.js` | `.name` CSS `font-size:clamp(61px,7vw,101px)` | DI-019-I |
 
 ---
 

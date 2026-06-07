@@ -1,5 +1,5 @@
 # DC-005 — Verification Protocol
-**Document:** DC-005 · Version 1.2 · 2026-06-06  
+**Document:** DC-005 · Version 1.3 · 2026-06-06  
 **Approved by:** Steven Tran
 
 ---
@@ -300,6 +300,10 @@ Check five conditions in `start_splash.hta`:
 4. Tick display uses `Int(stepVal)` not `CInt(stepVal)`.  
 5. Mathematical bound: `(99.5 − cap) / min_floor × 16 ms < 1000 ms` — proves Tick can traverse from the cap to the 99.5 close-trigger in under 1 second at worst-case minimum frame rate.  
 Fail action: Missing floors → stalling. Cap > 98 → premature "100%" for minutes during model loading. Mathematical bound failure → bar provably cannot close within 1 s even with correct guards. Restore all five conditions in `start_splash.hta`.
+
+**test_DI_019_I** — Athena title font-size is 101px in both splash implementations  
+Check: (1) `start_splash.hta` `.name` CSS contains `font-size:101px`. (2) `electron/main.js` `.name` CSS contains `font-size:clamp(61px,7vw,101px)`.  
+Fail action: Set `font-size:101px` on `.name` in `Athena/ui/start_splash.hta`. Set `font-size:clamp(61px,7vw,101px)` on `.name` in `Athena/electron/main.js`.
 
 ---
 
