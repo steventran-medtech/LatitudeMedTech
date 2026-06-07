@@ -1,5 +1,5 @@
 # DC-004 — Requirements Traceability Matrix (RTM)
-**Document:** DC-004 · Version 2.6 · 2026-06-07  
+**Document:** DC-004 · Version 2.8 · 2026-06-07  
 **Approved by:** Steven Tran
 
 This is the single source of truth for end-to-end coverage. Every user need
@@ -120,18 +120,21 @@ column are open findings requiring immediate remediation.
 | UN-030 | McKinsey/Latitude brand formatting | DI-030-A | All 6 `_DECK_GUIDES` entries include exec_summary | `agents/deck_agent.py` `_DECK_GUIDES` all 6 types | `test_DI_030_A` | OPEN |
 | UN-030 | | DI-030-B | McKinsey/Big-4/pyramid quality directive in all 6 deliverable agents | `content_agent.py`, `briefing_agent.py`, `ma_intelligence_agent.py`, `regulatory_strategy_agent.py`, `sow_agent.py`, `deck_agent.py` | `test_DI_030_B` | OPEN |
 | UN-030 | | DI-030-C | Latitude MedTech LLC brand identity injected via agent_base.py | `agents/agent_base.py` system prompt construction | `test_DI_030_C` | OPEN |
+| UN-030 | Publication format guide | DI-030-D | PUBLICATION_FORMAT_GUIDE dict defined in agent_base.py; system_prompt() injects it | `agents/agent_base.py` `PUBLICATION_FORMAT_GUIDE` + `system_prompt()` | `test_DI_030_D` | VERIFIED |
+| UN-030 | Agent persona format sections | DI-030-E | All 8 production persona .md files contain "## Output Format Standard" section | `.claude/agents/` 8 persona files | `test_DI_030_E` | VERIFIED |
+| UN-034 | All-agent queue submission | DI-034-A | qms_simulator_agent.py calls submit_for_review() after bundle generation | `agents/qms_simulator_agent.py` `submit_for_review(` | `test_DI_034_A` | VERIFIED |
 | UN-032 | Consulting learning visibility | DI-032-A | consulting_agent.py learn() generates "## Newly Ingested Items" report and calls submit_for_review() | `agents/consulting_agent.py` `learn()` + `submit_for_review(` | `test_DI_032_A` | OPEN |
 | UN-032 | | DI-032-B | Report written to `consulting_learning_<ts>.md`; "No new items ingested this run." fallback present | `agents/consulting_agent.py` path pattern + fallback string | `test_DI_032_B` | OPEN |
 
 ---
 
-## Coverage Summary (v2.7)
+## Coverage Summary (v2.8)
 
 | Metric | Count |
 |---|---|
-| Total user needs | 32 |
-| Total design inputs | 99 |
-| Design inputs with VERIFIED tests | 80 |
+| Total user needs | 34 |
+| Total design inputs | 102 |
+| Design inputs with VERIFIED tests | 83 |
 | Design inputs with PARTIAL coverage | 7 |
 | Design inputs with OPEN gap | 12 |
 | Design inputs with WAIVED status | 0 |
@@ -157,3 +160,6 @@ Items with OPEN or PARTIAL status that are tracked as formal findings:
 | TG-009 | DI-030-A | Pitch deck exec_summary gap — code fix required in deck_agent.py `_DECK_GUIDES["pitch"]` | Steven | Current |
 | TG-010 | DI-030-B | McKinsey quality directive check — verifies all 6 deliverable agent files | Steven | Current |
 | TG-011 | DI-030-C | Latitude brand identity check — verifies agent_base.py injection | Steven | Current |
+| TG-012 | DI-030-D | PUBLICATION_FORMAT_GUIDE dict + system_prompt() injection verified | Steven | CO-010 |
+| TG-013 | DI-030-E | All 8 production persona files contain Output Format Standard section | Steven | CO-010 |
+| TG-014 | DI-034-A | qms_simulator_agent.py submit_for_review() call verified | Steven | CO-010 |

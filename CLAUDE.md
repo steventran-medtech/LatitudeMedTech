@@ -235,6 +235,8 @@ Update this file's version line (date + vN) in the same final commit.
 | 2026-06-07 | CO-008 (UN-019 / DI-019-K): removed `$modelTimeout` blocking poll from `start_athena.ps1`; voice models load async in background; warm-start ≤ 10 s | DI-019-K |
 | 2026-06-07 | Version 0.5.6 — async startup, warm-start under 10 s |  |
 | 2026-06-06 | DI-019-J (C2): splash `#dots` now cycles `.`/`..`/`...` via VBScript `TickDots` at 400 ms/state; CSS `dotFlash` wave removed | DI-019-J |
+| 2026-06-07 | CO-010 (UN-034 / UN-030): All-agent queue submission + Publication Format Guide — `qms_simulator_agent.py` calls `submit_for_review()` on every bundle; `agent_base.py` `PUBLICATION_FORMAT_GUIDE` dict injects MedTech Dive/HBR/McKinsey/PwC style per agent; all 8 persona `.md` files get `## Output Format Standard` sections | DI-034-A, DI-030-D, DI-030-E |
+| 2026-06-07 | Version 0.6.0 — publication format guide + universal queue submission |  |
 
 ---
 

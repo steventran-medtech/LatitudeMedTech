@@ -1,5 +1,5 @@
 # DC-002 — Design Inputs
-**Document:** DC-002 · Version 2.6 · 2026-06-07  
+**Document:** DC-002 · Version 2.7 · 2026-06-07  
 **Approved by:** Steven Tran
 
 Design inputs are specific, verifiable requirements derived from the user
@@ -290,6 +290,18 @@ Each entry:
 | DI-030-A | UN-030 | All 6 `_DECK_GUIDES` entries in `deck_agent.py` ("strategy", "pitch", "regulatory", "coaching", "ma", "briefing") shall include "exec_summary" in their slide-sequence string so that every deck type leads with a McKinsey-standard executive summary slide | All 6 values in `_DECK_GUIDES` contain "exec_summary" | P1 | OPEN |
 | DI-030-B | UN-030 | All 6 deliverable-generating agent Python files (`content_agent.py`, `briefing_agent.py`, `ma_intelligence_agent.py`, `regulatory_strategy_agent.py`, `sow_agent.py`, `deck_agent.py`) shall contain at least one of "McKinsey", "Big 4", "pyramid", or "SCQA" as a quality directive in their system prompt or agent description | Grep across the 6 files for `McKinsey\|Big.4\|pyramid\|SCQA` | P1 | OPEN |
 | DI-030-C | UN-030 | `agent_base.py` shall inject "Latitude MedTech LLC" brand identity into all agent system prompts via a system-prompt construction routine | `agent_base.py` contains "Latitude MedTech LLC" and a system-prompt construction pattern (function or list) | P1 | OPEN |
+| DI-030-D | UN-030 | `agent_base.py` shall define a `PUBLICATION_FORMAT_GUIDE` dictionary mapping at least 4 agent-name keys to publication-style directives (MedTech Dive, HBR, McKinsey, or PwC), and `system_prompt()` shall inject the mapped directive when `self.name` exists in `PUBLICATION_FORMAT_GUIDE` | `agent_base.py` source contains `PUBLICATION_FORMAT_GUIDE` dict definition AND a reference to `PUBLICATION_FORMAT_GUIDE` inside the `system_prompt` method body | P1 | VERIFIED |
+| DI-030-E | UN-030 | Each of the 8 production agent persona files (`.claude/agents/content-agent.md`, `consulting-agent.md`, `briefing-agent.md`, `ma-intelligence-agent.md`, `marketing-agent.md`, `iso-agent.md`, `deck-agent.md`, `coaching-agent.md`) shall contain a "## Output Format Standard" section specifying the governing publication style and key structural requirements | All 8 files contain the string "## Output Format Standard" | P1 | VERIFIED |
+
+---
+
+## Universal Agent Queue Submission
+
+### UN-034 — All-Agent Review Queue Submission
+
+| ID | Source | Requirement Statement | Verification | Priority | Status |
+|---|---|---|---|---|---|
+| DI-034-A | UN-034 | `qms_simulator_agent.py` shall call `submit_for_review()` after the QMS bundle generation completes, passing the bundle index path as the artifact path so the complete bundle is visible in the human review queue | `qms_simulator_agent.py` source contains `submit_for_review(` | P0 | VERIFIED |
 
 ---
 

@@ -19,10 +19,12 @@ Every CO gets a unique ID at kickoff. Assign the next available CO-NNN here befo
 | CO-006 | 2026-06-07 | C2 | 2 | feat/co-006-consulting-learning-reports | DI-032-A, DI-032-B, DI-023-D | OPEN |
 
 | CO-007 | 2026-06-07 | C3 | 1 | chore/co-007-intro-exit-variations | — | OPEN |
-| CO-008 | 2026-06-07 | C2/C3 | 3 | feat/co-009-un-033-all-agent-queue-formatting | UN-033 (new), DI-033-A, DI-030-D, DI-030-E | OPEN |
+| CO-008 | 2026-06-07 | C3 | 3 | feat/co-008-un-019-startup-under-10s | DI-019-K (new) | MERGED (1a7525b, PR #91) |
+| CO-009 | 2026-06-07 | C2 | 1 | feat/co-009-progress-bar | DI-026-A | MERGED (f4a0eac, PR #94) |
+| CO-010 | 2026-06-07 | C2/C3 | 3 | feat/co-010-publication-format-queue | UN-034 (new), DI-034-A, DI-030-D, DI-030-E | OPEN |
 
 **Status values:** OPEN · MERGED · ABANDONED  
-**Next available ID:** CO-009
+**Next available ID:** CO-011
 
 ---
 

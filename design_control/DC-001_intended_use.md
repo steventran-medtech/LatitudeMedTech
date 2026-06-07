@@ -1,5 +1,5 @@
 # DC-001 — Intended Use & User Needs
-**Document:** DC-001 · Version 1.4 · 2026-06-07  
+**Document:** DC-001 · Version 1.5 · 2026-06-07  
 **Approved by:** Steven Tran
 
 ---
@@ -115,6 +115,7 @@ These are the enumerated, controlled user needs for Athena v0.5 (Alpha).
 | UN-013 | See real-time system health, agent status, token spend, and knowledge base growth in a dashboard | P1 |
 | UN-014 | Track each agent's accumulated learning, skills profile, and last-learning timestamp | P1 |
 | UN-032 | After each Consulting Agent learning run, receive a human-readable summary of every item ingested — source, title, category, and chunk count — submitted to the review queue so I can approve, reject, or edit the summary before it influences agent outputs | P1 |
+| UN-034 | Every Athena agent, upon completing any run that produces a substantive output, shall submit that output to the human review queue — so that no agent output is invisible to the approval workflow, and every deliverable can be approved, rejected, or edited before influencing any downstream process | P0 |
 
 ### Security & Compliance
 

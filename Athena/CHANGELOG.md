@@ -56,6 +56,11 @@ record of what changed between each version. Keep them in lock-step — see
 
 _Changes landed on `main` but not yet stamped into a numbered release go here._
 
+### Added
+- **UN-034 / CO-010** All-agent review queue submission — `qms_simulator_agent.py` now calls `submit_for_review()` after every QMS bundle generation so no bundle run is invisible to the review workflow (DI-034-A)
+- **UN-030 / CO-010** Publication Format Guide — `agent_base.py` defines `PUBLICATION_FORMAT_GUIDE` dictionary mapping 11 agent names to publication-style directives (MedTech Dive, HBR, McKinsey, PwC); `system_prompt()` injects the mapped directive at runtime (DI-030-D)
+- **UN-030 / CO-010** Per-agent Output Format Standard sections added to all 8 production persona files: `content-agent.md` (HBR), `consulting-agent.md` (McKinsey SCQA), `briefing-agent.md` (MedTech Dive), `ma-intelligence-agent.md` (MedTech Dive + McKinsey hybrid), `marketing-agent.md` (HBR), `iso-agent.md` (PwC), `deck-agent.md` (McKinsey single-idea), `coaching-agent.md` (HBR executive coaching) (DI-030-E)
+
 ### Fixed
 - **CO-004 / DI-019-H:** Splash progress bar could freeze indefinitely at any whole-number percentage (97% and 99% both observed). Root cause: `PollChromeReady` asymptotically converges `targetVal` to a hard cap of 97; once `stepVal` catches up, `Tick`'s `If stepVal < targetVal` branch is permanently false. A ceiling-based keep-alive merely moves the freeze (e.g., to 99%). Fix: `ElseIf Not readyToClose Then stepVal = stepVal + 0.05` with `If stepVal >= 99.5 Then stepVal = targetVal` wrap -- bar cycles 97->98->99->wrap->97->... at 320 ms/pt; no ceiling means no freeze at any whole number. `test_DI_019_H` expanded from 5 to 9 checks, adding keep-alive presence, no-blocking-ceiling, floor rate, and wrap@99.5.
 
