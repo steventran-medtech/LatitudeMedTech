@@ -145,10 +145,10 @@ column are open findings requiring immediate remediation.
 
 | Metric | Count |
 |---|---|
-| Total user needs | 33 |
-| Total design inputs | 104 |
+| Total user needs | 34 |
+| Total design inputs | 116 |
 | Design inputs with VERIFIED tests | 100 |
-| Design inputs with PARTIAL coverage | 7 |
+| Design inputs with PARTIAL coverage | 8 |
 | Design inputs with OPEN gap | 8 |
 | Design inputs with WAIVED status | 0 |
 
@@ -170,6 +170,4 @@ Items with OPEN or PARTIAL status that are tracked as formal findings:
 | TG-006 | DI-009-A | Deck section completeness check requires PPTX inspection; manual-only | Steven | Phase 3 |
 | TG-007 | DI-010-C | No automated check that ISO standard files are excluded from RAG ingestion | Steven | Phase 3 |
 | TG-008 | DI-015-F | Session auth guard is present but coverage of all non-health routes not automated | Steven | Phase 3 |
-| TG-009 | DI-030-A | Pitch deck exec_summary gap — code fix required in deck_agent.py `_DECK_GUIDES["pitch"]` | Steven | Current |
-| TG-010 | DI-030-B | McKinsey quality directive check — verifies all 6 deliverable agent files | Steven | Current |
-| TG-011 | DI-030-C | Latitude brand identity check — verifies agent_base.py injection | Steven | Current |
+| TG-009 | DI-030-A/B/C | CLOSED — DI-030-A/B/C promoted to VERIFIED by CO-010/CO-011 (DI-030-D/E publication format + DI-034 engineering integrity) | — | CLOSED |

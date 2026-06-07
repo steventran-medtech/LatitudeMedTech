@@ -1,5 +1,5 @@
 # DC-005 — Verification Protocol
-**Document:** DC-005 · Version 1.9 · 2026-06-07  
+**Document:** DC-005 · Version 2.0 · 2026-06-07  
 **Approved by:** Steven Tran
 
 ---
@@ -411,6 +411,35 @@ Fail action: Change `def _record_query()` to `def _record_query(stream)` and rem
 **test_DI_033_C** — `_voice_loop` opens one `sd.InputStream` and passes it to both functions  
 Check: `voice_bridge.py` `_voice_loop` function body contains `with sd.InputStream(` context manager; the calls `_listen_for_wake(oww, stream)` and `_record_query(stream)` both use the shared stream variable.  
 Fail action: Add `with sd.InputStream(device=INPUT_DEVICE, ...) as stream:` inside the `_voice_loop` main while loop; update call sites to `_listen_for_wake(oww, stream)` and `_record_query(stream)`.
+
+---
+
+### DI-034 — Engineering Process Integrity (CO-011)
+
+**test_DI_034_A** — `CLAUDE.md` contains the co-commit rule  
+Check: `CLAUDE.md` contains the phrase "must also update at least one design control document".  
+Fail action: Add the Co-Commit Rule to the Engineering Integrity Standards section of `CLAUDE.md`; the phrase must appear verbatim in the rule text.
+
+**test_DI_034_B** — `CLAUDE.md` contains the Auth Centralization Standard section  
+Check: `CLAUDE.md` contains the heading or label "Auth Centralization Standard".  
+Fail action: Add an "Auth Centralization Standard" subsection to the Engineering Integrity Standards section of `CLAUDE.md`; it must declare that all auth logic lives in `AuthMiddleware` and `auth_utils.py`.
+
+**test_DI_034_C** — `CLAUDE.md` contains the `voice_bridge.py` Boundary section  
+Check: `CLAUDE.md` contains the heading or label "voice_bridge.py Boundary".  
+Fail action: Add a "voice_bridge.py Boundary" subsection to the Engineering Integrity Standards section of `CLAUDE.md`; it must declare that `voice_bridge.py` owns all audio I/O.
+
+**test_DI_034_D** — `CLAUDE.md` documents the forward-only progress bar constraint  
+Check: `CLAUDE.md` contains the heading or label "Progress Bar Specification".  
+Fail action: Add a "Progress Bar Specification" subsection to the Engineering Integrity Standards section of `CLAUDE.md`; it must declare that the splash bar moves forward only.
+
+**test_DI_034_E** — `CLAUDE.md` contains the `App.jsx` Responsibility Scope section  
+Check: `CLAUDE.md` contains the heading or label "App.jsx Responsibility Scope".  
+Fail action: Add an "App.jsx Responsibility Scope" subsection to the Engineering Integrity Standards section of `CLAUDE.md`; it must enumerate what `App.jsx` owns and must not own.
+
+**test_DI_034_F** — `CLAUDE.md` contains the CLAUDE.md Update Policy section  
+Check: `CLAUDE.md` contains the heading or label "CLAUDE.md Update Policy".  
+Fail action: Add a "CLAUDE.md Update Policy" subsection to the Engineering Integrity Standards section of `CLAUDE.md`; it must state when this file must be updated.
+
 ## CAPA Trigger
 
 If `dc_verify.py` produces 3 or more FAIL results in a single run, open a CAPA:

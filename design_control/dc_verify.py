@@ -2527,22 +2527,22 @@ def test_DI_030_E():
     return True
 
 
-# ── UN-034 / All-Agent Review Queue Submission (CO-010) ──────────────────────
+# ── UN-034 / Engineering Process Integrity (CO-011) ────────────────────────────
 
 def test_DI_034_A():
-    """DI-034-A: qms_simulator_agent.py calls submit_for_review() after bundle generation"""
+    """DI-034-A: CLAUDE.md shall contain the co-commit rule phrase"""
     di = "DI-034-A"
     if _skip_if_filtered(di): return
-    f = AGENTS / "qms_simulator_agent.py"
+    f = ROOT / "CLAUDE.md"
     if not f.exists():
-        _log(FAIL, di, "qms_simulator_agent.py not found", str(f))
+        _log(FAIL, di, "CLAUDE.md not found", str(f))
         return
-    content = _read(f)
-    if "submit_for_review(" not in content:
-        _log(FAIL, di, "submit_for_review() not called in qms_simulator_agent.py",
-             "Add _MEM.submit_for_review() call in run() after bundle index is written")
+    if "must also update at least one design control document" not in _read(f):
+        _log(FAIL, di,
+             "CLAUDE.md missing co-commit rule phrase 'must also update at least one design control document'",
+             "Add co-commit rule to Engineering Integrity Standards section of CLAUDE.md")
         return
-    _log(PASS, di, "qms_simulator_agent.py contains submit_for_review() call")
+    _log(PASS, di, "CLAUDE.md contains the co-commit rule")
     return True
 
 
@@ -2901,7 +2901,7 @@ def main():
     _section("UN-032 Consulting Learning Visibility")
     test_DI_consulting_032_A(); test_DI_consulting_032_B()
 
-    _section("UN-034 All-Agent Review Queue Submission (CO-010)")
+    _section("UN-034 Engineering Process Integrity (CO-011)")
     test_DI_034_A()
     test_DI_034_B(); test_DI_034_C()
     test_DI_034_D(); test_DI_034_E(); test_DI_034_F()

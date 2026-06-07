@@ -268,7 +268,7 @@ Update this file's version line (date + vN) in the same final commit.
 | 2026-06-07 | Version 0.5.6 — async startup, warm-start under 10 s |  |
 | 2026-06-07 | CO-005 (UN-002): Document Queue tab merged Documents + Review Queue into Pending/Approved/Rejected three-filter view; App.jsx NAV_ITEMS consolidated to id:queue | DI-002-E, DI-002-F, DI-002-G |
 | 2026-06-07 | CO-010 (UN-033): `_voice_loop` shares one `sd.InputStream` per query cycle between `_listen_for_wake` and `_record_query` — eliminates 200-500 ms Windows MME close/reopen gap after wake detection | DI-033-A, DI-033-B, DI-033-C |
-| 2026-06-07 | CO-011 (UN-007, UN-002): renamed "Content Drafts" → "MedTech Meridian Drafts" (NAV_ITEMS + ContentView h2); fixed AGENT_TAB — coaching_brief→"coaching", 4 agents→"queue"; fixed WorkQueuePanel awaiting_review routing "review"→"queue" | DI-007-F, DI-002-H, DI-002-I |
+| 2026-06-07 | CO-011 (UN-034): Engineering Process Integrity — test_DI_034_A corrected (CLAUDE.md co-commit rule check); DI-034-B–F confirmed; DC-004 coverage summary corrected (34 UNs, 116 DIs); DC-005 v2.0 DI-034 procedures added; Version 0.6.1 | DI-034-A–F |
 | 2026-06-06 | DI-019-J (C2): splash `#dots` now cycles `.`/`..`/`...` via VBScript `TickDots` at 400 ms/state; CSS `dotFlash` wave removed | DI-019-J |
 
 ---
