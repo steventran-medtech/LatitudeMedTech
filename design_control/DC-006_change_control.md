@@ -11,9 +11,10 @@ Every CO gets a unique ID at kickoff. Assign the next available CO-NNN here befo
 | CO ID | Date | Class | Tier | Branch | DIs Affected | Status |
 |---|---|---|---|---|---|---|
 | CO-001 | 2026-06-05 | C2 | — | chore/add-change-order-skill | — | MERGED |
+| CO-002 | 2026-06-07 | C3 | 2 | feat/co-002-change-order-overlap-models-co-ids | — | MERGED |
 
 **Status values:** OPEN · MERGED · ABANDONED  
-**Next available ID:** CO-002
+**Next available ID:** CO-003
 
 ---
 
