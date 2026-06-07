@@ -3346,6 +3346,56 @@ def test_DI_022_A():
     return True
 
 
+def test_DI_022_B():
+    """DI-022-B: Interactive voice latency script exists with WebSocket timing and threshold"""
+    di = "DI-022-B"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    script = THIS_DIR / "test_voice_latency_live.py"
+
+    # ASSERT — script exists
+    if not script.exists():
+        _log(FAIL, di,
+             "FAIL DI-022-B: design_control/test_voice_latency_live.py not found",
+             "Fix: Create design_control/test_voice_latency_live.py per CO-019 spec")
+        return
+
+    content = _read(script)
+
+    # ASSERT — websockets import present (T2 symbol existence)
+    if "websockets" not in content:
+        _log(FAIL, di,
+             "FAIL DI-022-B: test_voice_latency_live.py does not import websockets",
+             "Fix: Add 'import websockets' and connect to ws://127.0.0.1:8000/api/voice/ws")
+        return
+
+    # ASSERT — voice_thinking event handled (T3 source pattern)
+    if "voice_thinking" not in content:
+        _log(FAIL, di,
+             "FAIL DI-022-B: test_voice_latency_live.py does not handle voice_thinking event",
+             "Fix: Add handler for etype == 'voice_thinking' to record t_thinking timestamp")
+        return
+
+    # ASSERT — voice_speaking_partial event handled (T3 source pattern)
+    if "voice_speaking_partial" not in content:
+        _log(FAIL, di,
+             "FAIL DI-022-B: test_voice_latency_live.py does not handle voice_speaking_partial event",
+             "Fix: Add handler for etype == 'voice_speaking_partial' to record t_first_audio timestamp")
+        return
+
+    # ASSERT — 1.75 threshold present (T1 constant check)
+    if "1.75" not in content:
+        _log(FAIL, di,
+             "FAIL DI-022-B: test_voice_latency_live.py does not reference 1.75 s threshold",
+             "Fix: Add THRESHOLD_S = 1.75 and compare each run's latency against it")
+        return
+
+    _log(PASS, di,
+         "Interactive voice latency script exists — WebSocket timing, both events, 1.75 s threshold")
+    return True
+
+
 # ── UN-035 / Voice Widget Docking Persistence ─────────────────────────────────
 
 def test_DI_035_A():
@@ -3664,8 +3714,8 @@ def main():
     _section("UN-033 Voice Query Readiness Latency (CO-010)")
     test_DI_033_A(); test_DI_033_B_voice(); test_DI_033_C()
 
-    _section("UN-022 Voice Conversation Quality (CO-016)")
-    test_DI_022_A()
+    _section("UN-022 Voice Conversation Quality (CO-016/CO-019)")
+    test_DI_022_A(); test_DI_022_B()
 
     _section("UN-035/036 Voice Docking & Agent Tab Approval Gate (CO-016/CO-017)")
     test_DI_035_A()
