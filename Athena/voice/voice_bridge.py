@@ -1452,6 +1452,8 @@ def _voice_loop():
     if not already_ready:
         _emit("loading", message="Waiting for models to finish loading…")
         _models_ready.wait(timeout=90)
+        if not _active:              # stop() fired while waiting for models — bail cleanly
+            _state = VS.STOPPED; return
 
     oww     = _oww_model
     whisper = _whisper_model
@@ -1460,6 +1462,9 @@ def _voice_loop():
     if oww is None:
         _state = VS.STOPPED
         _emit("stopped", reason="Wake word model failed"); return
+    if whisper is None:
+        _state = VS.STOPPED
+        _emit("stopped", reason="Whisper model failed to load"); return
 
     _state = VS.LISTENING
     _emit("listening", message=f"Say '{WAKE_PHRASE.title()}' to activate")
@@ -1484,6 +1489,7 @@ def _voice_loop():
         # `continue` to return here — no redundant state-flipping.
         if _review_session.get("awaiting_response"):
             # Review session: skip wake-word detection and record directly.
+            _consume_ptt()                        # discard any PTT set during this review cycle
             _review_session["awaiting_response"] = False
             wake_score = 1.0
         else:
@@ -1687,7 +1693,11 @@ async def start_voice():
 async def stop_voice():
     global _active
     _active = False
-    _ptt_event.clear()   # prevent a stale PTT from firing on the next start
+    _ptt_event.clear()                   # prevent a stale PTT from firing on the next start
+    _notification_queue.clear()          # drop stale notifications so they don't replay on next start
+    _review_session.update({             # reset review state; stale awaiting_response would ghost-record
+        "active": False, "items": [], "index": 0, "awaiting_response": False,
+    })
     return {"status": "stopping"}
 
 

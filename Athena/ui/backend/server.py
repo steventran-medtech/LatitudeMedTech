@@ -2044,8 +2044,8 @@ def google_auth_connect():
             Path(_GDRIVE_TOKEN).write_text(creds.to_json())
             _drive_auth_state = {"running": False, "error": ""}
         except Exception as exc:
-            _drive_auth_state = {"running": False, "error": str(exc)}
             print(f"[drive-auth] OAuth flow failed: {exc}")
+            _drive_auth_state = {"running": False, "error": "Authorization failed — see server console for details."}
 
     threading.Thread(target=_run, daemon=True).start()
     return {"started": True, "message": "Browser opening for Google authorization…"}
