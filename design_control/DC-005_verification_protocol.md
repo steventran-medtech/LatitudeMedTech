@@ -318,6 +318,12 @@ Preconditions: `start_splash.hta` on disk.
 Check: (1) File contains a `TickDots` sub (or equivalent cycling sub) that assigns to `dotsEl.innerText`. (2) File contains `setInterval("TickDots", N)` where N ≤ 500. (3) File contains `dotsEl.style.display = "none"` on loading completion. (4) The `#dots` HTML element uses a single span (not three individual `.dot` sub-spans).  
 Fail action: Replace 3-span CSS-animated dots in `start_splash.hta` with a single `<span id="dots">.</span>` and add the `TickDots` VBScript cycling sub with a `setInterval` ≤ 500 ms.
 
+**test_DI_019_K** — `start_athena.ps1` does not gate `.athena_ready` on voice model readiness  
+Preconditions: `start_athena.ps1` on disk.  
+Check: `start_athena.ps1` does NOT contain `$modelTimeout` — confirming the model-polling while-loop that blocked Chrome open for up to 180 s has been removed.  
+Warm-start definition: Python venv active, all model files present on disk (no first-run download), Vite build cache valid.  
+Fail action: Remove the `$modelTimeout` while-loop from `start_athena.ps1`. The `$session.models_ready` assignment used for session logging may remain; only the polling loop and `$modelTimeout` variable must be absent.
+
 ---
 
 ### DI-023 — Historical Data Depth
