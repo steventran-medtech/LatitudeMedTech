@@ -1,5 +1,5 @@
 ﻿# DC-004 — Requirements Traceability Matrix (RTM)
-**Document:** DC-004 · Version 3.3 · 2026-06-07
+**Document:** DC-004 · Version 3.4 · 2026-06-07
 **Approved by:** Steven Tran
 
 This is the single source of truth for end-to-end coverage. Every user need
@@ -39,8 +39,8 @@ column are open findings requiring immediate remediation.
 | UN-002 | | DI-002-K | Approved-tab conditional closes with )))}: arrow-fn paren + map call + ternary paren + JSX expr | `ReviewView.jsx` contains `)))}` sequence | `test_DI_002_K` | VERIFIED |
 | UN-003 | Knowledge base | DI-003-A | KBQuery searchable by agents | `kb_query.py` KBQuery | `test_DI_003_A` | VERIFIED |
 | UN-003 | | DI-003-B | RAG indexes FDA/EU/IMDRF | `knowledge_base/` subdirs | `test_DI_003_B` | VERIFIED |
-| UN-003 | | DI-003-C | RAG report with "Newly Ingested Documents" section + `date_published` + `scope_summary` fields per document | `agents/rag_agent.py` `main()` + `submit_for_review()` + `date_published` + `scope_summary` | `test_DI_003_C` | OPEN |
-| UN-003 | | DI-003-D | Report written to `rag_summary_<ts>.md` with "No new documents" fallback | `agents/rag_agent.py` report write + fallback string | `test_DI_003_D` | OPEN |
+| UN-003 | | DI-003-C | RAG report with "Newly Ingested Documents" section + `date_published` + `scope_summary` fields per document | `agents/rag_agent.py` `main()` + `submit_for_review()` + `date_published` + `scope_summary` | `test_DI_003_C` | VERIFIED |
+| UN-003 | | DI-003-D | Report written to `rag_summary_<ts>.md` with "No new documents" fallback | `agents/rag_agent.py` report write + fallback string | `test_DI_003_D` | VERIFIED |
 | UN-004 | Voice interaction | DI-004-A | Wake threshold ≤ 0.35 | `voice_bridge.py` WAKE_THRESHOLD | `test_DI_004_A` | VERIFIED |
 | UN-004 | | DI-004-B | Whisper STT + confidence log | `voice_bridge.py` whisper | `test_DI_004_B` | VERIFIED |
 | UN-004 | | DI-004-C | First audio ≤ 2s | Kokoro streaming pipeline | `test_DI_004_C` | PARTIAL |
@@ -50,33 +50,33 @@ column are open findings requiring immediate remediation.
 | UN-005 | | DI-005-B | Notification only if voice active | `voice_bridge.py` queue guard | `test_DI_005_B` | VERIFIED |
 | UN-006 | Persistent voice session | DI-006-A | Session persists across tabs | `useVoiceSession.js` app-level | `test_DI_006_A` | VERIFIED |
 | UN-006 | | DI-006-B | Status badge in header | `App.jsx` VoiceStatusBadge | `test_DI_006_B` | VERIFIED |
-| UN-022 | Voice conversation quality | DI-022-A | Latency ≤ 1.75 s (tightened from 2 s, CO-016); streaming sentence-split pipeline; first sentence dispatched to TTS before full response buffered | `voice_bridge.py` `_ask_claude_streaming` + `_SENTENCE_END` + `_speak_sentence` in token-stream loop | `test_DI_022_A` | OPEN |
-| UN-007 | Content generation | DI-007-A | 900–1,200 word articles | `content_agent.py` max_tokens | `test_DI_007_A` | PARTIAL |
+| UN-022 | Voice conversation quality | DI-022-A | Latency ≤ 1.75 s (tightened from 2 s, CO-016); streaming sentence-split pipeline; first sentence dispatched to TTS before full response buffered | `voice_bridge.py` `_ask_claude_streaming` + `_SENTENCE_END` + `_speak_sentence` in token-stream loop; live timing manual (MTP-003) | `test_DI_022_A` | PARTIAL |
+| UN-007 | Content generation | DI-007-A | 900–1,200 word articles | `content_agent.py` system prompt word-count instruction | `test_DI_007_A` | VERIFIED |
 | UN-007 | | DI-007-B | Title from body H1 | `content_agent.py` title_from_body | `test_DI_007_B` | VERIFIED |
 | UN-007 | | DI-007-C | Banned phrases enforced | `content_agent.py` system prompt | `test_DI_007_C` | VERIFIED |
 | UN-007 | | DI-007-D | Non-Latin chars stripped | `content_agent.py` clean_title | `test_DI_007_D` | VERIFIED |
 | UN-007 | | DI-007-E | YAML frontmatter stripped in UI | `App.jsx` renderInline | `test_DI_007_E` | VERIFIED |
 | UN-007 | | DI-007-F | Content tab labeled "MedTech Meridian Drafts" in NAV_ITEMS and ContentView h2 | `App.jsx` NAV_ITEMS label + ContentView h2 | `test_DI_007_F` | VERIFIED |
-| UN-007 | | DI-007-G | DEVICE_SUBSECTORS covers all 6 MedTech sectors | `content_agent.py` `DEVICE_SUBSECTORS` | `test_DI_007_G` | OPEN |
-| UN-007 | | DI-007-H | Sector/topic fallback uses `tm_yday` not `random.choice` | `content_agent.py` `_get_next_subsector()` + `_get_next_topic_category()` | `test_DI_007_H` | OPEN |
-| UN-008 | Marketing pipeline | DI-008-A | Pipeline DB ≥ 20 targets | `marketing_agent.py` pipeline.db | `test_DI_008_A` | PARTIAL |
-| UN-008 | | DI-008-B | Zero-cash channels only | `marketing_agent.py` seed data | `test_DI_008_B` | PARTIAL |
-| UN-008 | | DI-008-C | MarketingView bulk-select-and-delete via BulkBar pattern | `MarketingView.jsx` `useMultiSelect` + `BulkBar` + `delete-bulk` | `test_DI_008_C` | OPEN |
+| UN-007 | | DI-007-G | DEVICE_SUBSECTORS covers all 6 MedTech sectors | `content_agent.py` `DEVICE_SUBSECTORS` | `test_DI_007_G` | VERIFIED |
+| UN-007 | | DI-007-H | Sector/topic fallback uses `tm_yday` not `random.choice` | `content_agent.py` `_get_next_subsector()` + `_get_next_topic_category()` | `test_DI_007_H` | VERIFIED |
+| UN-008 | Marketing pipeline | DI-008-A | Pipeline DB ≥ 20 targets | `marketing_agent.py` seed count ≥ 20 verified by `test_DI_008_A` | `test_DI_008_A` | VERIFIED |
+| UN-008 | | DI-008-B | Zero-cash channels only | `marketing_agent.py` seed data; `test_DI_008_B` scans for paid types | `test_DI_008_B` | VERIFIED |
+| UN-008 | | DI-008-C | MarketingView bulk-select-and-delete via BulkBar pattern | `MarketingView.jsx` `useMultiSelect` + `BulkBar` + `delete-bulk` | `test_DI_008_C` | VERIFIED |
 | UN-009 | Slide deck generation | DI-009-A | Deck with required sections | `deck_agent.py` slide sequence | `test_DI_009_A` | PARTIAL |
 | UN-009 | | DI-009-B | Latitude brand palette | `deck_agent.py` colour constants | `test_DI_009_B` | VERIFIED |
 | UN-009 | | DI-009-C | DeckView gallery + download | `server.py` deck routes | `test_DI_009_C` | VERIFIED |
 | UN-010 | ISO 13485 coach | DI-010-A | Any clause on demand | `iso_coach_agent.py` clause lookup | `test_DI_010_A` | VERIFIED |
 | UN-010 | | DI-010-B | One clause at a time; no --all from UI | `iso_coach_agent.py` sequential logic | `test_DI_010_B` | VERIFIED |
-| UN-010 | | DI-010-C | No verbatim ISO text in RAG | `rag_agent.py` exclusion | `test_DI_010_C` | PARTIAL |
+| UN-010 | | DI-010-C | No verbatim ISO text in RAG | `iso.org` removed from Tavily `include_domains` in `rag_agent.py` (CO-018); `test_DI_010_C` confirms exclusion | `test_DI_010_C` | VERIFIED |
 | UN-011 | M&A intelligence | DI-011-A | QARA frameworks in analysis | `ma_intelligence_agent.py` | `test_DI_011_A` | VERIFIED |
 | UN-011 | | DI-011-B | Cited sources + dates | M&A agent system prompt | `test_DI_011_B` | VERIFIED |
-| UN-011 | | DI-011-C | M&A system prompt explicitly accepts historical requests from any year | `agents/ma_intelligence_agent.py` system prompt | `test_DI_011_C` | OPEN |
+| UN-011 | | DI-011-C | M&A system prompt explicitly accepts historical requests from any year | `agents/ma_intelligence_agent.py` system prompt | `test_DI_011_C` | VERIFIED |
 | UN-012 | Regulatory briefings | DI-012-A | FDA + EU MDR + IMDRF coverage | `briefing_agent.py` sources | `test_DI_012_A` | VERIFIED |
 | UN-012 | | DI-012-B | Briefings enter review queue | `briefing_agent.py` submit_for_review | `test_DI_012_B` | VERIFIED |
 | UN-023 | Historical data depth | DI-023-A | No date cutoff blocking >50-year-old sources; KB queries include historically-scoped terms | `rag_agent.py` no hard year filter; seed queries include non-date-restricted terms | `test_DI_023_A` | VERIFIED |
-| UN-023 | | DI-023-B | TAVILY_QUERIES includes ≥5 historically-scoped entries (history/evolution/1970s/etc.) | `agents/rag_agent.py` `TAVILY_QUERIES` | `test_DI_023_B` | OPEN |
-| UN-023 | | DI-023-C | Tavily rotation uses `tm_yday` not `random.sample` | `agents/rag_agent.py` `ingest_tavily()` | `test_DI_023_C` | OPEN |
-| UN-023 | | DI-023-D | HISTORICAL_CONSULTING_SOURCES in consulting_agent.py has ≥5 entries with historical marker terms | `agents/consulting_agent.py` `HISTORICAL_CONSULTING_SOURCES` | `test_DI_023_D` | OPEN |
+| UN-023 | | DI-023-B | TAVILY_QUERIES includes ≥5 historically-scoped entries (history/evolution/1970s/etc.) | `agents/rag_agent.py` `TAVILY_QUERIES` | `test_DI_023_B` | VERIFIED |
+| UN-023 | | DI-023-C | Tavily rotation uses `tm_yday` not `random.sample` | `agents/rag_agent.py` `ingest_tavily()` | `test_DI_023_C` | VERIFIED |
+| UN-023 | | DI-023-D | HISTORICAL_CONSULTING_SOURCES in consulting_agent.py has ≥5 entries with historical marker terms | `agents/consulting_agent.py` `HISTORICAL_CONSULTING_SOURCES` | `test_DI_023_D` | VERIFIED |
 | UN-013 | Dashboard | DI-013-A | Agent health (green/yellow/red) | `server.py` /api/dashboard | `test_DI_013_A` | VERIFIED |
 | UN-013 | | DI-013-B | Hourly token timeseries | `server.py` /api/dashboard/timeseries | `test_DI_013_B` | VERIFIED |
 | UN-013 | | DI-013-C | KB growth chart | `server.py` /api/dashboard/knowledge-growth | `test_DI_013_C` | VERIFIED |
@@ -90,7 +90,7 @@ column are open findings requiring immediate remediation.
 | UN-015 | | DI-015-C | Rate limiting at 120 req/min | `server.py` middleware | `test_DI_015_C` | VERIFIED |
 | UN-015 | | DI-015-D | Security headers | `server.py` middleware | `test_DI_015_D` | VERIFIED |
 | UN-015 | | DI-015-E | Path traversal protection | `server.py` file routes | `test_DI_015_E` | VERIFIED |
-| UN-015 | | DI-015-F | Session auth on all routes | `server.py` auth dependency | `test_DI_015_F` | PARTIAL |
+| UN-015 | | DI-015-F | Session auth on all routes | `AuthMiddleware` blanket coverage + `_AUTH_EXEMPT` scope verified by `test_DI_015_F` | `test_DI_015_F` | VERIFIED |
 | UN-015 | | DI-015-G | authHdr() on every frontend /api/ fetch | All `.jsx`/`.js` source files | `test_DI_015_G` | VERIFIED |
 | UN-016 | Output labeling | DI-016-A | Disclaimer on all outputs | `orchestrator.py` DISCLAIMER | `test_DI_016_A` | VERIFIED |
 | UN-016 | | DI-016-B | Readiness label on all outputs | `orchestrator.py` LABEL | `test_DI_016_B` | VERIFIED |
@@ -108,8 +108,8 @@ column are open findings requiring immediate remediation.
 | UN-019 | | DI-019-H | Bar never stalls > 1 s; cap ≤ 98 + mathematical bound `(99.5−cap)/floor×16 ms < 1000 ms` | `start_splash.hta` floors; cap ≤ 98; `Int()` display; computed bound | `test_DI_019_H` | VERIFIED |
 | UN-019 | | DI-019-I | Athena title `.name` font-size is 101px in both splash files | `start_splash.hta` `font-size:101px`; `electron/main.js` clamp(61px,7vw,101px) | `test_DI_019_I` | VERIFIED |
 | UN-019 | | DI-019-J | `#dots` cycles `.` / `..` / `...` via VBScript `TickDots` at ≤ 500 ms/state; hidden on done | `start_splash.hta` `TickDots` sub; `setInterval("TickDots", N)` N ≤ 500; `dotsEl.style.display = "none"` | `test_DI_019_J` | VERIFIED |
-| UN-019 | | DI-019-K | `$modelTimeout` polling loop absent from `start_athena.ps1`; voice models load async after Chrome open | `start_athena.ps1` | `test_DI_019_K` | OPEN |
-| UN-019 | | DI-019-L | Chrome opens only after `CloseSplash` sub writes `.athena_splash_done`; `start_athena.ps1` polls before Chrome launch; no fixed 2500ms sleep | `start_splash.hta` `CloseSplash` sub; `start_athena.ps1` poll loop | `test_DI_019_L` | OPEN |
+| UN-019 | | DI-019-K | `$modelTimeout` polling loop absent from `start_athena.ps1`; voice models load async after Chrome open | `start_athena.ps1` | `test_DI_019_K` | VERIFIED |
+| UN-019 | | DI-019-L | Chrome opens only after `CloseSplash` sub writes `.athena_splash_done`; `start_athena.ps1` polls before Chrome launch; no fixed 2500ms sleep | `start_splash.hta` `CloseSplash` sub; `start_athena.ps1` poll loop | `test_DI_019_L` | VERIFIED |
 | UN-020 | Document review & approval | DI-020-A | All reviewable agents call submit_for_review() | `agents/` source grep for `submit_for_review` | `test_DI_020_A` | VERIFIED |
 | UN-020 | | DI-020-B | Review queue GET fetch sends authHdr() | `ReviewView.jsx` `load()` contains `authHdr()` | `test_DI_020_B` | VERIFIED |
 | UN-020 | | DI-020-C | Review history GET fetch sends authHdr() | `ReviewView.jsx` `loadHistory()` contains `authHdr()` | `test_DI_020_C` | VERIFIED |
@@ -134,8 +134,8 @@ column are open findings requiring immediate remediation.
 | UN-030 | | DI-030-C | Latitude MedTech LLC brand identity injected via agent_base.py | `agents/agent_base.py` system prompt construction | `test_DI_030_C` | VERIFIED |
 | UN-030 | | DI-030-D | `PUBLICATION_FORMAT_GUIDE` dict in `agent_base.py`; injected via `system_prompt()` | `agents/agent_base.py` `PUBLICATION_FORMAT_GUIDE` + `system_prompt()` | `test_DI_030_D` | VERIFIED |
 | UN-030 | | DI-030-E | All 8 persona files contain `## Output Format Standard` section | `.claude/agents/*.md` — 8 files | `test_DI_030_E` | VERIFIED |
-| UN-032 | Consulting learning visibility | DI-032-A | consulting_agent.py learn() generates "## Newly Ingested Items" report and calls submit_for_review() | `agents/consulting_agent.py` `learn()` + `submit_for_review(` | `test_DI_032_A` | OPEN |
-| UN-032 | | DI-032-B | Report written to `consulting_learning_<ts>.md`; "No new items ingested this run." fallback present | `agents/consulting_agent.py` path pattern + fallback string | `test_DI_032_B` | OPEN |
+| UN-032 | Consulting learning visibility | DI-032-A | consulting_agent.py learn() generates "## Newly Ingested Items" report and calls submit_for_review() | `agents/consulting_agent.py` `learn()` + `submit_for_review(` | `test_DI_032_A` | VERIFIED |
+| UN-032 | | DI-032-B | Report written to `consulting_learning_<ts>.md`; "No new items ingested this run." fallback present | `agents/consulting_agent.py` path pattern + fallback string | `test_DI_032_B` | VERIFIED |
 | UN-033 | Voice query readiness latency | DI-033-A | `_listen_for_wake` accepts `stream` param; no internal `sd.InputStream` | `voice/voice_bridge.py` `_listen_for_wake(oww_model, stream)` | `test_DI_033_A` | VERIFIED |
 | UN-033 | | DI-033-B | `_record_query` accepts `stream` param; no internal `sd.InputStream` | `voice/voice_bridge.py` `_record_query(stream)` | `test_DI_033_B` | VERIFIED |
 | UN-033 | | DI-033-C | `_voice_loop` opens one stream; passes to `_listen_for_wake` and `_record_query` | `voice/voice_bridge.py` `_voice_loop` shared `sd.InputStream` | `test_DI_033_C` | VERIFIED |
@@ -154,19 +154,21 @@ column are open findings requiring immediate remediation.
 
 ---
 
-## Coverage Summary (v3.3 — CO-017)
+## Coverage Summary (v3.4 — CO-018)
 
 | Metric | Count |
 |---|---|
 | Total user needs | 36 |
 | Total design inputs | 129 |
-| Design inputs with VERIFIED tests | 112 |
-| Design inputs with PARTIAL coverage | 8 |
-| Design inputs with OPEN gap | 9 |
+| Design inputs with VERIFIED tests | 126 |
+| Design inputs with PARTIAL coverage | 3 |
+| Design inputs with OPEN gap | 0 |
 | Design inputs with WAIVED status | 0 |
 
-**PARTIAL items** require manual verification currently; automated tests are
-pending. See DC-005 for the verification procedures for PARTIAL items.
+**PARTIAL items** require manual live-stack verification; static automated
+tests pass for all three. See DC-005 for manual test procedures (MTP-001
+through MTP-003). See `DC-005_manual_verification_protocol.md` for the
+step-by-step protocol Steven executes against the running system.
 
 ---
 
@@ -176,13 +178,14 @@ Items with OPEN or PARTIAL status that are tracked as formal findings:
 
 | Finding ID | DI | Gap Description | Owner | Target |
 |---|---|---|---|---|
-| TG-002 | DI-004-C | Latency test (first audio ≤ 2s) requires running voice stack; manual-only | Steven | Phase 3 |
-| TG-003 | DI-007-A | Word count validation not enforced in post-processing code path | Steven | Phase 3 |
-| TG-004 | DI-008-A | Automated count of pipeline.db seed targets not yet in dc_verify.py | Steven | Phase 3 |
-| TG-005 | DI-008-B | Channel type validation against paid-media exclusion list not automated | Steven | Phase 3 |
-| TG-006 | DI-009-A | Deck section completeness check requires PPTX inspection; manual-only | Steven | Phase 3 |
-| TG-007 | DI-010-C | No automated check that ISO standard files are excluded from RAG ingestion | Steven | Phase 3 |
-| TG-008 | DI-015-F | Session auth guard is present but coverage of all non-health routes not automated | Steven | Phase 3 |
+| TG-002 | DI-004-C | Latency test (first audio ≤ 2s) requires running voice stack; manual only — see MTP-001 | Steven | Phase 3 |
+| TG-003 | DI-007-A | CLOSED — `test_DI_007_A` added (CO-018); system prompt word-count instruction verified | — | CLOSED |
+| TG-004 | DI-008-A | CLOSED — `test_DI_008_A` added (CO-018); seed count ≥ 20 verified statically | — | CLOSED |
+| TG-005 | DI-008-B | CLOSED — `test_DI_008_B` added (CO-018); no paid channel types in seed | — | CLOSED |
+| TG-006 | DI-009-A | Deck section completeness requires PPTX inspection; manual only — see MTP-002 | Steven | Phase 3 |
+| TG-007 | DI-010-C | CLOSED — iso.org removed from Tavily include_domains (CO-018); `test_DI_010_C` passes | — | CLOSED |
+| TG-008 | DI-015-F | CLOSED — `test_DI_015_F` added (CO-018); AuthMiddleware blanket coverage confirmed | — | CLOSED |
+| TG-014 | DI-022-A | Latency ≤ 1.75 s — static test passes; live timing requires running voice stack — see MTP-003 | Steven | Phase 3 |
 | TG-009 | DI-030-A/B/C | CLOSED — DI-030-A/B/C promoted to VERIFIED by CO-010/CO-011 (DI-030-D/E publication format + DI-034 engineering integrity) | — | CLOSED |
 | TG-010 | DI-007-G | CLOSED — DEVICE_SUBSECTORS all-6-sector coverage verified by CO-017 (dc_verify 122/122) | — | CLOSED |
 | TG-011 | DI-007-H | CLOSED — Content agent tm_yday fallback verified by CO-017 | — | CLOSED |

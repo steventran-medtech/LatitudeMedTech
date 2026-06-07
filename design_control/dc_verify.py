@@ -832,6 +832,34 @@ def test_DI_007_H():
     return True
 
 
+def test_DI_007_A():
+    """DI-007-A: content_agent.py system prompt states 900-1,200 word length requirement"""
+    di = "DI-007-A"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = AGENTS / "content_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "content_agent.py not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT — the system prompt must include a specific word count instruction
+    has_900  = "900" in content
+    has_1200 = "1,200" in content or "1200" in content
+
+    # ASSERT
+    if has_900 and has_1200:
+        _log(PASS, di, "content_agent.py system prompt specifies 900–1,200 word length requirement")
+    else:
+        missing = []
+        if not has_900:  missing.append("'900' lower bound missing")
+        if not has_1200: missing.append("'1,200' upper bound missing")
+        _log(FAIL, di, f"DI-007-A word count instruction absent from content_agent.py: {'; '.join(missing)}",
+             "Fix: Add 'LENGTH: 900–1,200 words.' to the system prompt in content_agent.py")
+    return True
+
+
 # ── UN-008 / Marketing Bulk Delete ────────────────────────────────────────────
 
 def test_DI_008_C():
@@ -864,6 +892,70 @@ def test_DI_008_C():
              f"FAIL DI-008-C: MarketingView.jsx bulk delete incomplete: {'; '.join(missing)}",
              "Fix: Add local useMultiSelect hook, local BulkBar component, and deleteSelected() "
              "calling POST /api/files/delete-bulk with folder:'marketing' to MarketingView.jsx")
+    return True
+
+
+def test_DI_008_A():
+    """DI-008-A: marketing_agent.py pipeline seed contains >=20 targets"""
+    di = "DI-008-A"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = AGENTS / "marketing_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "marketing_agent.py not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT — find seed list inside seed_pipeline() and count tuple entries
+    block_m = re.search(r'def seed_pipeline\(.*?conn\.executemany', content, re.DOTALL)
+    if not block_m:
+        _log(FAIL, di, "seed_pipeline() or conn.executemany not found in marketing_agent.py",
+             "Fix: Define seed_pipeline() with a seed = [(...)] list and conn.executemany call")
+        return
+    seed_m = re.search(r'seed\s*=\s*\[(.+?)\]', block_m.group(0), re.DOTALL)
+    if not seed_m:
+        _log(FAIL, di, "seed list literal not found inside seed_pipeline()",
+             "Fix: Define seed = [(...),...] literal with >=20 tuples inside seed_pipeline()")
+        return
+    count = len(re.findall(r'\("', seed_m.group(1)))
+
+    # ASSERT
+    if count >= 20:
+        _log(PASS, di, f"Pipeline seed has {count} targets (>= 20 required)")
+    else:
+        _log(FAIL, di, f"Pipeline seed has only {count} targets; need >= 20",
+             "Fix: Add more targets to seed list in marketing_agent.py seed_pipeline()")
+    return True
+
+
+def test_DI_008_B():
+    """DI-008-B: marketing_agent.py seed contains no paid-media channel types"""
+    di = "DI-008-B"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = AGENTS / "marketing_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "marketing_agent.py not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT — scan seed_pipeline() block for paid channel types
+    PAID_TYPES = ["paid_media", "paid_ad", "paid_sponsorship", "banner_ad",
+                  "display_ad", "google_ads", "linkedin_ads", "sponsored_post"]
+    block_m = re.search(r'def seed_pipeline\(.*?conn\.executemany', content, re.DOTALL)
+    block = block_m.group(0) if block_m else content
+    found_paid = [t for t in PAID_TYPES if t in block.lower()]
+    paid_literal_hits = re.findall(r'"(paid[^"]{0,30})"', block)
+
+    # ASSERT
+    all_paid = found_paid + paid_literal_hits
+    if not all_paid:
+        _log(PASS, di, "No paid channel types in pipeline seed (zero-cash budget maintained)")
+    else:
+        _log(FAIL, di, f"Paid channel type(s) in pipeline seed: {all_paid}",
+             "Fix: Remove all paid media types from seed_pipeline() — Alpha phase has zero-cash budget")
     return True
 
 
@@ -950,6 +1042,42 @@ def test_DI_010_B():
              "UI should never pass --all; it generates all clauses at once")
     else:
         _log(PASS, di, "--all flag not found in ISO coach API handler (correct)")
+
+
+def test_DI_010_C():
+    """DI-010-C: rag_agent.py excludes iso.org from STATIC_DOCS and Tavily include_domains"""
+    di = "DI-010-C"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = AGENTS / "rag_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "rag_agent.py not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT — iso.org must not appear in STATIC_DOCS URLs
+    static_m = re.search(r'STATIC_DOCS\s*=\s*\[(.+?)\]', content, re.DOTALL)
+    static_block = static_m.group(1) if static_m else ""
+    iso_in_static = "iso.org" in static_block
+
+    # iso.org must not appear in Tavily include_domains (would fetch verbatim paywall content)
+    tavily_domains_m = re.search(r'include_domains.*?\[(.+?)\]', content, re.DOTALL)
+    tavily_block = tavily_domains_m.group(1) if tavily_domains_m else ""
+    iso_in_tavily = "iso.org" in tavily_block
+
+    # ASSERT
+    issues = []
+    if iso_in_static:  issues.append("iso.org in STATIC_DOCS — remove to prevent verbatim ISO standard ingestion")
+    if iso_in_tavily:  issues.append("iso.org in Tavily include_domains — remove to prevent verbatim ISO standard ingestion")
+
+    if not issues:
+        _log(PASS, di, "iso.org excluded from STATIC_DOCS and Tavily include_domains — ISO verbatim text cannot be ingested")
+    else:
+        _log(FAIL, di, f"DI-010-C ISO exclusion violations: {'; '.join(issues)}",
+             "Fix: Remove iso.org from STATIC_DOCS and include_domains in rag_agent.py. "
+             "ISO context from other sources (RAPS, Greenlight Guru) is permitted.")
+    return True
 
 
 # ── UN-011 / M&A Intelligence ─────────────────────────────────────────────────
@@ -1366,6 +1494,43 @@ def test_DI_015_G():
     else:
         detail = "; ".join(naked[:5]) + (f" … +{len(naked)-5} more" if len(naked) > 5 else "")
         _log(FAIL, di, f"{len(naked)} fetch call(s) missing authHdr() in frontend source", detail)
+
+
+def test_DI_015_F():
+    """DI-015-F: server.py applies AuthMiddleware as blanket middleware covering all non-health routes"""
+    di = "DI-015-F"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = UI_BACK / "server.py"
+    if not f.exists():
+        _log(FAIL, di, "server.py not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT — AuthMiddleware class must exist and be registered
+    has_class  = "class AuthMiddleware" in content
+    has_add    = "add_middleware(AuthMiddleware)" in content
+
+    # _AUTH_EXEMPT must only exempt the expected safe routes
+    exempt_m = re.search(r'_AUTH_EXEMPT\s*=\s*frozenset\(\{([^}]+)\}', content)
+    exempt_routes = re.findall(r'"(/[^"]*)"', exempt_m.group(1)) if exempt_m else []
+    EXPECTED_EXEMPT = {"/", "/api/version", "/api/auth/token"}
+    unexpected = [r for r in exempt_routes if r not in EXPECTED_EXEMPT]
+
+    # ASSERT
+    issues = []
+    if not has_class:  issues.append("AuthMiddleware class missing from server.py")
+    if not has_add:    issues.append("app.add_middleware(AuthMiddleware) call missing — routes not protected")
+    if unexpected:     issues.append(f"Unexpected auth-exempt routes: {unexpected}")
+
+    if not issues:
+        _log(PASS, di, f"AuthMiddleware registered as blanket middleware; exempt routes: {exempt_routes}")
+    else:
+        _log(FAIL, di, f"DI-015-F auth coverage gaps: {'; '.join(issues)}",
+             "Fix: Add class AuthMiddleware(BaseHTTPMiddleware) and app.add_middleware(AuthMiddleware) "
+             "to server.py; limit _AUTH_EXEMPT to '/', '/api/version', '/api/auth/token'")
+    return True
 
 
 # ── UN-016 / Output Labeling ──────────────────────────────────────────────────
@@ -2467,7 +2632,7 @@ def test_DI_consulting_032_A():
 
 def test_DI_consulting_032_B():
     """DI-032-B: consulting_agent.py writes consulting_learning_ report with 'No new items ingested' fallback"""
-    di = "DI-033-B"
+    di = "DI-032-B"
     if _skip_if_filtered(di): return
 
     # ARRANGE
@@ -3430,13 +3595,13 @@ def main():
     test_DI_006_A(); test_DI_006_B()
 
     _section("UN-007/008/009 Content, Marketing & Decks")
-    test_DI_007_B(); test_DI_007_C(); test_DI_007_D(); test_DI_007_E()
+    test_DI_007_A(); test_DI_007_B(); test_DI_007_C(); test_DI_007_D(); test_DI_007_E()
     test_DI_007_F(); test_DI_007_G(); test_DI_007_H()
-    test_DI_008_C()
+    test_DI_008_A(); test_DI_008_B(); test_DI_008_C()
     test_DI_009_B(); test_DI_009_C()
 
     _section("UN-010/011/012 Regulatory Intelligence")
-    test_DI_010_A(); test_DI_010_B()
+    test_DI_010_A(); test_DI_010_B(); test_DI_010_C()
     test_DI_011_A(); test_DI_011_B(); test_DI_011_C()
     test_DI_012_A(); test_DI_012_B()
 
@@ -3447,7 +3612,7 @@ def main():
 
     _section("UN-015/016/017 Security, Labeling & Audit")
     test_DI_015_A(); test_DI_015_B(); test_DI_015_C()
-    test_DI_015_D(); test_DI_015_E(); test_DI_015_G()
+    test_DI_015_D(); test_DI_015_E(); test_DI_015_F(); test_DI_015_G()
     test_DI_016_A(); test_DI_016_B(); test_DI_016_C()
     test_DI_017_A(); test_DI_017_B(); test_DI_017_C()
 
