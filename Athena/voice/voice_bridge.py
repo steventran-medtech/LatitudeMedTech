@@ -927,45 +927,34 @@ def _preload_models():
     t = threading.Thread(target=_load, daemon=True, name="model-preloader")
     t.start()
 
-def _listen_for_wake(oww_model):
+def _listen_for_wake(oww_model, stream):
     """
     Stream mic → resample → openwakeword. Returns (detected: bool, max_score: float).
     max_score is the highest OWW confidence seen at detection — logged for threshold tuning.
-    Robust: catches device errors, re-opens stream, keeps listening.
+    Reads from the caller-supplied stream; returns (False, 0.0) on device-change so the
+    caller can exit the stream context and reopen with the new device.
     """
     level_every = max(1, int(0.1 * DEVICE_RATE / CHUNK_NATIVE))
     n = 0
-    retry_delay = 0.5
     while _active:
-        try:
-            with sd.InputStream(device=INPUT_DEVICE, samplerate=DEVICE_RATE,
-                                channels=DEVICE_CH, dtype="int16",
-                                blocksize=CHUNK_NATIVE) as stream:
-                while _active:
-                    if _device_changed.is_set():        # UN-029: reopen stream with new device
-                        _device_changed.clear()
-                        break
-                    chunk, _ = stream.read(CHUNK_NATIVE)
-                    mono = _to_mono_float(chunk)
-                    rs   = _resample(mono)
-                    n += 1
-                    if n % level_every == 0:
-                        _emit("level", level=round(min(1.0, _rms(mono) * 8), 3))
-                    if _consume_ptt():
-                        return True, 1.0   # PTT bypasses wake-word scoring
-                    if _chunk_is_speech(rs):
-                        i16 = (rs * 32768).clip(-32768, 32767).astype(np.int16)
-                        pred = oww_model.predict(i16)
-                        max_score = max(pred.values()) if pred else 0.0
-                        for _, score in pred.items():
-                            if score >= WAKE_THRESHOLD:
-                                return True, round(float(max_score), 4)
-        except Exception as e:
-            # Audio device hiccup — wait briefly and retry instead of crashing
-            _consume_ptt()   # discard any PTT that fired before the exception; don't carry it into the retry
-            _emit("level", level=0.0)
-            time.sleep(retry_delay)
-            retry_delay = min(retry_delay * 1.5, 3.0)  # back off up to 3s
+        if _device_changed.is_set():        # UN-029: signal caller to reopen stream with new device
+            _device_changed.clear()
+            return False, 0.0
+        chunk, _ = stream.read(CHUNK_NATIVE)
+        mono = _to_mono_float(chunk)
+        rs   = _resample(mono)
+        n += 1
+        if n % level_every == 0:
+            _emit("level", level=round(min(1.0, _rms(mono) * 8), 3))
+        if _consume_ptt():
+            return True, 1.0
+        if _chunk_is_speech(rs):
+            i16 = (rs * 32768).clip(-32768, 32767).astype(np.int16)
+            pred = oww_model.predict(i16)
+            max_score = max(pred.values()) if pred else 0.0
+            for _, score in pred.items():
+                if score >= WAKE_THRESHOLD:
+                    return True, round(float(max_score), 4)
     return False, 0.0
 
 # ── STT ───────────────────────────────────────────────────────────────────────
@@ -982,7 +971,7 @@ def _load_whisper():
         pass
     return WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8")
 
-def _record_query():
+def _record_query(stream):
     """Record until SILENCE_DURATION of continuous silence after at least
     MIN_SPEECH_CHUNKS of detected speech.  Uses the permissive query VAD and a
     fixed silence threshold that is not affected by the wake-word auto-tuner.
@@ -992,6 +981,8 @@ def _record_query():
                     so a false-positive wake trigger never blocks for 30 s.
       Post-speech — require BOTH RMS and VAD to agree on silence before counting,
                     so soft syllables don't prematurely end the recording.
+
+    Reads from the caller-supplied stream — no close/reopen gap after wake detection.
     """
     frames             = []
     silence            = 0
@@ -1002,38 +993,35 @@ def _record_query():
     sil_chunks            = int(SILENCE_DURATION * TARGET_RATE / CHUNK_SAMPLES_16K)
     max_chunks            = int(MAX_RECORD_SEC   * TARGET_RATE / CHUNK_SAMPLES_16K)
 
-    with sd.InputStream(device=INPUT_DEVICE, samplerate=DEVICE_RATE,
-                        channels=DEVICE_CH, dtype="int16",
-                        blocksize=CHUNK_NATIVE) as stream:
-        while len(frames) < max_chunks and _active:
-            chunk, _ = stream.read(CHUNK_NATIVE)
-            mono  = _to_mono_float(chunk)
-            rs    = _resample(mono)
-            rms   = _rms(mono)
-            _emit("level", level=round(min(1.0, rms * 8), 3))
-            frames.append(rs)
+    while len(frames) < max_chunks and _active:
+        chunk, _ = stream.read(CHUNK_NATIVE)
+        mono  = _to_mono_float(chunk)
+        rs    = _resample(mono)
+        rms   = _rms(mono)
+        _emit("level", level=round(min(1.0, rms * 8), 3))
+        frames.append(rs)
 
-            # aggressiveness=2 VAD correctly rejects ambient noise; no RMS gate needed.
-            is_speech = _chunk_is_speech(rs, _vad_query)
+        # aggressiveness=2 VAD correctly rejects ambient noise; no RMS gate needed.
+        is_speech = _chunk_is_speech(rs, _vad_query)
 
-            if is_speech:
-                speech_seen        += 1
-                silence             = 0
-                pre_speech_silence  = 0   # reset both on confirmed speech
-            elif speech_seen >= MIN_SPEECH_CHUNKS:
-                # Post-speech: VAD alone determines silence — RMS AND-gate removed (UN-028).
-                if not is_speech:
-                    silence += 1
-            else:
-                # Pre-speech: count toward false-positive bail-out only.
-                if not is_speech:
-                    pre_speech_silence += 1
-                    if pre_speech_silence >= PRE_SPEECH_SIL_CHUNKS:
-                        frames = []   # discard — no speech detected, likely false positive
-                        break
+        if is_speech:
+            speech_seen        += 1
+            silence             = 0
+            pre_speech_silence  = 0   # reset both on confirmed speech
+        elif speech_seen >= MIN_SPEECH_CHUNKS:
+            # Post-speech: VAD alone determines silence — RMS AND-gate removed (UN-028).
+            if not is_speech:
+                silence += 1
+        else:
+            # Pre-speech: count toward false-positive bail-out only.
+            if not is_speech:
+                pre_speech_silence += 1
+                if pre_speech_silence >= PRE_SPEECH_SIL_CHUNKS:
+                    frames = []   # discard — no speech detected, likely false positive
+                    break
 
-            if silence >= sil_chunks:
-                break
+        if silence >= sil_chunks:
+            break
 
     _emit("level", level=0.0)
     return np.concatenate(frames) if frames else np.array([], dtype=np.float32)
@@ -1521,35 +1509,45 @@ def _voice_loop():
         # LISTENING is emitted exactly once per cycle, right here, before the
         # blocking wake-word call.  Every processing branch below just uses
         # `continue` to return here — no redundant state-flipping.
-        if _review_session.get("awaiting_response"):
-            # Review session: skip wake-word detection and record directly.
-            _consume_ptt()                        # discard any PTT set during this review cycle
-            _review_session["awaiting_response"] = False
-            wake_score = 1.0
-        else:
-            _state = VS.LISTENING
-            _emit("listening", message=f"Say '{WAKE_PHRASE.title()}' to activate")
-            # PTT fired before blocking listen started — honour it immediately.
-            if _consume_ptt():
-                wake_detected, wake_score = True, 1.0
-            else:
-                wake_detected, wake_score = _listen_for_wake(oww)
-            if not wake_detected or not _active:
-                break
-
-        _state = VS.AWAKE
-        _emit("awake", message=(
-            "Listening for review response…"
-            if _review_session.get("active") else "Recording…"
-        ))
-
-        # ── Record ────────────────────────────────────────────────────────────
+        _stream_retry_delay = getattr(_voice_loop, "_stream_retry_delay", 0.5)
         try:
-            audio = _record_query()
+            with sd.InputStream(device=INPUT_DEVICE, samplerate=DEVICE_RATE,
+                                channels=DEVICE_CH, dtype="int16",
+                                blocksize=CHUNK_NATIVE) as stream:
+                _voice_loop._stream_retry_delay = 0.5  # reset backoff on successful open
+
+                if _review_session.get("awaiting_response"):
+                    # Review session: skip wake-word detection and record directly.
+                    _consume_ptt()                    # discard any PTT set during this review cycle
+                    _review_session["awaiting_response"] = False
+                    wake_score = 1.0
+                    _state = VS.AWAKE
+                    _emit("awake", message="Listening for review response…")
+                else:
+                    _state = VS.LISTENING
+                    _emit("listening", message=f"Say '{WAKE_PHRASE.title()}' to activate")
+                    # PTT fired before blocking listen started — honour it immediately.
+                    if _consume_ptt():
+                        wake_detected, wake_score = True, 1.0
+                    else:
+                        wake_detected, wake_score = _listen_for_wake(oww, stream)
+                    if not wake_detected:
+                        if not _active:
+                            break
+                        continue   # device changed → exit 'with', reopen with new device next iter
+                    _state = VS.AWAKE
+                    _emit("awake", message="Recording…")
+
+                audio = _record_query(stream)
+
         except Exception as e:
-            _emit("info", message=f"Recording error (retrying): {e}")
-            time.sleep(0.5)
-            continue   # → top of loop → LISTENING emit → wake-word
+            _emit("info", message=f"Audio error (retrying): {e}")
+            _emit("level", level=0.0)
+            _consume_ptt()
+            _stream_retry_delay = getattr(_voice_loop, "_stream_retry_delay", 0.5)
+            time.sleep(_stream_retry_delay)
+            _voice_loop._stream_retry_delay = min(_stream_retry_delay * 1.5, 3.0)
+            continue   # → top of loop
 
         # ── Transcribe ────────────────────────────────────────────────────────
         stt_t0 = time.time()
