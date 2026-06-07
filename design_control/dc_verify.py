@@ -1741,6 +1741,152 @@ def test_DI_027_A():
              "Add approved_paths = {r['file_path'] for r in mem.get_approved_reviews()} and filter disk scan")
 
 
+# ── UN-028 / Voice/Noise Discrimination ─────────────────────────────────────
+
+def test_DI_028_A():
+    """DI-028-A: _vad_query in voice_bridge.py uses aggressiveness >= 2"""
+    di = "DI-028-A"
+    if _skip_if_filtered(di): return
+    f = VOICE / "voice_bridge.py"
+    if not f.exists():
+        _log(FAIL, di, "voice_bridge.py not found", str(f))
+        return
+    content = _read(f)
+    m = re.search(r'_vad_query\s*=\s*_webrtcvad\.Vad\s*\(\s*(\d+)\s*\)', content)
+    if not m:
+        _log(FAIL, di, "_vad_query initialisation not found in voice_bridge.py",
+             "Add: _vad_query = _webrtcvad.Vad(2) in voice_bridge.py")
+        return
+    val = int(m.group(1))
+    if val >= 2:
+        _log(PASS, di, f"_vad_query aggressiveness = {val} (>= 2)")
+    else:
+        _log(FAIL, di, f"_vad_query aggressiveness = {val} (must be >= 2)",
+             "Set _vad_query = _webrtcvad.Vad(2) or higher in voice_bridge.py")
+
+
+def test_DI_028_B():
+    """DI-028-B: Post-speech silence in _record_query uses VAD alone (no RMS AND-gate)"""
+    di = "DI-028-B"
+    if _skip_if_filtered(di): return
+    f = VOICE / "voice_bridge.py"
+    if not f.exists():
+        _log(FAIL, di, "voice_bridge.py not found", str(f))
+        return
+    content = _read(f)
+    has_rms_and_gate = bool(re.search(
+        r'rms\s*<\s*QUERY_SILENCE_THRESHOLD\s+and\s+not\s+is_speech', content))
+    if has_rms_and_gate:
+        _log(FAIL, di, "RMS AND-gate still present in _record_query silence detection",
+             "Remove QUERY_SILENCE_THRESHOLD condition; use 'if not is_speech: silence += 1' alone")
+        return
+    if "silence += 1" in content and "speech_seen" in content:
+        _log(PASS, di, "Post-speech silence uses VAD alone — no RMS AND-gate")
+    else:
+        _log(FAIL, di, "Cannot confirm VAD-only silence detection in _record_query",
+             "Ensure 'if not is_speech: silence += 1' without RMS condition in _record_query")
+
+
+def test_DI_028_C():
+    """DI-028-C: _speak_phrase_greeting in server.py routes greeting via _voice_queue"""
+    di = "DI-028-C"
+    if _skip_if_filtered(di): return
+    f = UI_BACK / "server.py"
+    if not f.exists():
+        _log(FAIL, di, "server.py not found", str(f))
+        return
+    content = _read(f)
+    if bool(re.search(r'_voice_queue\.append', content)):
+        _log(PASS, di, "server.py _speak_phrase_greeting routes greeting via _voice_queue.append()")
+    else:
+        _log(FAIL, di, "_voice_queue.append not found in server.py",
+             "In _speak_phrase_greeting, replace direct _speak_sentence() call with _voice_queue.append(text)")
+
+
+def test_DI_028_D():
+    """DI-028-D: Voice loop startup sleep >= 0.5 s before first notification drain"""
+    di = "DI-028-D"
+    if _skip_if_filtered(di): return
+    f = VOICE / "voice_bridge.py"
+    if not f.exists():
+        _log(FAIL, di, "voice_bridge.py not found", str(f))
+        return
+    content = _read(f)
+    has_startup_sleep = bool(re.search(
+        r'time\.sleep\s*\(\s*0\.[5-9]|time\.sleep\s*\(\s*[1-9]', content))
+    if has_startup_sleep:
+        _log(PASS, di, "Voice bridge contains startup sleep >= 0.5 s")
+    else:
+        _log(FAIL, di, "No startup sleep >= 0.5 s found in voice_bridge.py",
+             "Add time.sleep(0.5) before the notification drain loop in _voice_loop()")
+
+
+# ── UN-029 / Audio Device Detection ─────────────────────────────────────────
+
+def test_DI_029_A():
+    """DI-029-A: _device_monitor_loop present in voice_bridge.py with poll interval <= 5 s"""
+    di = "DI-029-A"
+    if _skip_if_filtered(di): return
+    f = VOICE / "voice_bridge.py"
+    if not f.exists():
+        _log(FAIL, di, "voice_bridge.py not found", str(f))
+        return
+    content = _read(f)
+    if "_device_monitor_loop" not in content:
+        _log(FAIL, di, "_device_monitor_loop not defined in voice_bridge.py",
+             "Add _device_monitor_loop() that polls every <= 5 s and calls _apply_device on change")
+        return
+    m = re.search(
+        r'def _device_monitor_loop\(\).*?time\.sleep\s*\(\s*([0-9.]+)\s*\)',
+        content, re.DOTALL)
+    if m:
+        val = float(m.group(1))
+        if val <= 5.0:
+            _log(PASS, di, f"_device_monitor_loop present; poll interval = {val} s (<= 5 s)")
+        else:
+            _log(FAIL, di, f"_device_monitor_loop poll interval = {val} s (must be <= 5 s)",
+                 "Set time.sleep() in _device_monitor_loop to <= 5.0")
+    else:
+        _log(PASS, di, "_device_monitor_loop present")
+
+
+def test_DI_029_B():
+    """DI-029-B: _device_changed threading.Event and is_set() check in voice_bridge.py"""
+    di = "DI-029-B"
+    if _skip_if_filtered(di): return
+    f = VOICE / "voice_bridge.py"
+    if not f.exists():
+        _log(FAIL, di, "voice_bridge.py not found", str(f))
+        return
+    content = _read(f)
+    has_event = bool(re.search(r'_device_changed\s*=\s*threading\.Event\s*\(\s*\)', content))
+    has_check  = bool(re.search(r'_device_changed\.is_set\s*\(\s*\)', content))
+    if has_event and has_check:
+        _log(PASS, di, "_device_changed Event declared and is_set() checked in voice_bridge.py")
+    elif not has_event:
+        _log(FAIL, di, "_device_changed threading.Event not declared in voice_bridge.py",
+             "Add: _device_changed = threading.Event() at module level in voice_bridge.py")
+    else:
+        _log(FAIL, di, "_device_changed.is_set() not called in voice_bridge.py",
+             "Add: if _device_changed.is_set(): _device_changed.clear(); break inside _listen_for_wake loop")
+
+
+def test_DI_029_C():
+    """DI-029-C: _emit('device_changed', ...) WebSocket event present in voice_bridge.py"""
+    di = "DI-029-C"
+    if _skip_if_filtered(di): return
+    f = VOICE / "voice_bridge.py"
+    if not f.exists():
+        _log(FAIL, di, "voice_bridge.py not found", str(f))
+        return
+    content = _read(f)
+    if bool(re.search(r'_emit\s*\(\s*["\']device_changed["\']', content)):
+        _log(PASS, di, "_emit('device_changed', ...) present in voice_bridge.py")
+    else:
+        _log(FAIL, di, "_emit('device_changed', ...) not found in voice_bridge.py",
+             "Add: _emit('device_changed', device=new_name, device_rate=new_rate) in _device_monitor_loop")
+
+
 # ── UN-030 / McKinsey + Latitude Brand Formatting Standard ───────────────────
 
 def test_DI_030_A():
@@ -1991,6 +2137,12 @@ def main():
 
     _section("UN-026/027 Phase 2C — App Loading & Document Filter")
     test_DI_026_A(); test_DI_027_A()
+
+    _section("UN-028 Voice/Noise Discrimination")
+    test_DI_028_A(); test_DI_028_B(); test_DI_028_C(); test_DI_028_D()
+
+    _section("UN-029 Audio Device Detection")
+    test_DI_029_A(); test_DI_029_B(); test_DI_029_C()
 
     _section("UN-030 McKinsey/Latitude Brand Formatting Standard")
     test_DI_030_A(); test_DI_030_B(); test_DI_030_C()
