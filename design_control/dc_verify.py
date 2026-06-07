@@ -2126,7 +2126,7 @@ def test_DI_consulting_032_A():
 
 def test_DI_consulting_032_B():
     """DI-032-B: consulting_agent.py writes consulting_learning_ report with 'No new items ingested' fallback"""
-    di = "DI-032-B"
+    di = "DI-033-B"
     if _skip_if_filtered(di): return
 
     # ARRANGE
@@ -2468,13 +2468,11 @@ def test_DI_030_C():
              "Add 'Latitude MedTech LLC' to the system prompt template in agent_base.py")
 
 
-#
+# ── UN-033 / Voice Query Readiness Latency (CO-008 — OPEN) ──────────────────
 
-# ── UN-032 / Voice Query Readiness Latency ───────────────────────────────────
-
-def test_DI_032_A():
-    """DI-032-A: _listen_for_wake accepts a stream parameter and does not open sd.InputStream internally"""
-    di = "DI-032-A"
+def test_DI_033_A():
+    """DI-033-A: _listen_for_wake accepts a stream parameter and does not open sd.InputStream internally"""
+    di = "DI-033-A"
     if _skip_if_filtered(di): return
     f = VOICE / "voice_bridge.py"
     if not f.exists():
@@ -2495,9 +2493,9 @@ def test_DI_032_A():
     _log(PASS, di, "_listen_for_wake accepts stream parameter; no internal sd.InputStream")
 
 
-def test_DI_032_B():
-    """DI-032-B: _record_query accepts a stream parameter and does not open sd.InputStream internally"""
-    di = "DI-032-B"
+def test_DI_033_B():
+    """DI-033-B: _record_query accepts a stream parameter and does not open sd.InputStream internally"""
+    di = "DI-033-B"
     if _skip_if_filtered(di): return
     f = VOICE / "voice_bridge.py"
     if not f.exists():
@@ -2518,9 +2516,9 @@ def test_DI_032_B():
     _log(PASS, di, "_record_query accepts stream parameter; no internal sd.InputStream")
 
 
-def test_DI_032_C():
-    """DI-032-C: _voice_loop opens one sd.InputStream and passes it to _listen_for_wake and _record_query"""
-    di = "DI-032-C"
+def test_DI_033_C():
+    """DI-033-C: _voice_loop opens one sd.InputStream and passes it to _listen_for_wake and _record_query"""
+    di = "DI-033-C"
     if _skip_if_filtered(di): return
     f = VOICE / "voice_bridge.py"
     if not f.exists():
@@ -2738,8 +2736,7 @@ def main():
     _section("UN-032 Consulting Learning Visibility")
     test_DI_consulting_032_A(); test_DI_consulting_032_B()
 
-    _section("UN-032 Voice Query Readiness Latency")
-    test_DI_032_A(); test_DI_032_B(); test_DI_032_C()
+    # UN-033 (DI-033-A/B/C) deregistered — CO-008 re-enables with implementation
 
     if args.live or args.full:
         test_live_api()
