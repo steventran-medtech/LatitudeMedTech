@@ -1,5 +1,5 @@
 ﻿# DC-006 — Change Control
-**Document:** DC-006 · Version 1.1 · 2026-06-07  
+**Document:** DC-006 · Version 1.2 · 2026-06-07  
 **Approved by:** Steven Tran
 
 ---
@@ -26,9 +26,10 @@ Every CO gets a unique ID at kickoff. Assign the next available CO-NNN here befo
 
 | CO-012 | 2026-06-07 | C3 | 2 | co-011-fresh | DI-007-F (new, VERIFIED), DI-002-H (new, VERIFIED), DI-002-I (new, VERIFIED) | MERGED (0fc5b41, PR #100) |
 | CO-013 | 2026-06-07 | C2 | 2 | feat/co-013-un-019-splash-done-signal | DI-019-L (new, P0), DI-019-G (verification method update) | OPEN |
+| CO-014 | 2026-06-07 | C1 | 2 | fix/co-014-di-002-j-reviewview-duplicate-import | DI-002-J (new, VERIFIED) | OPEN |
 
 **Status values:** OPEN · MERGED · ABANDONED  
-**Next available ID:** CO-014
+**Next available ID:** CO-015
 
 ---
 

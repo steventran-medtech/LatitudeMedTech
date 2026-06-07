@@ -25,6 +25,11 @@ record of what changed between each version. Keep them in lock-step — see
 
 ## [Unreleased]
 
+### CO-014 (fix) — C1 Corrective: Remove duplicate FileViewer import in ReviewView.jsx (DI-002-J)
+
+- **ReviewView.jsx**: Removed duplicate `import FileViewer from "./FileViewer.jsx"` on line 8; duplicate caused a Vite build failure that prevented the Document Queue from loading and caused Chrome to open to the error overlay.
+- **DI-002-J** (P0, VERIFIED): New regression test `test_DI_002_J` in `dc_verify.py` asserts no duplicate import declarations in `ReviewView.jsx`.
+
 ### CO-013 (splash-done-signal) — UN-019: Splash 100% guaranteed before Chrome opens (DI-019-L)
 
 - **start_splash.hta**: Added `CloseSplash` sub that writes `.athena_splash_done` before `window.close()`; `Tick` sub now calls `window.setTimeout "CloseSplash"` instead of `window.setTimeout "window.close()"`.

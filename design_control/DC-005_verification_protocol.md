@@ -1,5 +1,5 @@
 # DC-005 — Verification Protocol
-**Document:** DC-005 · Version 2.0 · 2026-06-07  
+**Document:** DC-005 · Version 2.1 · 2026-06-07  
 **Approved by:** Steven Tran
 
 ---
@@ -91,6 +91,10 @@ Fail action: Change `useState('queue')` to `useState('pending')` and update the 
 **test_DI_002_G** â App.jsx NAV_ITEMS Document Queue consolidation
 Check: `App.jsx` NAV_ITEMS has `id:"queue"` and does NOT have `id:"documents"` or `id:"review"`.
 Fail action: Replace the old nav entries with `id:'queue'` in `App.jsx` NAV_ITEMS.
+
+**test_DI_002_J** — No duplicate imports in ReviewView.jsx  
+Check: Every `import` statement in `ReviewView.jsx` is unique; no identifier is imported twice.  
+Fail action: Remove the duplicate import line. A duplicate import causes a Vite build failure that prevents the entire Document Queue from loading (P0).
 
 ---
 ### DI-003 — Knowledge Base
