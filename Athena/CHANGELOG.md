@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to **Athena** (the Latitude MedTech AI Operating System) are
 recorded here. The format is based on [Keep a Changelog](https://keepachangelog.com/),
