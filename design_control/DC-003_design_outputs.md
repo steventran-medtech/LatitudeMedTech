@@ -1,5 +1,5 @@
 # DC-003 — Design Outputs
-**Document:** DC-003 · Version 1.4 · 2026-06-06  
+**Document:** DC-003 · Version 1.5 · 2026-06-07  
 **Approved by:** Steven Tran
 
 Design outputs are the code artifacts, APIs, data structures, and
@@ -44,7 +44,10 @@ Athena/
 | Approve endpoint | `ui/backend/server.py` | `POST /api/review/{item_id}/approve` | DI-002-B |
 | Reject endpoint | `ui/backend/server.py` | `POST /api/review/{item_id}/reject` | DI-002-C |
 | Edit-and-rewrite endpoint | `ui/backend/server.py` | `POST /api/review/{item_id}/edit` | DI-002-D |
-| Review UI | `ui/frontend/src/ReviewView.jsx` | Full component | DI-002-A through DI-002-D |
+| Review UI | `ui/frontend/src/ReviewView.jsx` | Full component — Document Queue tab with Pending / Approved / Rejected filters | DI-002-A through DI-002-G |
+| Document Queue navigation entry | `ui/frontend/src/App.jsx` | `NAV_ITEMS` `{id:"queue", label:"Document Queue"}` replaces former `documents` + `review` entries | DI-002-G |
+| Approved filter fetch | `ui/frontend/src/ReviewView.jsx` | `loadApproved()` — `GET /api/documents` | DI-002-E |
+| Approved document viewer | `ui/frontend/src/ReviewView.jsx` | `viewingApproved` state + `<FileViewer>` render | DI-002-F |
 | Submit for review helper | `agents/briefing_agent.py`, `agents/marketing_agent.py` | `submit_for_review()` calls | DI-002-A, DI-012-B |
 
 ---

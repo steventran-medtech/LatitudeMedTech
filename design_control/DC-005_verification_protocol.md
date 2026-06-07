@@ -1,5 +1,5 @@
 # DC-005 — Verification Protocol
-**Document:** DC-005 · Version 1.5 · 2026-06-06  
+**Document:** DC-005 · Version 1.6 · 2026-06-07  
 **Approved by:** Steven Tran
 
 ---
@@ -76,6 +76,18 @@ Fail action: Same as approve — restore immediately (P0).
 **test_DI_002_D** — Edit route  
 Check: `POST /api/review/{item_id}/edit` in `server.py`.  
 Fail action: Edit feature removed; P1 — restore in current sprint.
+
+**test_DI_002_E** — Approved filter uses `/api/documents`  
+Check: `ReviewView.jsx` contains a `fetch` to `/api/documents` for the Approved tab.  
+Fail action: Add `loadApproved()` fetching `GET /api/documents` and call it when `tab === "approved"` in ReviewView.jsx.
+
+**test_DI_002_F** — Document Queue three-state filter  
+Check: `ReviewView.jsx` uses `useState("pending")` as initial tab state; `"approved"` and `"rejected"` appear as tab keys; legacy `useState("queue")` is absent.  
+Fail action: Change `useState("queue")` → `useState("pending")`; replace tab array `["queue","Pending"],["history","History"]` with `["pending","Pending"],["approved","Approved"],["rejected","Rejected"]`.
+
+**test_DI_002_G** — Navigation MAP consolidation  
+Check: `App.jsx` `NAV_ITEMS` contains `id:"queue"` and does NOT contain `id:"documents"` or `id:"review"`.  
+Fail action: Remove the `documents` and `review` entries from `NAV_ITEMS`; add a single `{id:"queue", label:"Document Queue"}` entry.
 
 ---
 

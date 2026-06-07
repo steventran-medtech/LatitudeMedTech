@@ -228,6 +228,7 @@ Update this file's version line (date + vN) in the same final commit.
 | 2026-06-06 | DI-004-E (C3): `SILENCE_DURATION` tuned to 0.5 s; requirement range updated to [0.4, 0.65] s | DI-004-E |
 | 2026-06-06 | Version 0.5.3 — voice/noise discrimination + audio device detection |  |
 | 2026-06-06 | DI-019-J (C2): splash `#dots` now cycles `.`/`..`/`...` via VBScript `TickDots` at 400 ms/state; CSS `dotFlash` wave removed | DI-019-J |
+| 2026-06-07 | CO-005 (C3): Documents + Review Queue tabs merged into single Document Queue tab (Pending/Approved/Rejected filters) — `App.jsx` NAV_ITEMS + routing; `ReviewView.jsx` three-state filter | DI-002-E/F/G |
 
 ---
 

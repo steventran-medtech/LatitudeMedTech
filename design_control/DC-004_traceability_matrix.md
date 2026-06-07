@@ -1,5 +1,5 @@
 # DC-004 — Requirements Traceability Matrix (RTM)
-**Document:** DC-004 · Version 2.4 · 2026-06-06  
+**Document:** DC-004 · Version 2.5 · 2026-06-07  
 **Approved by:** Steven Tran
 
 This is the single source of truth for end-to-end coverage. Every user need
@@ -30,7 +30,9 @@ column are open findings requiring immediate remediation.
 | UN-002 | | DI-002-B | Approve action | `server.py` POST /api/review/{id}/approve | `test_DI_002_B` | VERIFIED |
 | UN-002 | | DI-002-C | Reject action | `server.py` POST /api/review/{id}/reject | `test_DI_002_C` | VERIFIED |
 | UN-002 | | DI-002-D | Edit-and-rewrite action | `server.py` POST /api/review/{id}/edit | `test_DI_002_D` | VERIFIED |
-| UN-002 | | DI-002-E | Only approved items in Docs hub | `server.py` `list_documents()` + `get_approved_reviews()` | `test_DI_027_A` | VERIFIED |
+| UN-002 | | DI-002-E | Approved items in Approved filter of Document Queue only | `ReviewView.jsx` `loadApproved()` + `server.py` `list_documents()` via `get_approved_reviews()` | `test_DI_002_E` | VERIFIED |
+| UN-002 | | DI-002-F | Document Queue tab has three filter states: Pending / Approved / Rejected | `ReviewView.jsx` `useState("pending")` + tab array with "approved" and "rejected" | `test_DI_002_F` | VERIFIED |
+| UN-002 | | DI-002-G | NAV_ITEMS has `id:"queue"`; no `id:"documents"` or `id:"review"` | `App.jsx` `NAV_ITEMS` | `test_DI_002_G` | VERIFIED |
 | UN-003 | Knowledge base | DI-003-A | KBQuery searchable by agents | `kb_query.py` KBQuery | `test_DI_003_A` | VERIFIED |
 | UN-003 | | DI-003-B | RAG indexes FDA/EU/IMDRF | `knowledge_base/` subdirs | `test_DI_003_B` | VERIFIED |
 | UN-004 | Voice interaction | DI-004-A | Wake threshold ≤ 0.35 | `voice_bridge.py` WAKE_THRESHOLD | `test_DI_004_A` | VERIFIED |
