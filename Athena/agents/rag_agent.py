@@ -206,7 +206,7 @@ def tavily_search(query: str, max_results: int = 5) -> list:
                 "max_results":      max_results,
                 "include_domains":  [
                     "fda.gov", "eur-lex.europa.eu", "health.ec.europa.eu",
-                    "imdrf.org", "iso.org", "emergobyul.com",
+                    "imdrf.org", "emergobyul.com",
                     "raps.org", "medicaldeviceacademy.com",
                     "greenlight.guru", "massdevice.com",
                 ],

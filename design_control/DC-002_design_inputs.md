@@ -1,5 +1,5 @@
 # DC-002 — Design Inputs
-**Document:** DC-002 · Version 3.5 · 2026-06-07  
+**Document:** DC-002 · Version 3.6 · 2026-06-07  
 **Approved by:** Steven Tran
 
 Design inputs are specific, verifiable requirements derived from the user
@@ -84,7 +84,7 @@ Each entry:
 
 | ID | Source | Requirement Statement | Verification | Priority | Status |
 |---|---|---|---|---|---|
-| DI-022-A | UN-022 | Latency between completion of user's voice input and commencement of audible agent response shall be ≤ 1.75 seconds (tightened from 2 s in CO-016; see also DI-004-C for TTS pipeline timing) | Static: `DC-002_design_inputs.md` DI-022-A text states "1.75" seconds; `voice_bridge.py` contains `_ask_claude_streaming` using a streaming LLM call, `_split_sentences` / `_SENTENCE_END` for sentence-boundary detection, and `_speak_sentence` called inside the token-stream loop — not after full response is buffered | P0 | OPEN |
+| DI-022-A | UN-022 | Latency between completion of user's voice input and commencement of audible agent response shall be ≤ 1.75 seconds (tightened from 2 s in CO-016; see also DI-004-C for TTS pipeline timing) | Static: `DC-002_design_inputs.md` DI-022-A text states "1.75" seconds; `voice_bridge.py` contains `_ask_claude_streaming` using a streaming LLM call, `_split_sentences` / `_SENTENCE_END` for sentence-boundary detection, and `_speak_sentence` called inside the token-stream loop — not after full response is buffered; live timing test manual (MTP-003) | P0 | PARTIAL |
 
 ---
 
@@ -94,7 +94,7 @@ Each entry:
 
 | ID | Source | Requirement Statement | Verification | Priority | Status |
 |---|---|---|---|---|---|
-| DI-007-A | UN-007 | Content agent shall generate articles of 900–1,200 words | `max_tokens = 4000` in content agent; word-count check in post-processing | P0 | PARTIAL |
+| DI-007-A | UN-007 | Content agent shall generate articles of 900–1,200 words | `max_tokens = 4000` in content agent; word-count instruction in system prompt ("LENGTH: 900–1,200 words") | P0 | VERIFIED |
 | DI-007-B | UN-007 | Article title shall be derived from the body H1 via `title_from_body()` and cleaned via `clean_title()` | Both functions exist in `content_agent.py` | P0 | VERIFIED |
 | DI-007-C | UN-007 | Banned phrases shall be enforced at prompt level | Banned phrase list present in content agent system prompt | P0 | VERIFIED |
 | DI-007-D | UN-007 | Non-Latin characters shall be removed from titles before storage | `clean_title()` strips non-ASCII characters | P0 | VERIFIED |
@@ -107,8 +107,8 @@ Each entry:
 
 | ID | Source | Requirement Statement | Verification | Priority | Status |
 |---|---|---|---|---|---|
-| DI-008-A | UN-008 | Marketing agent shall maintain a pipeline DB with ≥ 20 targets | `ops/marketing/pipeline.db` created on first run with ≥ 20 seed targets | P1 | PARTIAL |
-| DI-008-B | UN-008 | All outreach channels shall be zero-cash-budget (no paid media at Alpha) | No paid channel types in pipeline seed data | P1 | PARTIAL |
+| DI-008-A | UN-008 | Marketing agent shall maintain a pipeline DB with ≥ 20 targets | `ops/marketing/pipeline.db` created on first run with ≥ 20 seed targets; `dc_verify.py` counts tuples in `seed_pipeline()` | P1 | VERIFIED |
+| DI-008-B | UN-008 | All outreach channels shall be zero-cash-budget (no paid media at Alpha) | No paid channel types in pipeline seed data; `dc_verify.py` scans `seed_pipeline()` for paid-media type strings | P1 | VERIFIED |
 | DI-008-C | UN-008 | `MarketingView.jsx` shall provide a bulk-select-and-delete capability for marketing output files using the `BulkBar` / `useMultiSelect` pattern — checkboxes per file, a bulk-action bar showing selected count, and a delete-selected action calling `/api/files/delete-bulk` with `folder: "marketing"` | `MarketingView.jsx` contains `useMultiSelect`, `BulkBar`, and `delete-bulk` string | P1 | VERIFIED |
 
 ### UN-009 — Slide Deck Generation
@@ -129,7 +129,7 @@ Each entry:
 |---|---|---|---|---|---|
 | DI-010-A | UN-010 | ISO coach shall generate clause content for any valid ISO 13485 clause reference | Clause lookup present in `iso_coach_agent.py`; responds to any clause number | P0 | VERIFIED |
 | DI-010-B | UN-010 | ISO coach shall generate one clause at a time (blank input = next ungenerated clause) | Sequential generation logic present; `--all` flag unavailable from UI | P0 | VERIFIED |
-| DI-010-C | UN-010 | No verbatim ISO standard text shall appear in the RAG knowledge base | KB ingestion pipeline excludes ISO standard files | P0 | PARTIAL |
+| DI-010-C | UN-010 | No verbatim ISO standard text shall appear in the RAG knowledge base | `iso.org` absent from `STATIC_DOCS` and Tavily `include_domains` in `rag_agent.py` (removed CO-018) | P0 | VERIFIED |
 
 ### UN-011 — M&A Intelligence
 
@@ -151,9 +151,9 @@ Each entry:
 | ID | Source | Requirement Statement | Verification | Priority | Status |
 |---|---|---|---|---|---|
 | DI-023-A | UN-023 | The knowledge base ingestion pipeline shall not apply a date filter that excludes documents published or effective more than 50 years before the current year; RAG search queries shall include non-date-restricted and historically-scoped terms alongside current-year queries, so that agents can access and cite source material spanning at least 50 years | `rag_agent.py` contains no hard `cutoff_year`, `min_year`, or equivalent date filter rejecting documents older than 50 years; KB seed queries include at least one historically-scoped term not restricted to a specific recent year | P1 | VERIFIED |
-| DI-023-B | UN-023 | `TAVILY_QUERIES` in `rag_agent.py` shall include at least 5 entries that contain a historical marker term — one of: "history", "historical", "evolution", "origin", "1970", "1980", "1990", "2000s" — so that the Tavily search pipeline actively retrieves pre-2020 QARA source material spanning the 50-year scope defined in UN-023 | Count of `TAVILY_QUERIES` entries matching `history\|historical\|evolution\|origin\|1970\|1980\|1990\|2000s` ≥ 5 | P1 | OPEN |
-| DI-023-C | UN-023 | Tavily query selection per run shall use deterministic day-of-year modulo bucketing (`datetime.now().timetuple().tm_yday`) rather than `random.sample()` so that the same calendar day always executes the same query bucket and adjacent days execute different buckets, enabling predictable full-corpus coverage | `rag_agent.py` contains `tm_yday` and does NOT contain `random.sample` | P1 | OPEN |
-| DI-023-D | UN-023 | `consulting_agent.py` shall define a `HISTORICAL_CONSULTING_SOURCES` list with at least 5 entries whose `"name"` field contains a historical marker term — one of: "history", "historical", "evolution", "origin", "1970", "1980", "1990", "2000s", "50 year", "classic" — so that the consulting learning pipeline actively retrieves management consulting knowledge spanning the 50-year scope defined in UN-023 | Count of `HISTORICAL_CONSULTING_SOURCES` entries in `consulting_agent.py` whose `"name"` value matches `history\|historical\|evolution\|origin\|1970\|1980\|1990\|2000s\|50.year\|classic` ≥ 5 | P1 | OPEN |
+| DI-023-B | UN-023 | `TAVILY_QUERIES` in `rag_agent.py` shall include at least 5 entries that contain a historical marker term — one of: "history", "historical", "evolution", "origin", "1970", "1980", "1990", "2000s" — so that the Tavily search pipeline actively retrieves pre-2020 QARA source material spanning the 50-year scope defined in UN-023 | Count of `TAVILY_QUERIES` entries matching `history\|historical\|evolution\|origin\|1970\|1980\|1990\|2000s` ≥ 5 | P1 | VERIFIED |
+| DI-023-C | UN-023 | Tavily query selection per run shall use deterministic day-of-year modulo bucketing (`datetime.now().timetuple().tm_yday`) rather than `random.sample()` so that the same calendar day always executes the same query bucket and adjacent days execute different buckets, enabling predictable full-corpus coverage | `rag_agent.py` contains `tm_yday` and does NOT contain `random.sample` | P1 | VERIFIED |
+| DI-023-D | UN-023 | `consulting_agent.py` shall define a `HISTORICAL_CONSULTING_SOURCES` list with at least 5 entries whose `"name"` field contains a historical marker term — one of: "history", "historical", "evolution", "origin", "1970", "1980", "1990", "2000s", "50 year", "classic" — so that the consulting learning pipeline actively retrieves management consulting knowledge spanning the 50-year scope defined in UN-023 | Count of `HISTORICAL_CONSULTING_SOURCES` entries in `consulting_agent.py` whose `"name"` value matches `history\|historical\|evolution\|origin\|1970\|1980\|1990\|2000s\|50.year\|classic` ≥ 5 | P1 | VERIFIED |
 
 ---
 
@@ -190,7 +190,7 @@ Each entry:
 | DI-015-C | UN-015 | API shall enforce rate limiting at ≤ 120 requests per minute | Rate-limit middleware present in `server.py` | P0 | VERIFIED |
 | DI-015-D | UN-015 | API shall set security headers (CSP, X-Frame-Options, X-Content-Type-Options) | Security header middleware present in `server.py` | P0 | VERIFIED |
 | DI-015-E | UN-015 | File-serving endpoints shall reject path traversal attempts (`../`) | Path traversal check present in file-serving routes | P0 | VERIFIED |
-| DI-015-F | UN-015 | Session authentication token shall be required for all non-health API endpoints | Auth middleware or dependency in server.py guards non-public routes | P0 | PARTIAL |
+| DI-015-F | UN-015 | Session authentication token shall be required for all non-health API endpoints | `AuthMiddleware(BaseHTTPMiddleware)` registered via `app.add_middleware`; `_AUTH_EXEMPT` verified to contain only `{"/", "/api/version", "/api/auth/token"}` | P0 | VERIFIED |
 | DI-015-G | UN-015 | Every `fetch()` call to a non-exempt `/api/` endpoint in the frontend shall include `authHdr()` in its request headers — GET calls are not exempt | `dc_verify.py` `test_DI_015_G` scans all `.jsx`/`.js` source files for naked fetch calls | P0 | VERIFIED |
 
 ### UN-016 — Output Labeling & Disclaimer
@@ -236,8 +236,8 @@ Each entry:
 | DI-019-H | UN-019 | The progress bar shall not remain at any single whole-number percentage for more than 1 second due to animation algorithm constraints — enforced by: (a) a minimum per-frame increment floor in the Tick loop, (b) a minimum per-poll advancement floor in PollChromeReady, (c) a PollChromeReady cap ≤ 98 so that `Int()` display can never show "100%" while loading is incomplete, and (d) a mathematical proof that the Tick easing can traverse from the cap to the 99.5 close-trigger in < 1000 ms: `(99.5 − cap) ÷ min_floor × 16 ms < 1000 ms` | `start_splash.hta` Tick floor; PollChromeReady floor + cap ≤ 98; `Int(stepVal)` display; computed `(99.5 − cap) / min_floor * 16 < 1000` | P2 | VERIFIED |
 | DI-019-I | UN-019 | The splash screen "Athena" title (`.name`) font-size shall be 101px — `start_splash.hta` fixed value and `electron/main.js` clamp maximum shall both equal 101px | `start_splash.hta` `.name` CSS contains `font-size:101px`; `electron/main.js` `.name` CSS clamp is `clamp(61px,7vw,101px)` | P2 | VERIFIED |
 | DI-019-J | UN-019 | The `#dots` element shall cycle its displayed text through a one-dot (`.`), two-dot (`..`), and three-dot (`...`) sequence at a fixed interval of ≤ 500 ms per state, driven by a VBScript timer (not CSS animation), while loading is in progress; the dots shall be hidden when loading completes | `start_splash.hta` contains a `TickDots` sub using 3-state cycling; `setInterval("TickDots", N)` with N ≤ 500; `dotsEl.style.display = "none"` on completion | P2 | VERIFIED |
-| DI-019-K | UN-019 | The Athena startup sequence shall not gate Chrome opening on voice model readiness — the `$modelTimeout` polling loop that blocks `.athena_ready` on `models_ready = true` from `/api/voice/status` shall be absent from `start_athena.ps1`; voice models shall preload asynchronously after Chrome opens; on warm start (Python env active, all model files present on disk), the total time from launch invocation to Chrome window opening shall be less than 10 seconds | `start_athena.ps1` does not contain `$modelTimeout` variable | P1 | OPEN |
-| DI-019-L | UN-019 | Chrome shall not open until the splash screen confirms its progress bar has reached 100% by writing a `.athena_splash_done` signal file; `start_splash.hta` shall contain a `CloseSplash` sub that writes the signal file before calling `window.close()`; `start_athena.ps1` shall poll for this file (up to 6000ms timeout) before launching Chrome and shall not use a fixed sleep as the sole gating mechanism | Static: `start_splash.hta` contains `CloseSplash` sub that writes `.athena_splash_done` before `window.close()`; `start_athena.ps1` contains `athena_splash_done` poll loop; `Start-Sleep -Milliseconds 2500` is absent from the Chrome-launch path | P0 | OPEN |
+| DI-019-K | UN-019 | The Athena startup sequence shall not gate Chrome opening on voice model readiness — the `$modelTimeout` polling loop that blocks `.athena_ready` on `models_ready = true` from `/api/voice/status` shall be absent from `start_athena.ps1`; voice models shall preload asynchronously after Chrome opens; on warm start (Python env active, all model files present on disk), the total time from launch invocation to Chrome window opening shall be less than 10 seconds | `start_athena.ps1` does not contain `$modelTimeout` variable | P1 | VERIFIED |
+| DI-019-L | UN-019 | Chrome shall not open until the splash screen confirms its progress bar has reached 100% by writing a `.athena_splash_done` signal file; `start_splash.hta` shall contain a `CloseSplash` sub that writes the signal file before calling `window.close()`; `start_athena.ps1` shall poll for this file (up to 6000ms timeout) before launching Chrome and shall not use a fixed sleep as the sole gating mechanism | Static: `start_splash.hta` contains `CloseSplash` sub that writes `.athena_splash_done` before `window.close()`; `start_athena.ps1` contains `athena_splash_done` poll loop; `Start-Sleep -Milliseconds 2500` is absent from the Chrome-launch path | P0 | VERIFIED |
 
 ---
 
@@ -324,8 +324,8 @@ Each entry:
 
 | ID | Source | Requirement Statement | Verification | Priority | Status |
 |---|---|---|---|---|---|
-| DI-032-A | UN-032 | `consulting_agent.py`'s `learn()` shall generate a Markdown learning summary report after each run and submit it to the review queue via `submit_for_review()`, with a report body that includes a "## Newly Ingested Items" section listing each new item (title, source, URL, category, chunk count) or an explicit "No new items ingested this run." message if none were found | `consulting_agent.py` contains `submit_for_review(` call AND "## Newly Ingested Items" section header string | P1 | OPEN |
-| DI-032-B | UN-032 | The consulting learning report shall be written to a file matching the `consulting_learning_` path pattern under the logs directory and shall include a fallback "No new items ingested this run." message when zero items were ingested in the run | `consulting_agent.py` source contains both `consulting_learning_` path pattern and `"No new items ingested this run."` string | P1 | OPEN |
+| DI-032-A | UN-032 | `consulting_agent.py`'s `learn()` shall generate a Markdown learning summary report after each run and submit it to the review queue via `submit_for_review()`, with a report body that includes a "## Newly Ingested Items" section listing each new item (title, source, URL, category, chunk count) or an explicit "No new items ingested this run." message if none were found | `consulting_agent.py` contains `submit_for_review(` call AND "## Newly Ingested Items" section header string | P1 | VERIFIED |
+| DI-032-B | UN-032 | The consulting learning report shall be written to a file matching the `consulting_learning_` path pattern under the logs directory and shall include a fallback "No new items ingested this run." message when zero items were ingested in the run | `consulting_agent.py` source contains both `consulting_learning_` path pattern and `"No new items ingested this run."` string | P1 | VERIFIED |
 
 ---
 
