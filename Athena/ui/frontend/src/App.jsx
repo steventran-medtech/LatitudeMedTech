@@ -1391,18 +1391,19 @@ const AGENT_ETA_SECONDS = {
   regulatory_strategy_agent: 240,
 };
 
-// Maps agent IDs to the tab to navigate to when the task completes
+// Maps agent IDs to the tab to navigate to when the task completes.
+// All agent-specific output tabs require approval; outputs route to "queue" first (DI-036-A).
 const AGENT_TAB = {
-  briefing_agent:        "briefing",
-  content_agent:         "content",
-  marketing_agent:       "marketing",
-  iso_coach:             "iso",
-  coaching_brief:              "coaching",
+  briefing_agent:              "queue",
+  content_agent:               "queue",
+  marketing_agent:             "queue",
+  iso_coach:                   "queue",
+  coaching_brief:              "queue",
+  deck_agent:                  "queue",
   consulting_agent:            "queue",
   ma_intelligence_agent:       "queue",
   sow_agent:                   "queue",
   regulatory_strategy_agent:   "queue",
-  deck_agent:            "decks",
 };
 
 // ── Toast notification system ──────────────────────────────────────────────
@@ -1778,7 +1779,7 @@ function FloatingVoiceWidget({ voice, open, onToggle, onFullView, docked, floatP
         onClick={handleBarClick}
         title="Drag to detach as floating widget"
         style={{
-          position:"fixed", top:0, left:0, right:0, height:VOICE_BAR_H,
+          position:"fixed", top:0, left:0, right:0, width:"auto", height:VOICE_BAR_H,
           background:"linear-gradient(90deg,#0B2642 0%,#071E33 100%)",
           borderBottom:"1px solid rgba(26,111,163,0.22)",
           display:"flex", alignItems:"center", padding:"0 14px",

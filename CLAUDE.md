@@ -254,6 +254,7 @@ Update this file's version line (date + vN) in the same final commit.
 
 | Date | Change | DC Reference |
 |---|---|---|
+| 2026-06-07 | CO-016 (C2/C3 batch): RAG ingestion adds date_published + scope_summary; DEVICE_SUBSECTORS covers all 6 sectors; tm_yday fallback replaces random.choice in content rotation; MarketingView bulk delete; M&A accepts historical requests; voice latency threshold ≤1.75 s; voice docking width:"auto" fix; all 10 agents route to "queue"; list_briefings/list_drafts/list_briefs/list_marketing_outputs gated by get_approved_reviews() | DI-003-C (mod), DI-007-G/H (new), DI-008-C (new), DI-011-C (new), DI-022-A (mod), DI-035-A (new), DI-036-A/B/C (new) |
 | 2026-06-07 | CO-015 (C1 corrective): Fixed missing closing paren `))}` → `)))}` in Approved-tab JSX of `ReviewView.jsx`; was masked by CO-014's import error; added DI-002-K regression test (P0) | DI-002-K (new, VERIFIED) |
 | 2026-06-07 | CO-014 (C1 corrective): Removed duplicate `import FileViewer` in `ReviewView.jsx` — caused Vite build failure and Chrome opening to error overlay; added DI-002-J regression test (P0) | DI-002-J (new, VERIFIED) |
 | 2026-06-07 | CO-013 (UN-019): Splash 100% guaranteed before Chrome opens — `CloseSplash` sub in `start_splash.hta` writes `.athena_splash_done` before `window.close()`; `start_athena.ps1` polls for signal file at 200ms (6s max) before Chrome launch; fixed `Start-Sleep -Milliseconds 2500` race condition | DI-019-L (new), DI-019-G (verification updated) |

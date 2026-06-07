@@ -520,7 +520,17 @@ def list_drafts():
     drafts_dir = ATHENA / 'content' / 'drafts'
     if not drafts_dir.exists():
         return {"drafts": []}
-    files = sorted(drafts_dir.glob('*.md'), key=lambda f: f.stat().st_mtime, reverse=True)
+    try:
+        approved_paths = {
+            r["file_path"] for r in mem.get_approved_reviews()
+            if r.get("file_path")
+        }
+    except Exception:
+        approved_paths = set()
+    files = sorted(
+        [f for f in drafts_dir.glob('*.md') if str(f) in approved_paths],
+        key=lambda f: f.stat().st_mtime, reverse=True
+    )
     drafts = []
     for f in files[:20]:
         content = f.read_text(encoding='utf-8', errors='replace')
@@ -554,8 +564,16 @@ def list_briefings():
     briefings_dir = ATHENA / 'briefings'
     if not briefings_dir.exists():
         return {"briefings": []}
+    try:
+        approved_paths = {
+            r["file_path"] for r in mem.get_approved_reviews()
+            if r.get("file_path")
+        }
+    except Exception:
+        approved_paths = set()
     files = sorted(
-        [f for f in briefings_dir.glob('*.md') if not f.name.startswith('.')],
+        [f for f in briefings_dir.glob('*.md')
+         if not f.name.startswith('.') and str(f) in approved_paths],
         key=lambda f: f.stat().st_mtime, reverse=True
     )
     briefings = []
@@ -832,13 +850,24 @@ def list_marketing_outputs():
     mdir = ATHENA / "ops" / "marketing"
     if not mdir.exists():
         return {"files": []}
+    try:
+        approved_paths = {
+            r["file_path"] for r in mem.get_approved_reviews()
+            if r.get("file_path")
+        }
+    except Exception:
+        approved_paths = set()
     files = []
     for f in sorted(mdir.glob("*.md"), key=lambda x: x.stat().st_mtime, reverse=True):
+        if str(f) not in approved_paths:
+            continue
         files.append({"filename": f.name, "label": f.stem.replace("_", " ").title(),
                       "modified": datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d")})
     out_dir = mdir / "outreach"
     if out_dir.exists():
         for f in sorted(out_dir.glob("*.md"), key=lambda x: x.stat().st_mtime, reverse=True):
+            if str(f) not in approved_paths:
+                continue
             files.append({"filename": f"outreach/{f.name}",
                           "label": f.stem.replace("_outreach_", " → ").replace("_", " ").title(),
                           "modified": datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d")})
@@ -1840,7 +1869,17 @@ def list_briefs():
     briefs_dir = _HOME_ATHENA / "coaching" / "briefs"
     if not briefs_dir.exists():
         return {"briefs": []}
-    files = sorted(briefs_dir.glob("*.md"), key=lambda f: f.stat().st_mtime, reverse=True)
+    try:
+        approved_paths = {
+            r["file_path"] for r in mem.get_approved_reviews()
+            if r.get("file_path")
+        }
+    except Exception:
+        approved_paths = set()
+    files = sorted(
+        [f for f in briefs_dir.glob("*.md") if str(f) in approved_paths],
+        key=lambda f: f.stat().st_mtime, reverse=True
+    )
     return {"briefs": [
         {"filename": f.name, "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat()}
         for f in files[:20]

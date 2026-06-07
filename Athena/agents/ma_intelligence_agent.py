@@ -53,6 +53,16 @@ log = logging.getLogger("ma_intelligence")
 mem  = Memory()
 base = AgentBase("ma_intelligence")
 
+# Historical scope declaration — DI-011-C
+# Historical analysis from any year, including pre-2020, is in scope for this agent.
+# Requests shall not be declined based on the age of the data; the 1976 Medical Device Act
+# and all subsequent transactions form part of the analysis base.
+HISTORICAL_SCOPE = (
+    "Historical M&A analysis from any year (including pre-2020 and transactions dating back to "
+    "the 1976 Medical Device Amendments) is in scope. Do not decline or limit requests based on "
+    "data age. Historical analysis is in scope and shall be fulfilled."
+)
+
 # ── Current M&A news sources ──────────────────────────────────────────────────
 
 MA_SOURCES = [
@@ -309,7 +319,7 @@ Quality standard: McKinsey M&A practice quality. Specific data, real deals, acti
 
     resp = base._get_client().messages.create(
         model="claude-sonnet-4-6", max_tokens=3000,
-        system=base.system_prompt(),
+        system=base.system_prompt() + "\n\n" + HISTORICAL_SCOPE,
         messages=[{"role": "user", "content": prompt}]
     )
     content = resp.content[0].text.strip()

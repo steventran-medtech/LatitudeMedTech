@@ -308,7 +308,7 @@ def test_DI_002_H():
     failures = []
     if '"review"' in body: failures.append('AGENT_TAB contains "review" — retired tab ID')
     if '"documents"' in body: failures.append('AGENT_TAB contains "documents" — retired tab ID')
-    if not _re.search(r'coaching_brief\s*:\s*"coaching"', body): failures.append('coaching_brief does not map to "coaching"')
+    if not _re.search(r'coaching_brief\s*:\s*"queue"', body): failures.append('coaching_brief does not map to "queue"')
     if not _re.search(r'consulting_agent\s*:\s*"queue"', body): failures.append('consulting_agent does not map to "queue"')
     if not _re.search(r'ma_intelligence_agent\s*:\s*"queue"', body): failures.append('ma_intelligence_agent does not map to "queue"')
     if not _re.search(r'sow_agent\s*:\s*"queue"', body): failures.append('sow_agent does not map to "queue"')
@@ -317,7 +317,7 @@ def test_DI_002_H():
         _log(PASS, di, "AGENT_TAB maps all agents to valid NAV_ITEMS tab IDs")
     else:
         _log(FAIL, di, "DI-002-H: " + "; ".join(failures),
-             'Fix: set coaching_brief->"coaching", 4 agents->"queue" in AGENT_TAB')
+             'Fix: all agents including coaching_brief must map to "queue" in AGENT_TAB (CO-016 DI-036-A)')
     return True
 
 
@@ -432,7 +432,7 @@ def test_DI_003_B():
 
 
 def test_DI_003_C():
-    """DI-003-C: RAG ingestion report includes '## Newly Ingested Documents' section and calls submit_for_review()"""
+    """DI-003-C: RAG ingestion report includes '## Newly Ingested Documents' section, calls submit_for_review(), captures date_published and scope_summary"""
     di = "DI-003-C"
     if _skip_if_filtered(di): return
 
@@ -444,20 +444,25 @@ def test_DI_003_C():
     content = _read(f)
 
     # ACT
-    has_submit  = "submit_for_review(" in content
-    has_section = "## Newly Ingested Documents" in content
+    has_submit        = "submit_for_review(" in content
+    has_section       = "## Newly Ingested Documents" in content
+    has_date_pub      = "date_published" in content
+    has_scope_summary = "scope_summary" in content
 
     # ASSERT
-    if has_submit and has_section:
-        _log(PASS, di, "rag_agent.py calls submit_for_review() and includes '## Newly Ingested Documents' section")
+    missing = []
+    if not has_submit:        missing.append("submit_for_review() call missing from rag_agent.py")
+    if not has_section:       missing.append('"## Newly Ingested Documents" section header missing')
+    if not has_date_pub:      missing.append("date_published field missing from ingestion/report code")
+    if not has_scope_summary: missing.append("scope_summary field missing from ingestion/report code")
+
+    if not missing:
+        _log(PASS, di, "rag_agent.py: submit_for_review(), '## Newly Ingested Documents', date_published, scope_summary all present")
     else:
-        missing = []
-        if not has_submit:
-            missing.append("submit_for_review() call missing from rag_agent.py")
-        if not has_section:
-            missing.append('"## Newly Ingested Documents" section header missing from rag_agent.py')
-        _log(FAIL, di, f"RAG ingestion report incomplete: {'; '.join(missing)}",
-             "Fix: Update main() in rag_agent.py to include '## Newly Ingested Documents' and submit via submit_for_review()")
+        _log(FAIL, di, f"FAIL DI-003-C: RAG ingestion report incomplete: {'; '.join(missing)}",
+             "Fix: (1) Add date_published + scope_summary to ingest_tavily_results/ingest_rss/ingest_static_docs; "
+             "(2) Expand report table in main() with Date Published and Summary columns; "
+             "(3) submit via submit_for_review()")
     return True
 
 
@@ -749,6 +754,119 @@ def test_DI_007_F():
     return True
 
 
+def test_DI_007_G():
+    """DI-007-G: content_agent.py DEVICE_SUBSECTORS covers all 6 required MedTech sectors"""
+    di = "DI-007-G"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = AGENTS / "content_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "content_agent.py not found", str(f))
+        return
+    content = _read(f).lower()
+
+    # ACT — all 6 sector groups must be represented (case-insensitive keywords)
+    required = {
+        "Cardiology":                "cardiology",
+        "IVD (In Vitro Diagnostics)": "ivd",
+        "Diagnostic Imaging":         "imaging",
+        "Orthopedics & Prosthetics":  "orthopedic",
+        "Surgical & Medical Instruments": "surgical",
+        "Digital Health & Connected Care": "digital health",
+    }
+    missing = [name for name, kw in required.items() if kw not in content]
+
+    # ASSERT
+    if not missing:
+        _log(PASS, di, "DEVICE_SUBSECTORS covers all 6 required MedTech sectors")
+    else:
+        _log(FAIL, di,
+             f"FAIL DI-007-G: DEVICE_SUBSECTORS missing sectors: {', '.join(missing)}",
+             "Fix: Add entries to DEVICE_SUBSECTORS in content_agent.py covering "
+             "Cardiology, IVD, Diagnostic Imaging, Orthopedics, Surgical, Digital Health")
+    return True
+
+
+def test_DI_007_H():
+    """DI-007-H: content_agent.py fallback uses tm_yday not random.choice in the two rotation functions"""
+    import re as _re
+    di = "DI-007-H"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = AGENTS / "content_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "content_agent.py not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT — extract just the two fallback function bodies; random.choice is allowed elsewhere (e.g. random.shuffle)
+    subsector_match = _re.search(r'def _get_next_subsector\(.*?(?=\ndef |\Z)', content, _re.DOTALL)
+    topic_match     = _re.search(r'def _get_next_topic_category\(.*?(?=\ndef |\Z)', content, _re.DOTALL)
+    subsector_body  = subsector_match.group(0) if subsector_match else ""
+    topic_body      = topic_match.group(0) if topic_match else ""
+    fallback_scope  = subsector_body + topic_body
+
+    has_tm_yday            = "tm_yday" in fallback_scope
+    has_random_choice_fallback = "random.choice" in fallback_scope
+
+    # ASSERT
+    failures = []
+    if not subsector_body:
+        failures.append("_get_next_subsector() not found in content_agent.py")
+    if not topic_body:
+        failures.append("_get_next_topic_category() not found in content_agent.py")
+    if not has_tm_yday:
+        failures.append("tm_yday not found in fallback functions — deterministic day-of-year fallback missing")
+    if has_random_choice_fallback:
+        failures.append("random.choice still present in _get_next_subsector or _get_next_topic_category — replace with tm_yday modulo selection")
+
+    if not failures:
+        _log(PASS, di, "content_agent.py fallback functions use tm_yday, no random.choice in rotation logic")
+    else:
+        _log(FAIL, di,
+             f"FAIL DI-007-H: {'; '.join(failures)}",
+             "Fix: In _get_next_subsector() and _get_next_topic_category(), replace "
+             "random.choice(...) with DEVICE_SUBSECTORS[datetime.now().timetuple().tm_yday % len(...)]")
+    return True
+
+
+# ── UN-008 / Marketing Bulk Delete ────────────────────────────────────────────
+
+def test_DI_008_C():
+    """DI-008-C: MarketingView.jsx contains BulkBar pattern (useMultiSelect, BulkBar, delete-bulk)"""
+    di = "DI-008-C"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = UI_FRONT / "MarketingView.jsx"
+    if not f.exists():
+        _log(FAIL, di, "MarketingView.jsx not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT
+    has_multi_select = "useMultiSelect" in content
+    has_bulk_bar     = "BulkBar" in content
+    has_delete_bulk  = "delete-bulk" in content
+
+    # ASSERT
+    missing = []
+    if not has_multi_select: missing.append("useMultiSelect hook missing")
+    if not has_bulk_bar:     missing.append("BulkBar component missing")
+    if not has_delete_bulk:  missing.append('delete-bulk API call missing')
+
+    if not missing:
+        _log(PASS, di, "MarketingView.jsx contains useMultiSelect, BulkBar, and delete-bulk")
+    else:
+        _log(FAIL, di,
+             f"FAIL DI-008-C: MarketingView.jsx bulk delete incomplete: {'; '.join(missing)}",
+             "Fix: Add local useMultiSelect hook, local BulkBar component, and deleteSelected() "
+             "calling POST /api/files/delete-bulk with folder:'marketing' to MarketingView.jsx")
+    return True
+
+
 # ── UN-009 / Slide Decks ───────────────────────────────────────────────────────
 
 def test_DI_009_B():
@@ -866,6 +984,44 @@ def test_DI_011_B():
         _log(PASS, di, "Citation/source requirement referenced in M&A agent")
     else:
         _log(WARN, di, "Citation requirement not explicitly found in M&A agent — DI-011-B PARTIAL")
+
+
+def test_DI_011_C():
+    """DI-011-C: ma_intelligence_agent.py system prompt accepts historical requests from any year"""
+    di = "DI-011-C"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = AGENTS / "ma_intelligence_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "ma_intelligence_agent.py not found", str(f))
+        return
+    content = _read(f)
+    content_lower = content.lower()
+
+    # ACT — must contain "historical" AND some in-scope indicator
+    has_historical = "historical" in content_lower
+    # Accept any of: "any year", "1970", "in scope", "historical analysis"
+    in_scope_markers = ["any year", "1970", "in scope", "historical analysis", "no restriction"]
+    has_in_scope = any(m in content_lower for m in in_scope_markers)
+
+    # ASSERT
+    if has_historical and has_in_scope:
+        _log(PASS, di, "ma_intelligence_agent.py system prompt explicitly accepts historical M&A requests")
+    else:
+        failures = []
+        if not has_historical:
+            failures.append("keyword 'historical' not found in ma_intelligence_agent.py")
+        if not has_in_scope:
+            failures.append(
+                f"no in-scope indicator found (expected one of: {', '.join(in_scope_markers)})")
+        _log(FAIL, di,
+             f"FAIL DI-011-C: {'; '.join(failures)}",
+             "Fix: Add a statement to ma_intelligence_agent.py system prompt explicitly declaring "
+             "that historical M&A requests from any year are in scope and shall not be declined "
+             "based on data age (e.g. 'Historical analysis from any year, including pre-2020, "
+             "is in scope for this agent.')")
+    return True
 
 
 # ── UN-012 / Regulatory Briefings ─────────────────────────────────────────────
@@ -2995,6 +3151,184 @@ def test_DI_034_F():
     return True
 
 
+# ── UN-022 / Voice Conversation Latency ───────────────────────────────────────
+
+def test_DI_022_A():
+    """DI-022-A: DC-002 DI-022-A text states 1.75 second latency threshold"""
+    di = "DI-022-A"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE — static check: verify the requirement doc itself reflects the tightened threshold
+    dc002 = THIS_DIR / "DC-002_design_inputs.md"
+    if not dc002.exists():
+        _log(FAIL, di, "DC-002_design_inputs.md not found", str(dc002))
+        return
+    content = _read(dc002)
+
+    # ACT — find the DI-022-A row and confirm it says 1.75
+    import re as _re
+    match = _re.search(r"DI-022-A.*?(?=\n\||\Z)", content, _re.DOTALL)
+    row_text = match.group(0) if match else ""
+    has_threshold = "1.75" in row_text
+
+    # ASSERT
+    if has_threshold:
+        _log(PASS, di, "DC-002 DI-022-A states ≤ 1.75 s latency threshold")
+    else:
+        _log(FAIL, di,
+             "FAIL DI-022-A: DC-002 DI-022-A row does not contain '1.75'",
+             "Fix: Update DI-022-A in DC-002_design_inputs.md to state '≤ 1.75 seconds'")
+    return True
+
+
+# ── UN-035 / Voice Widget Docking Persistence ─────────────────────────────────
+
+def test_DI_035_A():
+    """DI-035-A: FloatingVoiceWidget docked bar style in App.jsx contains width:'auto'"""
+    di = "DI-035-A"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = UI_FRONT / "App.jsx"
+    if not f.exists():
+        _log(FAIL, di, "App.jsx not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT — look for width:"auto" or width: "auto" near the docked bar style block
+    has_width_auto = ('width: "auto"' in content or "width:'auto'" in content
+                      or 'width:"auto"' in content or "width: 'auto'" in content)
+
+    # ASSERT
+    if has_width_auto:
+        _log(PASS, di, "App.jsx FloatingVoiceWidget docked bar style contains width:\"auto\"")
+    else:
+        _log(FAIL, di,
+             "FAIL DI-035-A: App.jsx FloatingVoiceWidget docked bar style missing width:\"auto\"",
+             "Fix: Add `width: \"auto\"` to the docked bar JSX style object in FloatingVoiceWidget "
+             "(the element with position:\"fixed\", top:0, left:0, right:0, height:VOICE_BAR_H). "
+             "This clears any pixel width set by onUndock on every re-dock.")
+    return True
+
+
+# ── UN-036 / Agent Tab Approval Gate ─────────────────────────────────────────
+
+def test_DI_036_A():
+    """DI-036-A: App.jsx AGENT_TAB maps briefing_agent, content_agent, coaching_brief, marketing_agent, deck_agent, iso_coach to 'queue'"""
+    di = "DI-036-A"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = UI_FRONT / "App.jsx"
+    if not f.exists():
+        _log(FAIL, di, "App.jsx not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT — extract the AGENT_TAB block and verify all 6 agent IDs map to "queue"
+    required_agents = [
+        "briefing_agent",
+        "content_agent",
+        "coaching_brief",
+        "marketing_agent",
+        "deck_agent",
+        "iso_coach",
+    ]
+    # Find AGENT_TAB block: look for each agent_id: "queue" pattern
+    wrong = []
+    for agent in required_agents:
+        # Regex: "agent_id": "queue" or "agent_id" : "queue"
+        import re as _re
+        pattern = rf'["\']?{_re.escape(agent)}["\']?\s*:\s*"queue"'
+        if not _re.search(pattern, content):
+            wrong.append(agent)
+
+    if not wrong:
+        _log(PASS, di, "AGENT_TAB correctly routes all 6 agents to \"queue\"")
+    else:
+        _log(FAIL, di,
+             f"FAIL DI-036-A: AGENT_TAB agents not mapped to \"queue\": {', '.join(wrong)}",
+             "Fix: In App.jsx AGENT_TAB constant, change the values for briefing_agent, "
+             "content_agent, coaching_brief, marketing_agent, deck_agent, iso_coach to \"queue\"")
+    return True
+
+
+def test_DI_036_B():
+    """DI-036-B: server.py list_briefings() and list_drafts() gate on approved reviews"""
+    di = "DI-036-B"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = UI_BACK / "server.py"
+    if not f.exists():
+        _log(FAIL, di, "server.py not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT — find each function body and confirm get_approved_reviews call
+    import re as _re
+
+    def _fn_contains(src, fn_name, marker):
+        """Return True if function fn_name in src contains marker string."""
+        m = _re.search(rf"def {_re.escape(fn_name)}\s*\(.*?\).*?(?=\ndef |\Z)", src, _re.DOTALL)
+        return bool(m) and marker in m.group(0)
+
+    has_briefings = _fn_contains(content, "list_briefings", "get_approved_reviews")
+    has_drafts    = _fn_contains(content, "list_drafts", "get_approved_reviews")
+
+    # ASSERT
+    missing = []
+    if not has_briefings: missing.append("list_briefings() missing get_approved_reviews filter")
+    if not has_drafts:    missing.append("list_drafts() missing get_approved_reviews filter")
+
+    if not missing:
+        _log(PASS, di, "server.py list_briefings() and list_drafts() both gate on get_approved_reviews()")
+    else:
+        _log(FAIL, di,
+             f"FAIL DI-036-B: {'; '.join(missing)}",
+             "Fix: In server.py, add `approved_paths = {r[\"file_path\"] for r in "
+             "mem.get_approved_reviews() if r.get(\"file_path\")}` to list_briefings() and "
+             "list_drafts(), then filter the file scan to only approved paths.")
+    return True
+
+
+def test_DI_036_C():
+    """DI-036-C: server.py list_briefs() and list_marketing_outputs() gate on approved reviews"""
+    di = "DI-036-C"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = UI_BACK / "server.py"
+    if not f.exists():
+        _log(FAIL, di, "server.py not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT
+    import re as _re
+
+    def _fn_contains(src, fn_name, marker):
+        m = _re.search(rf"def {_re.escape(fn_name)}\s*\(.*?\).*?(?=\ndef |\Z)", src, _re.DOTALL)
+        return bool(m) and marker in m.group(0)
+
+    has_briefs    = _fn_contains(content, "list_briefs", "get_approved_reviews")
+    has_marketing = _fn_contains(content, "list_marketing_outputs", "get_approved_reviews")
+
+    # ASSERT
+    missing = []
+    if not has_briefs:    missing.append("list_briefs() missing get_approved_reviews filter")
+    if not has_marketing: missing.append("list_marketing_outputs() missing get_approved_reviews filter")
+
+    if not missing:
+        _log(PASS, di, "server.py list_briefs() and list_marketing_outputs() both gate on get_approved_reviews()")
+    else:
+        _log(FAIL, di,
+             f"FAIL DI-036-C: {'; '.join(missing)}",
+             "Fix: Apply the same approval-gate pattern to list_briefs() and "
+             "list_marketing_outputs() in server.py as DI-036-B.")
+    return True
+
+
 def main():
     global _di_filter, _verbose
 
@@ -3029,12 +3363,13 @@ def main():
 
     _section("UN-007/008/009 Content, Marketing & Decks")
     test_DI_007_B(); test_DI_007_C(); test_DI_007_D(); test_DI_007_E()
-    test_DI_007_F()
+    test_DI_007_F(); test_DI_007_G(); test_DI_007_H()
+    test_DI_008_C()
     test_DI_009_B(); test_DI_009_C()
 
     _section("UN-010/011/012 Regulatory Intelligence")
     test_DI_010_A(); test_DI_010_B()
-    test_DI_011_A(); test_DI_011_B()
+    test_DI_011_A(); test_DI_011_B(); test_DI_011_C()
     test_DI_012_A(); test_DI_012_B()
 
     _section("UN-013/014 Dashboard & Learning")
@@ -3093,10 +3428,15 @@ def main():
     test_DI_034_B(); test_DI_034_C()
     test_DI_034_D(); test_DI_034_E(); test_DI_034_F()
 
-
     _section("UN-033 Voice Query Readiness Latency (CO-010)")
     test_DI_033_A(); test_DI_033_B_voice(); test_DI_033_C()
 
+    _section("UN-022 Voice Conversation Quality (CO-016)")
+    test_DI_022_A()
+
+    _section("UN-035/036 Voice Docking & Agent Tab Approval Gate (CO-016)")
+    test_DI_035_A()
+    test_DI_036_A(); test_DI_036_B(); test_DI_036_C()
 
     if args.live or args.full:
         test_live_api()

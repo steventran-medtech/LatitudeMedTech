@@ -247,16 +247,21 @@ def ingest_tavily_results(index: dict, results: list, query: str) -> dict:
         elif "raps.org" in url_lower:
             category = "Regulatory"
 
+        date_published = result.get("published_date", "") or ""
+        scope_summary  = content[:150].replace("\n", " ").strip()
+
         chunks = chunk_text(content, doc_id, title, category)
         save_document(doc_id, title, category, chunks, source=f"tavily:{query}")
         index["documents"][doc_id] = {
-            "name":       title,
-            "category":   category,
-            "url":        url,
-            "chunks":     len(chunks),
-            "ingested_at":datetime.now().isoformat(),
-            "source":     f"tavily:{query}",
-            "hash":       doc_hash(content[:500]),
+            "name":          title,
+            "category":      category,
+            "url":           url,
+            "chunks":        len(chunks),
+            "ingested_at":   datetime.now().isoformat(),
+            "source":        f"tavily:{query}",
+            "hash":          doc_hash(content[:500]),
+            "date_published": date_published,
+            "scope_summary":  scope_summary,
         }
         ingested += 1
 
@@ -275,15 +280,18 @@ def ingest_static_docs(index):
         text = fetch_url(doc["url"])
         if not text:
             continue
+        scope_summary = text[:150].replace("\n", " ").strip()
         chunks = chunk_text(text, doc["id"], doc["name"], doc["category"])
         save_document(doc["id"], doc["name"], doc["category"], chunks)
         index["documents"][doc["id"]] = {
-            "name":       doc["name"],
-            "category":   doc["category"],
-            "url":        doc["url"],
-            "chunks":     len(chunks),
-            "ingested_at":datetime.now().isoformat(),
-            "hash":       doc_hash(text[:1000]),
+            "name":          doc["name"],
+            "category":      doc["category"],
+            "url":           doc["url"],
+            "chunks":        len(chunks),
+            "ingested_at":   datetime.now().isoformat(),
+            "hash":          doc_hash(text[:1000]),
+            "date_published": "",
+            "scope_summary":  scope_summary,
         }
         log.info(f"  OK: {doc['name']} ({len(chunks)} chunks)")
         time.sleep(2)
@@ -309,15 +317,19 @@ def ingest_rss(index):
                 if len(content.split()) < 30 and link:
                     time.sleep(1)
                     content = fetch_url(link) or content
+                date_published = getattr(entry, "published", "") or ""
+                scope_summary  = content[:150].replace("\n", " ").strip()
                 chunks = chunk_text(f"{title}\n\n{content}", doc_id, title, source["category"])
                 save_document(doc_id, title, source["category"], chunks, source="rss")
                 index["documents"][doc_id] = {
-                    "name":       title,
-                    "category":   source["category"],
-                    "url":        link,
-                    "chunks":     len(chunks),
-                    "ingested_at":datetime.now().isoformat(),
-                    "hash":       doc_hash(content[:500]),
+                    "name":          title,
+                    "category":      source["category"],
+                    "url":           link,
+                    "chunks":        len(chunks),
+                    "ingested_at":   datetime.now().isoformat(),
+                    "hash":          doc_hash(content[:500]),
+                    "date_published": date_published,
+                    "scope_summary":  scope_summary,
                 }
                 new_count += 1
                 time.sleep(1)
@@ -426,17 +438,19 @@ def main():
         if new_doc_ids:
             table_rows = []
             for _id in sorted(new_doc_ids):
-                _meta   = index["documents"][_id]
-                _title  = _meta.get("name", _id)
-                _url    = _meta.get("url", "")
-                _cat    = _meta.get("category", "General")
-                _chunks = _meta.get("chunks", 0)
-                _link   = f"[{_title}]({_url})" if _url else _title
-                table_rows.append(f"| {_link} | {_cat} | {_chunks} |")
+                _meta    = index["documents"][_id]
+                _title   = _meta.get("name", _id)
+                _url     = _meta.get("url", "")
+                _cat     = _meta.get("category", "General")
+                _chunks  = _meta.get("chunks", 0)
+                _date    = _meta.get("date_published", "") or ""
+                _summary = _meta.get("scope_summary", "") or ""
+                _link    = f"[{_title}]({_url})" if _url else _title
+                table_rows.append(f"| {_link} | {_cat} | {_date} | {_chunks} | {_summary} |")
             newly_ingested_section = (
                 "## Newly Ingested Documents\n\n"
-                "| Document | Category | Chunks |\n"
-                "|---|---|---|\n" +
+                "| Document | Category | Date Published | Chunks | Summary |\n"
+                "|---|---|---|---|---|\n" +
                 "\n".join(table_rows)
             )
         else:

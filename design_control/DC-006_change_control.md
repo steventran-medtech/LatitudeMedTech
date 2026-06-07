@@ -16,7 +16,7 @@ Every CO gets a unique ID at kickoff. Assign the next available CO-NNN here befo
 
 | CO-004 | 2026-06-07 | C2 | 2 | feat/co-004-un-031-tab-singleton | DI-031-A, DI-031-B | MERGED (4f20d0e, PR #92) |
 | CO-005 | 2026-06-07 | C3 | 3 | chore/co-005-un-002-document-queue | DI-002-E (mod), DI-002-F, DI-002-G | MERGED |
-| CO-006 | 2026-06-07 | C2 | 2 | feat/co-006-consulting-learning-reports | DI-032-A, DI-032-B, DI-023-D | OPEN |
+| CO-006 | 2026-06-07 | C2 | 2 | feat/co-006-consulting-learning-reports | DI-032-A, DI-032-B, DI-023-D | MERGED (register corrected 2026-06-07 — branch showed zero diff vs main) |
 
 | CO-007 | 2026-06-07 | C3 | 1 | chore/co-007-intro-exit-variations | — | MERGED |
 | CO-008 | 2026-06-07 | C3 | 3 | feat/co-008-un-019-startup-under-10s | DI-019-K (new) | MERGED (1a7525b, PR #91) |
@@ -29,8 +29,10 @@ Every CO gets a unique ID at kickoff. Assign the next available CO-NNN here befo
 | CO-014 | 2026-06-07 | C1 | 2 | fix/co-014-di-002-j-reviewview-duplicate-import | DI-002-J (new, VERIFIED) | MERGED (dcff017, PR #102) |
 | CO-015 | 2026-06-07 | C1 | 2 | fix/co-015-di-002-k-reviewview-approved-close-paren | DI-002-K (new, VERIFIED) | MERGED (68b5ae8, PR #103) |
 
+| CO-016 | 2026-06-07 | C2/C3 | 3 | feat/co-016-multi-requirement-batch | DI-003-C (mod), DI-007-G, DI-007-H, DI-008-C, DI-011-C, DI-022-A (mod), DI-035-A, DI-036-A, DI-036-B, DI-036-C | OPEN |
+
 **Status values:** OPEN · MERGED · ABANDONED  
-**Next available ID:** CO-016
+**Next available ID:** CO-017
 
 ---
 

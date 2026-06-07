@@ -204,14 +204,14 @@ DEVICE_SUBSECTORS = [
     {"key": "endoscopy_gi",         "label": "Endoscopy & GI",                "seed": "endoscopes, capsule endoscopy, GI surgical devices, colonoscopy, minimally invasive GI"},
     {"key": "combination_products", "label": "Combination Products",          "seed": "drug-device combinations, drug-eluting stents, prefilled syringes, combination product regulatory pathways"},
     {"key": "imaging_radiology",    "label": "Imaging & Radiology",           "seed": "medical imaging systems, MRI, ultrasound, interventional radiology, imaging AI, PACS"},
-    {"key": "cardiovascular_crm",   "label": "Cardiovascular/CRM",            "seed": "cardiac rhythm management, pacemakers, ICD, ablation catheters, heart failure devices"},
+    {"key": "cardiovascular_crm",   "label": "Cardiology & Cardiovascular/CRM", "seed": "cardiology, cardiac rhythm management, pacemakers, ICD, ablation catheters, heart failure devices"},
 ]
 
 def _get_next_subsector(mem_obj) -> dict:
     """Pick the device sub-sector least recently featured in articles."""
-    import random
+    _yday_fallback = DEVICE_SUBSECTORS[datetime.now().timetuple().tm_yday % len(DEVICE_SUBSECTORS)]
     if not mem_obj:
-        return random.choice(DEVICE_SUBSECTORS)
+        return _yday_fallback
     try:
         rows = mem_obj.conn.execute(
             "SELECT metadata FROM content_items WHERE content_type='article' ORDER BY timestamp DESC LIMIT 30"
@@ -230,7 +230,7 @@ def _get_next_subsector(mem_obj) -> dict:
         chosen_key = min(all_keys, key=lambda k: covered.get(k, 0))
         return next(s for s in DEVICE_SUBSECTORS if s["key"] == chosen_key)
     except Exception:
-        return random.choice(DEVICE_SUBSECTORS)
+        return _yday_fallback
 
 
 # ── Topic curriculum ──────────────────────────────────────────────────────────
@@ -309,9 +309,11 @@ def _get_next_topic_category(mem_obj) -> dict:
     Pick the topic category least recently covered.
     Prevents CAPA dominance and ensures curriculum variety.
     """
+    _all_cats = list(TOPIC_CURRICULUM.keys())
+    _yday_key = _all_cats[datetime.now().timetuple().tm_yday % len(_all_cats)]
+    _yday_fallback = {"key": _yday_key, **TOPIC_CURRICULUM[_yday_key]}
     if not mem_obj:
-        import random
-        return random.choice(list(TOPIC_CURRICULUM.values()))
+        return _yday_fallback
     try:
         # Get coverage counts per category from content_items
         rows = mem_obj.conn.execute(
@@ -332,9 +334,7 @@ def _get_next_topic_category(mem_obj) -> dict:
         chosen = min(all_cats, key=lambda c: covered.get(c, 0))
         return {"key": chosen, **TOPIC_CURRICULUM[chosen]}
     except Exception:
-        import random
-        key = random.choice(list(TOPIC_CURRICULUM.keys()))
-        return {"key": key, **TOPIC_CURRICULUM[key]}
+        return _yday_fallback
 
 
 # ── News fetching ─────────────────────────────────────────────────────────────

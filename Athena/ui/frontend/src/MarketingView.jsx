@@ -232,8 +232,53 @@ function NextActions({ actions, onUpdateStatus }) {
   );
 }
 
+// ── Multi-select hook (local copy) ───────────────────────────────────────────
+function useMultiSelect() {
+  const [checked, setChecked] = useState(new Set());
+  return {
+    checked,
+    toggle:    (id)  => setChecked(p => { const s = new Set(p); s.has(id) ? s.delete(id) : s.add(id); return s; }),
+    clear:     ()    => setChecked(new Set()),
+    selectAll: (ids) => setChecked(new Set(ids)),
+    has:       (id)  => checked.has(id),
+    size:      checked.size,
+  };
+}
+
+// ── Bulk action bar (local copy) ──────────────────────────────────────────────
+function BulkBar({ count, total, onDeleteSelected, onSelectAll, onClear }) {
+  if (count === 0) return null;
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 10,
+      padding: "10px 14px", marginBottom: 10,
+      background: "#EEF5FB", border: `1px solid ${C.ocean}33`, borderRadius: 7,
+    }}>
+      <span style={{ fontFamily: F.sans, fontSize: 12, fontWeight: 600, color: C.ocean, flex: 1 }}>
+        {count} selected
+      </span>
+      <button onClick={onSelectAll}
+        style={{ padding: "4px 10px", borderRadius: 5, border: `1px solid ${C.mist}`,
+          background: "transparent", color: C.fog, cursor: "pointer", fontSize: 11 }}>
+        All ({total})
+      </button>
+      <button onClick={onClear}
+        style={{ padding: "4px 10px", borderRadius: 5, border: `1px solid ${C.mist}`,
+          background: "transparent", color: C.fog, cursor: "pointer", fontSize: 11 }}>
+        None
+      </button>
+      <button onClick={onDeleteSelected}
+        style={{ padding: "5px 14px", borderRadius: 5, border: "none",
+          background: C.red, color: C.pearl, cursor: "pointer",
+          fontFamily: F.sans, fontSize: 11, fontWeight: 600 }}>
+        Delete {count}
+      </button>
+    </div>
+  );
+}
+
 // ── Output file list ──────────────────────────────────────────────────────────
-function OutputList({ files, selected, onSelect }) {
+function OutputList({ files, selected, onSelect, ms }) {
   if (!files?.length) {
     return (
       <div style={{ fontFamily: F.sans, fontSize: 12, color: C.fog, padding: "12px 0" }}>
@@ -244,23 +289,29 @@ function OutputList({ files, selected, onSelect }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       {files.map(f => (
-        <div
-          key={f.filename}
-          onClick={() => onSelect(f.filename)}
-          style={{
-            padding: "9px 12px", borderRadius: 7, cursor: "pointer",
-            background: selected === f.filename ? C.sand : C.pearl,
-            border: `1px solid ${selected === f.filename ? C.ocean : C.mist}`,
-            borderLeft: `3px solid ${selected === f.filename ? C.ocean : C.mist}`,
-            transition: "background 0.1s, border-color 0.1s",
-          }}>
-          <div style={{ fontFamily: F.sans, fontSize: 12,
-            color: selected === f.filename ? C.ink : C.slate,
-            fontWeight: selected === f.filename ? 600 : 400, lineHeight: 1.4 }}>
-            {f.label || f.filename}
-          </div>
-          <div style={{ fontFamily: F.sans, fontSize: 10, color: C.fog, marginTop: 2 }}>
-            {f.modified}
+        <div key={f.filename} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {ms && (
+            <input type="checkbox" checked={ms.has(f.filename)}
+              onChange={e => { e.stopPropagation(); ms.toggle(f.filename); }}
+              style={{ width: 14, height: 14, cursor: "pointer", accentColor: C.ocean, flexShrink: 0 }} />
+          )}
+          <div
+            onClick={() => onSelect(f.filename)}
+            style={{
+              flex: 1, padding: "9px 12px", borderRadius: 7, cursor: "pointer",
+              background: selected === f.filename ? C.sand : C.pearl,
+              border: `1px solid ${selected === f.filename ? C.ocean : C.mist}`,
+              borderLeft: `3px solid ${selected === f.filename ? C.ocean : C.mist}`,
+              transition: "background 0.1s, border-color 0.1s",
+            }}>
+            <div style={{ fontFamily: F.sans, fontSize: 12,
+              color: selected === f.filename ? C.ink : C.slate,
+              fontWeight: selected === f.filename ? 600 : 400, lineHeight: 1.4 }}>
+              {f.label || f.filename}
+            </div>
+            <div style={{ fontFamily: F.sans, fontSize: 10, color: C.fog, marginTop: 2 }}>
+              {f.modified}
+            </div>
           </div>
         </div>
       ))}
@@ -277,6 +328,7 @@ export default function MarketingView({ runningAgents }) {
   const [running,     setRunning]     = useState(null);
   const [outreach,    setOutreach]    = useState("");
   const [status,      setStatus]      = useState("");
+  const ms = useMultiSelect();
 
   // ── Live progress, driven by the global WebSocket agent lifecycle ───────────
   // App.jsx tracks every active agent in `runningAgents` (updated on the
@@ -297,6 +349,19 @@ export default function MarketingView({ runningAgents }) {
       // Auto-select latest if nothing selected yet
       if (!selected && files.length) setSelected(files[0].filename);
     }).catch(() => {});
+  };
+
+  const deleteSelected = async () => {
+    if (!ms.size) return;
+    if (!window.confirm(`Delete ${ms.size} marketing output(s)?`)) return;
+    await fetch(`${API}/api/files/delete-bulk`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHdr() },
+      body: JSON.stringify({ folder: "marketing", filenames: [...ms.checked] }),
+    }).catch(() => {});
+    if (ms.has(selected)) { setSelected(null); setContent(""); }
+    ms.clear();
+    loadOutputs();
   };
 
   useEffect(() => { loadPipeline(); loadOutputs(); }, []);
@@ -468,7 +533,11 @@ export default function MarketingView({ runningAgents }) {
         <div style={{ width: 260, flexShrink: 0 }}>
           <div style={{ ...S.card, padding: "16px 18px" }}>
             <span style={S.label}>Generated outputs</span>
-            <OutputList files={outputs} selected={selected} onSelect={f => setSelected(f)} />
+            <BulkBar count={ms.size} total={outputs.length}
+              onDeleteSelected={deleteSelected}
+              onSelectAll={() => ms.selectAll(outputs.map(f => f.filename))}
+              onClear={ms.clear} />
+            <OutputList files={outputs} selected={selected} onSelect={f => setSelected(f)} ms={ms} />
           </div>
         </div>
 
