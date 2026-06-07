@@ -167,6 +167,7 @@ def test_server_routes():
         '/api/settings',
         '/api/coaching/briefs',
         '/api/documents/generate',
+        '/api/voice/listen',
     ]
 
     # Check __main__ is at end
@@ -245,6 +246,30 @@ def test_live_api():
                         "Restart server after updating server.py")
         except Exception as e:
             log(FAIL, "API: openapi.json", str(e)[:80])
+
+        # Test PTT endpoint exists (voice/listen) — OK if voice offline, route must exist
+        try:
+            req = urllib.request.Request(
+                f"{base}/api/voice/listen",
+                data=b"{}",
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            try:
+                r    = urllib.request.urlopen(req, timeout=5)
+                data = json.loads(r.read())
+                if "ok" in data:
+                    log(PASS, "API: /api/voice/listen route responding")
+                else:
+                    log(WARN, "API: /api/voice/listen", f"Unexpected: {str(data)[:80]}")
+            except urllib.error.HTTPError as e:
+                body = e.read().decode()
+                if e.code == 401:
+                    log(PASS, "API: /api/voice/listen route responding (auth required)")
+                else:
+                    log(FAIL, "API: /api/voice/listen", body[:80])
+        except Exception as e:
+            log(FAIL, "API: /api/voice/listen", str(e)[:80])
 
         # Test delete endpoint exists (don't actually delete)
         try:

@@ -147,7 +147,8 @@ function fmtElapsed(s) {
 export default function VoiceView({ voice }) {
   const { running, state, level, query, lastYou, lastAthena, speakingLines,
           streamingText, typedYou,
-          log, status, devices, selDev, setSelDev, elapsed, startVoice, stopVoice } = voice;
+          log, status, devices, selDev, setSelDev, elapsed,
+          startVoice, stopVoice, triggerListen, pttRejected } = voice;
   const cfg = ORB[state] ?? ORB.idle;
 
   return (
@@ -272,6 +273,51 @@ export default function VoiceView({ voice }) {
           </div>
         </div>
       </div>
+
+      {/* Press to Listen — manual PTT trigger */}
+      {running && state === "listening" && (
+        <div style={{ marginBottom: 24 }}>
+          <button
+            onClick={triggerListen}
+            style={{
+              padding: "10px 28px",
+              background: "transparent",
+              border: `1px solid ${OCEAN}88`,
+              borderRadius: 24,
+              color: OCEAN,
+              fontFamily: "Inter, sans-serif",
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+              boxShadow: `0 0 14px ${OCEAN}22`,
+              transition: "border-color 0.2s, box-shadow 0.2s",
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = OCEAN;
+              e.currentTarget.style.boxShadow = `0 0 20px ${OCEAN}44`;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = `${OCEAN}88`;
+              e.currentTarget.style.boxShadow = `0 0 14px ${OCEAN}22`;
+            }}
+          >
+            Press to Listen
+          </button>
+          {pttRejected && (
+            <div style={{
+              marginTop: 8,
+              fontFamily: "Inter, sans-serif", fontSize: 10, fontWeight: 600,
+              letterSpacing: "0.08em", textTransform: "uppercase",
+              color: `${RED}cc`,
+              animation: "cursorBlink 0.6s ease-in-out 2",
+            }}>
+              Busy — try again
+            </div>
+          )}
+        </div>
+      )}
 
       {/* HUD panels — last exchange */}
       <div style={{ width: "100%", maxWidth: 560, display: "flex", flexDirection: "column", gap: 10 }}>

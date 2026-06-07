@@ -56,18 +56,46 @@ export default function FileViewer({ folder, filename, onClose }) {
 
   const connectDrive = async () => {
     setConnecting(true);
+    setErrorMsg("");
     try {
-      const res = await fetch(`${API}/api/google/auth`, { method: "POST", headers: authHdr() });
+      const res  = await fetch(`${API}/api/google/auth`, { method: "POST", headers: authHdr() });
       const data = await res.json();
-      if (data.ok) {
-        // Re-attempt the view now that we have a token
-        loadView();
-      } else {
-        setErrorMsg(data.detail || "Authorization failed.");
+
+      if (!data.started) {
+        // Pre-flight failure (e.g. missing client_secrets.json) — error is in data.message
+        setErrorMsg(data.message || data.detail || "Authorization failed.");
+        setConnecting(false);
+        return;
       }
+
+      // OAuth browser flow is running in a background thread on the server.
+      // Poll GET /api/google/auth-status every 2 s until configured=true or error.
+      const deadline = Date.now() + 120_000;   // 2-minute timeout
+      const poll = () => {
+        if (Date.now() > deadline) {
+          setErrorMsg("Authorization timed out — please try again.");
+          setConnecting(false);
+          return;
+        }
+        fetch(`${API}/api/google/auth-status`, { headers: authHdr() })
+          .then(r => r.json())
+          .then(s => {
+            if (s.configured) {
+              setConnecting(false);
+              loadView();                         // token ready — load the file
+            } else if (s.reason === "error") {
+              setErrorMsg(s.message || "Authorization failed.");
+              setConnecting(false);
+            } else {
+              setTimeout(poll, 2000);             // still in progress — try again
+            }
+          })
+          .catch(() => setTimeout(poll, 2000));   // network blip — retry
+      };
+      setTimeout(poll, 2000);   // first check 2 s after the browser opens
+
     } catch (e) {
       setErrorMsg(e.message);
-    } finally {
       setConnecting(false);
     }
   };
@@ -191,7 +219,7 @@ export default function FileViewer({ folder, filename, onClose }) {
                     marginBottom: 16,
                   }}
                 >
-                  {connecting ? "Opening browser…" : "Connect Google Drive"}
+                  {connecting ? "Complete authorization in browser…" : "Connect Google Drive"}
                 </button>
               ) : (
                 <div style={{ fontSize: 11, color: "#aaa", lineHeight: 1.8,
