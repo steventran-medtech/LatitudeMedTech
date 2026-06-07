@@ -25,6 +25,11 @@ record of what changed between each version. Keep them in lock-step — see
 
 ## [Unreleased]
 
+### CO-015 (fix) — C1 Corrective: Fix missing closing paren in Approved-tab JSX (DI-002-K)
+
+- **ReviewView.jsx line 650**: Changed `)))}` — the Approved-tab conditional expression closing `doc => (...)` was missing one paren, causing a Vite parse error after CO-014 unmasked it.
+- **DI-002-K** (P0, VERIFIED): New regression test `test_DI_002_K` asserts `)))}` appears in `ReviewView.jsx` after the Approved-tab map pattern.
+
 ### CO-014 (fix) — C1 Corrective: Remove duplicate FileViewer import in ReviewView.jsx (DI-002-J)
 
 - **ReviewView.jsx**: Removed duplicate `import FileViewer from "./FileViewer.jsx"` on line 8; duplicate caused a Vite build failure that prevented the Document Queue from loading and caused Chrome to open to the error overlay.

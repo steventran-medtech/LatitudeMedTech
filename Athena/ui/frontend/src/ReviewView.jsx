@@ -647,7 +647,7 @@ export default function ReviewView({ reviewRefreshToken = 0 }) {
             )}
           </div>
         </div>
-      ))}
+      )))}
 
       {/* -- Rejected -- */}
       {tab === "rejected" && (() => {
