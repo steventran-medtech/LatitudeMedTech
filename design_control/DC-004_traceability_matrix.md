@@ -1,5 +1,5 @@
 # DC-004 — Requirements Traceability Matrix (RTM)
-**Document:** DC-004 · Version 2.1 · 2026-06-06  
+**Document:** DC-004 · Version 2.4 · 2026-06-06  
 **Approved by:** Steven Tran
 
 This is the single source of truth for end-to-end coverage. Every user need
@@ -37,7 +37,7 @@ column are open findings requiring immediate remediation.
 | UN-004 | | DI-004-B | Whisper STT + confidence log | `voice_bridge.py` whisper | `test_DI_004_B` | VERIFIED |
 | UN-004 | | DI-004-C | First audio ≤ 2s | Kokoro streaming pipeline | `test_DI_004_C` | PARTIAL |
 | UN-004 | | DI-004-D | Intent routing via tool_use | `voice_bridge.py` dispatch | `test_DI_004_D` | VERIFIED |
-| UN-004 | | DI-004-E | SILENCE_DURATION = 0.65s (BUG-2 latency fix 2026-06-06) | `voice_bridge.py` constant | `test_DI_004_E` | VERIFIED |
+| UN-004 | | DI-004-E | SILENCE_DURATION in [0.4, 0.65] s (C3 update 2026-06-06; tuned to 0.5 s) | `voice_bridge.py` constant + settings.json | `test_DI_004_E` | VERIFIED |
 | UN-005 | Task notifications | DI-005-A | Notify endpoint exists | `server.py` POST /api/voice/notify | `test_DI_005_A` | VERIFIED |
 | UN-005 | | DI-005-B | Notification only if voice active | `voice_bridge.py` queue guard | `test_DI_005_B` | VERIFIED |
 | UN-006 | Persistent voice session | DI-006-A | Session persists across tabs | `useVoiceSession.js` app-level | `test_DI_006_A` | VERIFIED |
@@ -90,6 +90,8 @@ column are open findings requiring immediate remediation.
 | UN-019 | | DI-019-F | Smooth loading — asymptotic easing + minimum per-frame floor in Tick | `start_splash.hta` Tick asymptotic factor + `If inc <` floor | `test_DI_019_F` | VERIFIED |
 | UN-019 | | DI-019-G | Splash→Chrome gap < 3 seconds | `start_athena.ps1` `Start-Sleep` ≤ 2500 ms | `test_DI_019_G` | VERIFIED |
 | UN-019 | | DI-019-H | Bar never stalls > 1 s; cap ≤ 98 + mathematical bound `(99.5−cap)/floor×16 ms < 1000 ms` | `start_splash.hta` floors; cap ≤ 98; `Int()` display; computed bound | `test_DI_019_H` | VERIFIED |
+| UN-019 | | DI-019-I | Athena title `.name` font-size is 101px in both splash files | `start_splash.hta` `font-size:101px`; `electron/main.js` clamp(61px,7vw,101px) | `test_DI_019_I` | VERIFIED |
+| UN-019 | | DI-019-J | `#dots` cycles `.` / `..` / `...` via VBScript `TickDots` at ≤ 500 ms/state; hidden on done | `start_splash.hta` `TickDots` sub; `setInterval("TickDots", N)` N ≤ 500; `dotsEl.style.display = "none"` | `test_DI_019_J` | OPEN |
 | UN-020 | Document review & approval | DI-020-A | All reviewable agents call submit_for_review() | `agents/` source grep for `submit_for_review` | `test_DI_020_A` | VERIFIED |
 | UN-020 | | DI-020-B | Review queue GET fetch sends authHdr() | `ReviewView.jsx` `load()` contains `authHdr()` | `test_DI_020_B` | VERIFIED |
 | UN-020 | | DI-020-C | Review history GET fetch sends authHdr() | `ReviewView.jsx` `loadHistory()` contains `authHdr()` | `test_DI_020_C` | VERIFIED |
@@ -100,18 +102,28 @@ column are open findings requiring immediate remediation.
 | UN-025 | Regulatory strategy (Phase 2C) | DI-025-A | Regulatory strategy agent: Gate 10 + Gate 3 confidence | `agents/regulatory_strategy_agent.py` | `test_DI_025_A` | VERIFIED |
 | UN-026 | App startup loading (Phase 2C) | DI-026-A | React loading overlay with animated bar until WS connects | `App.jsx` `startupDone` state | `test_DI_026_A` | VERIFIED |
 | UN-027 | Documents hub approval gate | DI-027-A | Documents hub shows only Gate 10-approved files | `server.py` `list_documents()` | `test_DI_027_A` | VERIFIED |
+| UN-028 | Voice/noise discrimination | DI-028-A | `_vad_query` aggressiveness ≥ 2 | `voice_bridge.py` `_vad_query` init | `test_DI_028_A` | VERIFIED |
+| UN-028 | | DI-028-B | Post-speech silence on VAD alone (no RMS gate) | `voice_bridge.py` `_record_query` post-speech branch | `test_DI_028_B` | VERIFIED |
+| UN-028 | | DI-028-C | Greeting via `_voice_queue`, not direct TTS | `server.py` `_speak_phrase_greeting` | `test_DI_028_C` | VERIFIED |
+| UN-028 | | DI-028-D | Voice loop sleep ≥ 0.5 s before first drain | `voice_bridge.py` `_voice_loop` startup pause | `test_DI_028_D` | VERIFIED |
+| UN-029 | Audio device detection | DI-029-A | Device monitor polls ≤ 5 s | `voice_bridge.py` `_device_monitor_loop` | `test_DI_029_A` | VERIFIED |
+| UN-029 | | DI-029-B | `_device_changed` Event + `_listen_for_wake` break on device change | `voice_bridge.py` `_device_changed`, `_listen_for_wake` | `test_DI_029_B` | VERIFIED |
+| UN-029 | | DI-029-C | `device_changed` WebSocket event emitted | `voice_bridge.py` `_device_monitor_loop` | `test_DI_029_C` | VERIFIED |
+| UN-030 | McKinsey/Latitude brand formatting | DI-030-A | All 6 `_DECK_GUIDES` entries include exec_summary | `agents/deck_agent.py` `_DECK_GUIDES` all 6 types | `test_DI_030_A` | OPEN |
+| UN-030 | | DI-030-B | McKinsey/Big-4/pyramid quality directive in all 6 deliverable agents | `content_agent.py`, `briefing_agent.py`, `ma_intelligence_agent.py`, `regulatory_strategy_agent.py`, `sow_agent.py`, `deck_agent.py` | `test_DI_030_B` | OPEN |
+| UN-030 | | DI-030-C | Latitude MedTech LLC brand identity injected via agent_base.py | `agents/agent_base.py` system prompt construction | `test_DI_030_C` | OPEN |
 
 ---
 
-## Coverage Summary (v2.0)
+## Coverage Summary (v2.4)
 
 | Metric | Count |
 |---|---|
-| Total user needs | 27 |
-| Total design inputs | 78 |
-| Design inputs with VERIFIED tests | 71 |
+| Total user needs | 30 |
+| Total design inputs | 89 |
+| Design inputs with VERIFIED tests | 78 |
 | Design inputs with PARTIAL coverage | 7 |
-| Design inputs with OPEN gap | 0 |
+| Design inputs with OPEN gap | 4 |
 | Design inputs with WAIVED status | 0 |
 
 **PARTIAL items** require manual verification currently; automated tests are
@@ -132,3 +144,6 @@ Items with OPEN or PARTIAL status that are tracked as formal findings:
 | TG-006 | DI-009-A | Deck section completeness check requires PPTX inspection; manual-only | Steven | Phase 3 |
 | TG-007 | DI-010-C | No automated check that ISO standard files are excluded from RAG ingestion | Steven | Phase 3 |
 | TG-008 | DI-015-F | Session auth guard is present but coverage of all non-health routes not automated | Steven | Phase 3 |
+| TG-009 | DI-030-A | Pitch deck exec_summary gap — code fix required in deck_agent.py `_DECK_GUIDES["pitch"]` | Steven | Current |
+| TG-010 | DI-030-B | McKinsey quality directive check — verifies all 6 deliverable agent files | Steven | Current |
+| TG-011 | DI-030-C | Latitude brand identity check — verifies agent_base.py injection | Steven | Current |

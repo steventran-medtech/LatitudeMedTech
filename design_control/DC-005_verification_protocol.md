@@ -1,5 +1,5 @@
 # DC-005 — Verification Protocol
-**Document:** DC-005 · Version 1.2 · 2026-06-06  
+**Document:** DC-005 · Version 1.5 · 2026-06-06  
 **Approved by:** Steven Tran
 
 ---
@@ -301,6 +301,15 @@ Check five conditions in `start_splash.hta`:
 5. Mathematical bound: `(99.5 − cap) / min_floor × 16 ms < 1000 ms` — proves Tick can traverse from the cap to the 99.5 close-trigger in under 1 second at worst-case minimum frame rate.  
 Fail action: Missing floors → stalling. Cap > 98 → premature "100%" for minutes during model loading. Mathematical bound failure → bar provably cannot close within 1 s even with correct guards. Restore all five conditions in `start_splash.hta`.
 
+**test_DI_019_I** — Athena title font-size is 101px in both splash implementations  
+Check: (1) `start_splash.hta` `.name` CSS contains `font-size:101px`. (2) `electron/main.js` `.name` CSS contains `font-size:clamp(61px,7vw,101px)`.  
+Fail action: Set `font-size:101px` on `.name` in `Athena/ui/start_splash.hta`. Set `font-size:clamp(61px,7vw,101px)` on `.name` in `Athena/electron/main.js`.
+
+**test_DI_019_J** — `#dots` element cycles via VBScript `TickDots` at ≤ 500 ms/state; hidden on completion  
+Preconditions: `start_splash.hta` on disk.  
+Check: (1) File contains a `TickDots` sub (or equivalent cycling sub) that assigns to `dotsEl.innerText`. (2) File contains `setInterval("TickDots", N)` where N ≤ 500. (3) File contains `dotsEl.style.display = "none"` on loading completion. (4) The `#dots` HTML element uses a single span (not three individual `.dot` sub-spans).  
+Fail action: Replace 3-span CSS-animated dots in `start_splash.hta` with a single `<span id="dots">.</span>` and add the `TickDots` VBScript cycling sub with a `setInterval` ≤ 500 ms.
+
 ---
 
 ### DI-023 — Historical Data Depth
@@ -321,6 +330,22 @@ Fail action: Remove any hard year filter from `rag_agent.py`. Add at least one h
 | FAIL (P1) | Fix within current sprint. Document in CAPA if 3+ P1 failures. |
 | WARN | Investigate; resolve within one sprint or document as accepted risk. |
 | SKIP | Test was skipped due to missing dependency. Investigate and re-enable. |
+
+### DI-030 — McKinsey/Latitude Brand Formatting Standard
+
+**test_DI_030_A** — All deck types include exec_summary  
+Check: All 6 `_DECK_GUIDES` entries in `deck_agent.py` ("strategy", "pitch", "regulatory", "coaching", "ma", "briefing") contain "exec_summary" in their slide-sequence string.  
+Fail action: Add `exec_summary` after `cover` in the missing `_DECK_GUIDES` entry. The pitch deck was originally missing this slide; add it as the second slide after cover.
+
+**test_DI_030_B** — McKinsey quality directive in all deliverable agents  
+Check: Each of `content_agent.py`, `briefing_agent.py`, `ma_intelligence_agent.py`, `regulatory_strategy_agent.py`, `sow_agent.py`, `deck_agent.py` contains at least one of "McKinsey", "Big 4", "pyramid", "SCQA" in its source text.  
+Fail action: Add a quality directive to the missing agent's system prompt constant: e.g., `"Quality standard: McKinsey/Big 4 management consulting register."`.
+
+**test_DI_030_C** — Latitude MedTech LLC brand identity in agent_base.py  
+Check: `agent_base.py` contains "Latitude MedTech LLC" and a system prompt construction pattern (a `parts` list, `build_system_prompt`, or equivalent function).  
+Fail action: Ensure `agent_base.py` injects "Latitude MedTech LLC" into the shared system prompt prefix so all agents carry the brand identity.
+
+---
 
 ## CAPA Trigger
 

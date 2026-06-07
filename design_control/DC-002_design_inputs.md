@@ -1,5 +1,5 @@
 # DC-002 — Design Inputs
-**Document:** DC-002 · Version 2.2 · 2026-06-06  
+**Document:** DC-002 · Version 2.4 · 2026-06-06  
 **Approved by:** Steven Tran
 
 Design inputs are specific, verifiable requirements derived from the user
@@ -56,7 +56,7 @@ Each entry:
 | DI-004-B | UN-004 | System shall transcribe voice queries via Whisper and log confidence score | Whisper model loads at startup; `[low conf]` tag written to log on low-confidence result | P0 | VERIFIED |
 | DI-004-C | UN-004 | First TTS audio byte shall be produced within 2 seconds of query completion | Streaming sentence-split pipeline; first sentence dispatched to Kokoro before full response | P0 | PARTIAL |
 | DI-004-D | UN-004 | Voice bridge shall classify query intent and route to the correct agent via `tool_use` | `voice_bridge.py` contains tool-use dispatch logic | P0 | VERIFIED |
-| DI-004-E | UN-004 | SILENCE_DURATION shall be 0.65 s (BUG-2 latency fix 2026-06-06 — reduced from 0.8 s; 0.65 s is the minimum that avoids mid-sentence cutoff on the RTX 4070 + Whisper base.en stack) | `SILENCE_DURATION` default in `voice_bridge.py` equals 0.65 | P0 | VERIFIED |
+| DI-004-E | UN-004 | SILENCE_DURATION, loaded from settings.json `voice.silence_duration`, shall be in the range [0.4, 0.65] s — values below 0.4 risk mid-sentence cutoff; values above 0.65 cause unacceptable latency on the RTX 4070 + Whisper base.en stack; current tuned value is 0.5 s (C3 update 2026-06-06) | `SILENCE_DURATION` in `voice_bridge.py` and `settings.json voice.silence_duration` are each in [0.4, 0.65] | P0 | VERIFIED |
 
 ### UN-005 — Task Completion Notifications
 
@@ -218,7 +218,8 @@ Each entry:
 | DI-019-F | UN-019 | Splash progress bar shall load smoothly per standard UI/UX best practices — the Tick animation loop shall use asymptotic easing with a guaranteed minimum per-frame increment so the bar is always visibly moving while behind its target | `start_splash.hta` Tick sub contains asymptotic expression `(targetVal - stepVal) * 0.N` and minimum floor `If inc < N Then inc = N` | P2 | VERIFIED |
 | DI-019-G | UN-019 | The interval between splash screen close and Chrome opening shall be less than 3 seconds | `start_athena.ps1` `Start-Sleep -Milliseconds` value is ≤ 2500 | P2 | VERIFIED |
 | DI-019-H | UN-019 | The progress bar shall not remain at any single whole-number percentage for more than 1 second due to animation algorithm constraints — enforced by: (a) a minimum per-frame increment floor in the Tick loop, (b) a minimum per-poll advancement floor in PollChromeReady, (c) a PollChromeReady cap ≤ 98 so that `Int()` display can never show "100%" while loading is incomplete, and (d) a mathematical proof that the Tick easing can traverse from the cap to the 99.5 close-trigger in < 1000 ms: `(99.5 − cap) ÷ min_floor × 16 ms < 1000 ms` | `start_splash.hta` Tick floor; PollChromeReady floor + cap ≤ 98; `Int(stepVal)` display; computed `(99.5 − cap) / min_floor * 16 < 1000` | P2 | VERIFIED |
-| DI-019-I | UN-019 | The splash screen "Athena" title (`.name`) font-size shall be 101px — `start_splash.hta` fixed value and `electron/main.js` clamp maximum shall both equal 101px | `start_splash.hta` `.name` CSS contains `font-size:101px`; `electron/main.js` `.name` CSS clamp is `clamp(61px,7vw,101px)` | P2 | OPEN |
+| DI-019-I | UN-019 | The splash screen "Athena" title (`.name`) font-size shall be 101px — `start_splash.hta` fixed value and `electron/main.js` clamp maximum shall both equal 101px | `start_splash.hta` `.name` CSS contains `font-size:101px`; `electron/main.js` `.name` CSS clamp is `clamp(61px,7vw,101px)` | P2 | VERIFIED |
+| DI-019-J | UN-019 | The `#dots` element shall cycle its displayed text through a one-dot (`.`), two-dot (`..`), and three-dot (`...`) sequence at a fixed interval of ≤ 500 ms per state, driven by a VBScript timer (not CSS animation), while loading is in progress; the dots shall be hidden when loading completes | `start_splash.hta` contains a `TickDots` sub using 3-state cycling; `setInterval("TickDots", N)` with N ≤ 500; `dotsEl.style.display = "none"` on completion | P2 | OPEN |
 
 ---
 
@@ -271,6 +272,18 @@ Each entry:
 | ID | Source | Requirement Statement | Verification | Priority | Status |
 |---|---|---|---|---|---|
 | DI-027-A | UN-027 | The Documents hub (`GET /api/documents`) shall only surface files whose `file_path` appears in the `review_queue` table with `status = 'approved'` — pending, rejected, and unsubmitted files shall not appear | `server.py` `list_documents()` calls `mem.get_approved_reviews()` and filters disk scan to the approved path set | P0 | VERIFIED |
+
+---
+
+## Deliverable Formatting Standard
+
+### UN-030 — McKinsey/Latitude Brand Formatting Standard
+
+| ID | Source | Requirement Statement | Verification | Priority | Status |
+|---|---|---|---|---|---|
+| DI-030-A | UN-030 | All 6 `_DECK_GUIDES` entries in `deck_agent.py` ("strategy", "pitch", "regulatory", "coaching", "ma", "briefing") shall include "exec_summary" in their slide-sequence string so that every deck type leads with a McKinsey-standard executive summary slide | All 6 values in `_DECK_GUIDES` contain "exec_summary" | P1 | OPEN |
+| DI-030-B | UN-030 | All 6 deliverable-generating agent Python files (`content_agent.py`, `briefing_agent.py`, `ma_intelligence_agent.py`, `regulatory_strategy_agent.py`, `sow_agent.py`, `deck_agent.py`) shall contain at least one of "McKinsey", "Big 4", "pyramid", or "SCQA" as a quality directive in their system prompt or agent description | Grep across the 6 files for `McKinsey\|Big.4\|pyramid\|SCQA` | P1 | OPEN |
+| DI-030-C | UN-030 | `agent_base.py` shall inject "Latitude MedTech LLC" brand identity into all agent system prompts via a system-prompt construction routine | `agent_base.py` contains "Latitude MedTech LLC" and a system-prompt construction pattern (function or list) | P1 | OPEN |
 
 ---
 

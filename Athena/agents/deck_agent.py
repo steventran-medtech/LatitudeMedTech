@@ -69,11 +69,12 @@ _DECK_GUIDES = {
         "Total: 10-12 slides."
     ),
     "pitch": (
-        "Investor/client pitch deck. Slides: cover, content_bullets (Problem), "
-        "content_bullets (Solution), data_chart (Market Size), two_column (Product/Service), "
-        "content_bullets (Business Model), data_chart (Traction/Proof), "
-        "comparison_table (Team or Competitive), next_steps (The Ask). "
-        "Total: 9-10 slides."
+        "Investor/client pitch deck following McKinsey bottom-line-up-front structure. "
+        "Slides: cover, exec_summary (BLUF: what you're asking for and why — one crisp recommendation), "
+        "content_bullets (Problem), content_bullets (Solution), data_chart (Market Size), "
+        "two_column (Product/Service), content_bullets (Business Model), "
+        "data_chart (Traction/Proof), comparison_table (Team or Competitive), "
+        "next_steps (The Ask). Total: 10-11 slides."
     ),
     "regulatory": (
         "Regulatory pathway analysis. Slides: cover, exec_summary, "

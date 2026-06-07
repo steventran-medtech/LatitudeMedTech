@@ -1,5 +1,5 @@
 # DC-003 — Design Outputs
-**Document:** DC-003 · Version 1.2 · 2026-06-06  
+**Document:** DC-003 · Version 1.4 · 2026-06-06  
 **Approved by:** Steven Tran
 
 Design outputs are the code artifacts, APIs, data structures, and
@@ -220,8 +220,9 @@ Athena/
 
 | Design Output | File | Symbol / Route | Implements |
 |---|---|---|---|
-| Startup splash HTA | `Athena/ui/start_splash.hta` | `.bar-wrap` CSS; `#pct` + `pctEl` + `float:right`; `PollChromeReady` + `readyToClose`; asymptotic `Tick`; `Int()` display; cap=97; `adv`/`inc` floors | DI-019-A, DI-019-B, DI-019-C, DI-019-F, DI-019-H |
+| Startup splash HTA | `Athena/ui/start_splash.hta` | `.bar-wrap` CSS; `#pct` + `pctEl` + `float:right`; `PollChromeReady` + `readyToClose`; asymptotic `Tick`; `Int()` display; cap=97; `adv`/`inc` floors; `.name` font-size 101px; `TickDots` + `dots_id` VBScript cycling; `#dots` single-span | DI-019-A, DI-019-B, DI-019-C, DI-019-F, DI-019-H, DI-019-I, DI-019-J |
 | Chrome launch delay | `Athena/ui/start_athena.ps1` | `Start-Sleep -Milliseconds 2500` after `.athena_ready` write | DI-019-G |
+| Electron splash | `Athena/electron/main.js` | `.name` CSS `font-size:clamp(61px,7vw,101px)` | DI-019-I |
 
 ---
 
@@ -233,3 +234,13 @@ Athena/
 | Client DB methods | `agents/memory.py` | `Memory.add_client()`, `Memory.get_clients()`, `Memory.update_client()`, `Memory.delete_client()` | DI-018-A |
 | Client intake form | `ui/frontend/src/ClientsView.jsx` | `IntakeForm` — required-field validation for `name`, `email`, `program_tier`; per-field red-border + inline error | DI-018-B |
 | Engagement API | `ui/backend/server.py` | `GET/POST /api/clients/{id}/engagements`, `PUT /api/engagements/{id}` | DI-018-A |
+
+---
+
+## DO-030 — McKinsey/Latitude Brand Formatting Standard
+
+| Design Output | File | Symbol / Route | Implements |
+|---|---|---|---|
+| Pitch deck exec_summary slide | `agents/deck_agent.py` | `_DECK_GUIDES["pitch"]` — exec_summary added after cover | DI-030-A |
+| McKinsey quality directives | `agents/content_agent.py`, `briefing_agent.py`, `ma_intelligence_agent.py`, `regulatory_strategy_agent.py`, `sow_agent.py`, `deck_agent.py` | System prompt / SYSTEM / agent description constants | DI-030-B |
+| Brand identity injection | `agents/agent_base.py` | `build_system_prompt()` / system prompt `parts` list with "Latitude MedTech LLC" | DI-030-C |

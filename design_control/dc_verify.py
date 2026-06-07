@@ -1328,6 +1328,97 @@ def test_DI_019_H():
              "Restore all five guards: Tick floor, PollChromeReady floor, cap<=98, Int() display, (99.5-cap)/floor*16<1000")
 
 
+def test_DI_019_I():
+    """DI-019-I: Splash .name font-size is 101px in start_splash.hta and clamp(61px,7vw,101px) in electron/main.js"""
+    di = "DI-019-I"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    hta      = ATHENA / "ui" / "start_splash.hta"
+    electron = ATHENA / "electron" / "main.js"
+
+    # ACT + ASSERT — HTA (T1: constant value check)
+    if not hta.exists():
+        _log(FAIL, di, "start_splash.hta not found", str(hta))
+        return
+    hta_ok = "font-size:101px" in _read(hta)
+
+    # ACT + ASSERT — Electron (T1: constant value check)
+    if not electron.exists():
+        _log(FAIL, di, "electron/main.js not found", str(electron))
+        return
+    electron_ok = "font-size:clamp(61px,7vw,101px)" in _read(electron)
+
+    if hta_ok and electron_ok:
+        _log(PASS, di, ".name font-size is 101px in both start_splash.hta and electron/main.js")
+    else:
+        issues = []
+        if not hta_ok:
+            issues.append("start_splash.hta .name font-size is not 101px")
+        if not electron_ok:
+            issues.append("electron/main.js .name clamp max is not 101px")
+        _log(FAIL, di, "; ".join(issues),
+             "Set font-size:101px on .name in start_splash.hta; set font-size:clamp(61px,7vw,101px) on .name in electron/main.js")
+
+
+def test_DI_019_J():
+    """DI-019-J: #dots cycles via VBScript TickDots at <=500ms/state; hidden on completion"""
+    di = "DI-019-J"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    hta = ATHENA / "ui" / "start_splash.hta"
+
+    assert hta.exists(), (
+        f"FAIL {di}: start_splash.hta not found at {hta}\n"
+        "Fix: Confirm Athena/ui/start_splash.hta exists"
+    )
+    content = _read(hta)
+
+    # ACT — check 1: TickDots sub with 3-state cycling
+    has_tickdots = bool(re.search(r'Sub\s+TickDots', content, re.IGNORECASE))
+    assert has_tickdots, (
+        f"FAIL {di}: No 'Sub TickDots' found in start_splash.hta\n"
+        "Fix: Add a TickDots VBScript sub that cycles dotsEl.innerText through '.', '..', '...'"
+    )
+
+    # ACT — check 2: 3-state cycling via Mod 3 or equivalent
+    has_mod3 = bool(re.search(r'Mod\s+3', content, re.IGNORECASE))
+    assert has_mod3, (
+        f"FAIL {di}: TickDots sub does not use 'Mod 3' for 3-state cycling in start_splash.hta\n"
+        "Fix: Use 'dotState = (dotState + 1) Mod 3' in TickDots to cycle through 3 states"
+    )
+
+    # ACT — check 3: setInterval for TickDots with interval <=500
+    m = re.search(r'setInterval\s*\(\s*"TickDots"\s*,\s*(\d+)\s*\)', content, re.IGNORECASE)
+    assert m, (
+        f"FAIL {di}: No setInterval(\"TickDots\", N) found in start_splash.hta\n"
+        "Fix: Add 'dots_id = window.setInterval(\"TickDots\", 400)' in Window_OnLoad"
+    )
+    interval_val = int(m.group(1))
+    assert interval_val <= 500, (
+        f"FAIL {di}: TickDots interval is {interval_val}ms (must be <=500ms)\n"
+        "Fix: Reduce the interval in setInterval(\"TickDots\", N) to 500 or less"
+    )
+
+    # ACT — check 4: dotsEl.style.display = "none" on completion
+    has_hide = bool(re.search(r'dotsEl\.style\.display\s*=\s*"none"', content, re.IGNORECASE))
+    assert has_hide, (
+        f"FAIL {di}: dotsEl.style.display = \"none\" not found in start_splash.hta\n"
+        "Fix: Add 'dotsEl.style.display = \"none\"' in PollChromeReady when .athena_ready is detected"
+    )
+
+    # ACT — check 5: single #dots span (not three .dot sub-spans)
+    has_three_dot_spans = bool(re.search(r'class\s*=\s*["\']dot\s+dot[123]', content, re.IGNORECASE))
+    assert not has_three_dot_spans, (
+        f"FAIL {di}: start_splash.hta still uses three .dot.dot1/.dot2/.dot3 sub-spans inside #dots\n"
+        "Fix: Replace with a single <span id=\"dots\">.</span> — TickDots drives the content via VBScript"
+    )
+
+    _log(PASS, di, "TickDots cycling sub present; Mod 3 state machine; setInterval <= 500ms; hide on done; single #dots span")
+    return True
+
+
 # ── UN-020 / Document Review & Approval ──────────────────────────────────────
 
 def test_DI_020_A():
@@ -1650,6 +1741,83 @@ def test_DI_027_A():
              "Add approved_paths = {r['file_path'] for r in mem.get_approved_reviews()} and filter disk scan")
 
 
+# ── UN-030 / McKinsey + Latitude Brand Formatting Standard ───────────────────
+
+def test_DI_030_A():
+    """DI-030-A: All 6 _DECK_GUIDES entries in deck_agent.py include exec_summary"""
+    di = "DI-030-A"
+    if _skip_if_filtered(di): return
+    f = AGENTS / "deck_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "deck_agent.py not found", str(f))
+        return
+    content = _read(f)
+    required_types = ["strategy", "pitch", "regulatory", "coaching", "ma", "briefing"]
+    missing = []
+    for deck_type in required_types:
+        # Find the key entry and check the next 600 chars for exec_summary
+        m = re.search(rf'"{deck_type}"\s*:\s*\(', content)
+        if not m:
+            missing.append(f'"{deck_type}" key not found in _DECK_GUIDES')
+            continue
+        window = content[m.start():m.start() + 600]
+        if "exec_summary" not in window:
+            missing.append(f'"{deck_type}" guide lacks exec_summary slide')
+    if not missing:
+        _log(PASS, di, "All 6 _DECK_GUIDES entries include exec_summary slide")
+    else:
+        _log(FAIL, di, f"_DECK_GUIDES missing exec_summary in: {'; '.join(missing)}",
+             "Fix: add 'exec_summary' after 'cover' in the affected _DECK_GUIDES entry in deck_agent.py")
+
+
+def test_DI_030_B():
+    """DI-030-B: All 6 deliverable-generating agents contain McKinsey/Big-4/pyramid/SCQA directive"""
+    di = "DI-030-B"
+    if _skip_if_filtered(di): return
+    quality_pattern = re.compile(r'McKinsey|Big.4|pyramid|SCQA', re.IGNORECASE)
+    agents_to_check = [
+        AGENTS / "content_agent.py",
+        AGENTS / "briefing_agent.py",
+        AGENTS / "ma_intelligence_agent.py",
+        AGENTS / "regulatory_strategy_agent.py",
+        AGENTS / "sow_agent.py",
+        AGENTS / "deck_agent.py",
+    ]
+    missing = []
+    for agent_file in agents_to_check:
+        if not agent_file.exists():
+            missing.append(f"{agent_file.name} not found")
+            continue
+        if not quality_pattern.search(_read(agent_file)):
+            missing.append(f"{agent_file.name} has no McKinsey/Big-4/pyramid/SCQA directive")
+    if not missing:
+        _log(PASS, di, "All 6 deliverable agents contain McKinsey/Big-4 quality directive")
+    else:
+        _log(FAIL, di, f"Missing quality directive: {'; '.join(missing)}",
+             "Add a McKinsey/Big-4 quality standard line to the agent's system prompt or SYSTEM constant")
+
+
+def test_DI_030_C():
+    """DI-030-C: agent_base.py injects Latitude MedTech LLC brand identity into agent system prompts"""
+    di = "DI-030-C"
+    if _skip_if_filtered(di): return
+    f = AGENTS / "agent_base.py"
+    if not f.exists():
+        _log(FAIL, di, "agent_base.py not found", str(f))
+        return
+    content = _read(f)
+    has_brand  = "Latitude MedTech LLC" in content
+    has_prompt = bool(re.search(r'parts\s*=\s*\[|build_system_prompt|system_prompt', content))
+    if has_brand and has_prompt:
+        _log(PASS, di, "agent_base.py injects 'Latitude MedTech LLC' brand identity into agent system prompts")
+    elif has_brand:
+        _log(WARN, di, "agent_base.py has brand identity but system-prompt construction pattern not confirmed",
+             "Verify agent_base.py injects 'Latitude MedTech LLC' into all agent prompts")
+    else:
+        _log(FAIL, di, "agent_base.py missing 'Latitude MedTech LLC' brand identity",
+             "Add 'Latitude MedTech LLC' to the system prompt template in agent_base.py")
+
+
 # ── Live API Tests ─────────────────────────────────────────────────────────────
 
 def test_live_api():
@@ -1807,7 +1975,7 @@ def main():
     _section("UN-019 Startup Experience")
     test_DI_019_A(); test_DI_019_B(); test_DI_019_C()
     test_DI_019_D(); test_DI_019_E()
-    test_DI_019_F(); test_DI_019_G(); test_DI_019_H()
+    test_DI_019_F(); test_DI_019_G(); test_DI_019_H(); test_DI_019_I(); test_DI_019_J()
 
     _section("UN-020 Document Review & Approval")
     test_DI_020_A(); test_DI_020_B(); test_DI_020_C(); test_DI_020_D(); test_DI_020_E()
@@ -1823,6 +1991,9 @@ def main():
 
     _section("UN-026/027 Phase 2C — App Loading & Document Filter")
     test_DI_026_A(); test_DI_027_A()
+
+    _section("UN-030 McKinsey/Latitude Brand Formatting Standard")
+    test_DI_030_A(); test_DI_030_B(); test_DI_030_C()
 
     if args.live or args.full:
         test_live_api()
