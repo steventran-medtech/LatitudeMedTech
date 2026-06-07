@@ -25,6 +25,13 @@ record of what changed between each version. Keep them in lock-step — see
 
 ## [Unreleased]
 
+### CO-013 (splash-done-signal) — UN-019: Splash 100% guaranteed before Chrome opens (DI-019-L)
+
+- **start_splash.hta**: Added `CloseSplash` sub that writes `.athena_splash_done` before `window.close()`; `Tick` sub now calls `window.setTimeout "CloseSplash"` instead of `window.setTimeout "window.close()"`.
+- **start_athena.ps1**: Replaced `Start-Sleep -Milliseconds 2500` race condition with a 200ms polling loop waiting for `.athena_splash_done` (max 6s timeout); flag cleaned up at startup.
+- **DI-019-G** verification method updated: gap now signal-bounded to < 400ms.
+- **dc_verify.py**: `test_DI_019_G` updated; `test_DI_019_L` (P0) added; 109/109 PASSED.
+
 ### CO-012 — UN-007 + UN-002: Tab rename + AGENT_TAB routing fix
 
 ### Changed

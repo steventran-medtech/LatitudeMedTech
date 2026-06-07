@@ -1734,6 +1734,59 @@ def test_DI_019_K():
     return True
 
 
+def test_DI_019_L():
+    """DI-019-L: Chrome opens only after splash writes .athena_splash_done; no fixed 2500ms sleep gate"""
+    di = "DI-019-L"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    hta = ATHENA / "ui" / "start_splash.hta"
+    ps1 = ATHENA / "ui" / "start_athena.ps1"
+
+    assert hta.exists(), (
+        f"FAIL {di}: start_splash.hta not found at {hta}\n"
+        "Fix: Confirm Athena/ui/start_splash.hta exists"
+    )
+    assert ps1.exists(), (
+        f"FAIL {di}: start_athena.ps1 not found at {ps1}\n"
+        "Fix: Confirm Athena/ui/start_athena.ps1 exists"
+    )
+
+    # ACT
+    hta_content = _read(hta)
+    ps1_content = _read(ps1)
+
+    # ASSERT 1 — HTA has CloseSplash sub
+    assert "CloseSplash" in hta_content, (
+        f"FAIL {di}: CloseSplash sub not found in start_splash.hta\n"
+        "Fix: Add 'Sub CloseSplash' that writes .athena_splash_done then calls window.close(); "
+        "change Tick's window.setTimeout call to 'CloseSplash' instead of 'window.close()'"
+    )
+
+    # ASSERT 2 — HTA CloseSplash writes .athena_splash_done
+    assert "athena_splash_done" in hta_content, (
+        f"FAIL {di}: .athena_splash_done write not found in start_splash.hta\n"
+        "Fix: Add fso.CreateTextFile '.../athena_splash_done' inside the CloseSplash sub before window.close()"
+    )
+
+    # ASSERT 3 — PS1 polls for .athena_splash_done
+    assert "athena_splash_done" in ps1_content, (
+        f"FAIL {di}: start_athena.ps1 does not poll .athena_splash_done before Chrome launch\n"
+        "Fix: Add a while-loop polling $splashDoneFile (200ms interval, 6000ms max) before Start-Process chrome"
+    )
+
+    # ASSERT 4 — old fixed sleep is gone from the Chrome-launch gate path
+    assert "Start-Sleep -Milliseconds 2500" not in ps1_content, (
+        f"FAIL {di}: start_athena.ps1 still uses fixed Start-Sleep -Milliseconds 2500 as the Chrome-launch gate\n"
+        "Fix: Remove 'Start-Sleep -Milliseconds 2500' and replace with the .athena_splash_done polling loop"
+    )
+
+    _log(PASS, di,
+         "CloseSplash sub present in HTA; .athena_splash_done written before close; "
+         "PS1 polls for done-signal; fixed 2500ms sleep removed")
+    return True
+
+
 # ── UN-020 / Document Review & Approval ──────────────────────────────────────
 
 def test_DI_020_A():
@@ -2943,7 +2996,7 @@ def main():
     test_DI_019_A(); test_DI_019_B(); test_DI_019_C()
     test_DI_019_D(); test_DI_019_E()
     test_DI_019_F(); test_DI_019_G(); test_DI_019_H(); test_DI_019_I(); test_DI_019_J()
-    test_DI_019_K()
+    test_DI_019_K(); test_DI_019_L()
 
     _section("UN-020 Document Review & Approval")
     test_DI_020_A(); test_DI_020_B(); test_DI_020_C(); test_DI_020_D(); test_DI_020_E()

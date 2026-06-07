@@ -8,12 +8,13 @@
 $VENV_PY  = "$ATHENA\voice\venv\Scripts\python.exe"
 $SERVER   = "$ATHENA\ui\backend\server.py"
 $FRONT    = "$ATHENA\ui\frontend"
-$flagFile  = "$ATHENA\ui\.athena_ready"
-$errFile   = "$ATHENA\ui\.athena_error"
-$abortFile = "$ATHENA\ui\.athena_abort"
+$flagFile       = "$ATHENA\ui\.athena_ready"
+$errFile        = "$ATHENA\ui\.athena_error"
+$abortFile      = "$ATHENA\ui\.athena_abort"
+$splashDoneFile = "$ATHENA\ui\.athena_splash_done"
 
 # Remove stale flag/error from any previous run
-foreach ($f in @($flagFile, $errFile, $abortFile)) { if (Test-Path $f) { Remove-Item $f -Force } }
+foreach ($f in @($flagFile, $errFile, $abortFile, $splashDoneFile)) { if (Test-Path $f) { Remove-Item $f -Force } }
 
 # ── Duplicate-instance guard ────────────────────────────────────────────────
 # If Athena is already up, don't silently kill its backend and spawn a second
@@ -131,18 +132,26 @@ $session.models_ready = $false   # updated async by voice_bridge; not tracked he
 $session.model_load_s = $null
 
 # ── Signal the splash BEFORE opening Chrome ───────────────────────────────
-# Writing the flag now lets the splash finish its 95→100% countdown and
-# close cleanly. Chrome is opened only after the splash is gone so the two
-# windows never appear on screen at the same time.
+# Writing .athena_ready lets the splash finish its 95→100% countdown and
+# close cleanly. The splash writes .athena_splash_done (DI-019-L) just before
+# window.close(), and we poll for that file before opening Chrome — guaranteeing
+# causal ordering instead of relying on a fixed sleep that can be beaten by
+# slow HTA timers under load.
 $session.launch_ok    = $true
 $session.ready_at     = (Get-Date).ToString("o")
 $session.startup_secs = [math]::Round(((Get-Date) - $sessionStart).TotalSeconds, 1)
 $session | ConvertTo-Json -Compress | Out-File $SESSION_STATE -Encoding utf8
 New-Item -Path $flagFile -ItemType File -Force | Out-Null
 
-# Splash detects the flag, animates from cap (~97%) to 100%, and closes in ~1s.
-# 2.5s sleep gives the splash ~1.5s of margin before Chrome opens (DI-019-G: < 3s gap).
-Start-Sleep -Milliseconds 2500
+# Wait for the HTA splash to confirm it wrote 100% and closed (DI-019-L).
+# Poll at 200ms; timeout at 6000ms in case the splash was closed early or
+# skipped (abort path, crash). DI-019-G gap bound: < 400ms on normal close.
+$sdWait = 0
+while (-not (Test-Path $splashDoneFile) -and $sdWait -lt 6000) {
+    Start-Sleep -Milliseconds 200
+    $sdWait += 200
+}
+if (Test-Path $splashDoneFile) { Remove-Item $splashDoneFile -Force -ErrorAction SilentlyContinue }
 
 # ── Open Chrome ────────────────────────────────────────────────────────────
 $chrome = @(

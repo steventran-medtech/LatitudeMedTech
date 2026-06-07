@@ -338,6 +338,11 @@ Check: `start_athena.ps1` does NOT contain `$modelTimeout` — confirming the mo
 Warm-start definition: Python venv active, all model files present on disk (no first-run download), Vite build cache valid.  
 Fail action: Remove the `$modelTimeout` while-loop from `start_athena.ps1`. The `$session.models_ready` assignment used for session logging may remain; only the polling loop and `$modelTimeout` variable must be absent.
 
+**test_DI_019_L** — Chrome opens only after splash writes `.athena_splash_done` signal  
+Preconditions: `start_splash.hta` and `start_athena.ps1` on disk.  
+Check: (1) `start_splash.hta` contains a `CloseSplash` sub. (2) `start_splash.hta` contains `athena_splash_done` write inside `CloseSplash`. (3) `start_athena.ps1` contains `athena_splash_done` poll loop. (4) `Start-Sleep -Milliseconds 2500` is absent from the Chrome-launch gate path in `start_athena.ps1`.  
+Fail action: (1) Add `Sub CloseSplash` to `start_splash.hta` that runs `fso.CreateTextFile ".../athena_splash_done"` then `window.close()`. (2) Change `window.setTimeout "window.close()", 100` in the `Tick` sub to `window.setTimeout "CloseSplash", 100`. (3) Replace `Start-Sleep -Milliseconds 2500` in `start_athena.ps1` with a while-loop polling `$splashDoneFile` at 200ms intervals with a 6000ms timeout.
+
 ---
 
 ### DI-023 — Historical Data Depth

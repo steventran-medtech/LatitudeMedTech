@@ -331,8 +331,18 @@ Sub Tick
   ' avoid CInt rounding (99.9 displays as "100%" but fails an exact >= 100 check).
   If readyToClose And stepVal >= 99.5 Then
     window.clearInterval timer_id
-    window.setTimeout "window.close()", 100
+    window.setTimeout "CloseSplash", 100
   End If
+End Sub
+
+Sub CloseSplash
+  ' Write the done-signal BEFORE closing (DI-019-L): start_athena.ps1 polls for this
+  ' file before opening Chrome, guaranteeing causal ordering instead of a fixed sleep.
+  On Error Resume Next
+  Dim fso
+  Set fso = CreateObject("Scripting.FileSystemObject")
+  fso.CreateTextFile "C:\Users\huann\LatitudeMedTech\Athena\ui\.athena_splash_done", True
+  window.close()
 End Sub
 
 Sub PollBackend

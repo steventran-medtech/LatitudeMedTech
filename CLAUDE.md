@@ -254,6 +254,7 @@ Update this file's version line (date + vN) in the same final commit.
 
 | Date | Change | DC Reference |
 |---|---|---|
+| 2026-06-07 | CO-013 (UN-019): Splash 100% guaranteed before Chrome opens — `CloseSplash` sub in `start_splash.hta` writes `.athena_splash_done` before `window.close()`; `start_athena.ps1` polls for signal file at 200ms (6s max) before Chrome launch; fixed `Start-Sleep -Milliseconds 2500` race condition | DI-019-L (new), DI-019-G (verification updated) |
 | 2026-06-07 | CO-012 (UN-007, UN-002): renamed "Content Drafts" → "MedTech Meridian Drafts" (NAV_ITEMS + ContentView h2); fixed AGENT_TAB — coaching_brief→"coaching", 4 agents→"queue"; fixed WorkQueuePanel awaiting_review routing "review"→"queue" | DI-007-F, DI-002-H, DI-002-I |
 | 2026-06-07 | CO-010 (UN-033/UN-034): Voice stream sharing (DI-033-A/B/C VERIFIED); PUBLICATION_FORMAT_GUIDE in agent_base.py (DI-030-D); Output Format Standard in 8 persona files (DI-030-E); Engineering Integrity Standards in CLAUDE.md (DI-034-A–F); Version 0.6.0 | DI-033-A/B/C, DI-030-D/E, DI-034-A–F |
 | 2026-06-07 | UN-003, UN-023 (CO-003): RAG reviewable reports + 50-year QARA knowledge — rich ingestion report with `## Newly Ingested Documents` table; 7 historical Tavily queries; `tm_yday` deterministic rotation; QARA RSS sources in `learning_sources.py` | DI-003-C, DI-003-D, DI-023-B, DI-023-C |
