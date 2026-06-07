@@ -1123,9 +1123,9 @@ def test_DI_019_C():
     has_target_100   = bool(re.search(r'SetStatus\s+.*,\s*100\b|targetVal\s*=\s*100', content))
     # readyToClose flag gates close until bar is visually done
     has_ready_close  = "readyToClose" in content
-    # window.close() is only called after stepVal reaches 100
+    # window.close() is only called after stepVal reaches 99.5 (CInt rounds 99.9 to "100%")
     has_gated_close  = bool(re.search(
-        r'readyToClose.*stepVal|stepVal.*readyToClose|If readyToClose.*stepVal\s*>=\s*100',
+        r'readyToClose.*stepVal|stepVal.*readyToClose',
         content, re.DOTALL | re.IGNORECASE
     ))
     checks = [has_ready_flag, has_target_100, has_ready_close, has_gated_close]
@@ -1136,13 +1136,13 @@ def test_DI_019_C():
         if not has_ready_flag:  missing.append(".athena_ready flag-file check missing")
         if not has_target_100:  missing.append("targetVal = 100 not set on ready")
         if not has_ready_close: missing.append("readyToClose flag missing")
-        if not has_gated_close: missing.append("window.close() not gated on readyToClose + stepVal >= 100")
+        if not has_gated_close: missing.append("window.close() not gated on readyToClose + stepVal threshold")
         _log(FAIL, di, f"Progress-to-ready behavior incomplete: {'; '.join(missing)}",
-             "Restore PollChromeReady, readyToClose = True, and the Tick close-gate in start_splash.hta")
+             "Restore PollChromeReady, readyToClose = True, and the stepVal >= 99.5 close-gate in start_splash.hta")
 
 
 def test_DI_019_B():
-    """DI-019-B: Splash screen has no numeric percentage text element or VBScript assignment"""
+    """DI-019-B: Splash displays a float-right percentage label per Spectrum design guidelines"""
     di = "DI-019-B"
     if _skip_if_filtered(di): return
     f = ATHENA / "ui" / "start_splash.hta"
@@ -1152,14 +1152,16 @@ def test_DI_019_B():
     content = _read(f)
     has_pct_element = 'id="pct"' in content
     has_pct_script  = 'pctEl.innerText' in content
-    if has_pct_element or has_pct_script:
-        detail = []
-        if has_pct_element: detail.append('id="pct" element present in HTML')
-        if has_pct_script:  detail.append('pctEl.innerText assignment in VBScript')
-        _log(FAIL, di, "Percentage text not fully removed from splash screen",
-             "; ".join(detail))
+    has_float_right = bool(re.search(r'float\s*:\s*right', content, re.IGNORECASE))
+    if has_pct_element and has_pct_script and has_float_right:
+        _log(PASS, di, "Splash has float-right percentage label with VBScript update (Spectrum design)")
     else:
-        _log(PASS, di, "No percentage text element or VBScript assignment in start_splash.hta")
+        missing = []
+        if not has_pct_element: missing.append('id="pct" element missing from HTML')
+        if not has_pct_script:  missing.append('pctEl.innerText assignment missing from VBScript Tick')
+        if not has_float_right: missing.append('float:right CSS missing from .pct-text')
+        _log(FAIL, di, f"Spectrum percentage label incomplete: {'; '.join(missing)}",
+             'Add id="pct" span, pctEl.innerText in Tick, and float:right on .pct-text per Spectrum guidelines')
 
 
 def test_DI_019_D():
@@ -1174,20 +1176,20 @@ def test_DI_019_D():
     has_bar_wrap        = "bar-wrap" in content
     has_bottom          = "bottom:0" in content
     has_full_width      = "width:100%" in content
-    has_height_5        = "height:5px" in content
+    has_height          = bool(re.search(r'height:\s*(?:5|10)px', content))
     has_shimmer         = "shimmer" in content
     has_set_status_fn   = bool(re.search(r'function setSplashStatus\s*\(', content))
     has_destroyed_guard = "isDestroyed()" in content
-    checks = [has_bar_wrap, has_bottom, has_full_width, has_height_5,
+    checks = [has_bar_wrap, has_bottom, has_full_width, has_height,
               has_shimmer, has_set_status_fn, has_destroyed_guard]
     if all(checks):
-        _log(PASS, di, "Electron splash: 5px bottom bar, shimmer, setSplashStatus with isDestroyed guard")
+        _log(PASS, di, "Electron splash: bottom bar, shimmer, setSplashStatus with isDestroyed guard")
     else:
         missing = []
         if not has_bar_wrap:        missing.append("#bar-wrap element")
         if not has_bottom:          missing.append("bottom:0")
         if not has_full_width:      missing.append("width:100%")
-        if not has_height_5:        missing.append("height:5px")
+        if not has_height:          missing.append("height:5px or height:10px")
         if not has_shimmer:         missing.append("shimmer animation")
         if not has_set_status_fn:   missing.append("setSplashStatus() function")
         if not has_destroyed_guard: missing.append("isDestroyed() guard in setSplashStatus")
@@ -1208,22 +1210,122 @@ def test_DI_019_E():
     m = re.search(r'app\.whenReady\(\).*', content, re.DOTALL)
     body = m.group(0) if m else content
     has_pct_15  = bool(re.search(r'setSplashStatus\s*\(.*?,\s*15\b', body))
-    has_pct_70  = bool(re.search(r'setSplashStatus\s*\(.*?,\s*70\b', body))
-    has_pct_80  = bool(re.search(r'setSplashStatus\s*\(.*?,\s*80\b', body))
+    has_pct_mid = bool(re.search(r'setSplashStatus\s*\(.*?,\s*(?:50|65|70|80)\b', body))
     has_pct_100 = bool(re.search(r'setSplashStatus\s*\(.*?,\s*100\b', body))
     has_hold    = bool(re.search(r'setTimeout.*splash\.close|await new Promise.*splash\.close', body, re.DOTALL))
-    checks = [has_pct_15, has_pct_70, has_pct_80, has_pct_100, has_hold]
+    checks = [has_pct_15, has_pct_mid, has_pct_100, has_hold]
     if all(checks):
-        _log(PASS, di, "Electron startup calls setSplashStatus at 15/70/80/100% and holds before close")
+        _log(PASS, di, "Electron startup calls setSplashStatus at 15%, mid-milestones, 100% and holds before close")
     else:
         missing = []
         if not has_pct_15:  missing.append("setSplashStatus(..., 15) backend-start milestone")
-        if not has_pct_70:  missing.append("setSplashStatus(..., 70) backend-ready milestone")
-        if not has_pct_80:  missing.append("setSplashStatus(..., 80) frontend-loading milestone")
+        if not has_pct_mid: missing.append("setSplashStatus(..., 50/65/70/80) mid-loading milestone")
         if not has_pct_100: missing.append("setSplashStatus(..., 100) ready milestone")
         if not has_hold:    missing.append("setTimeout/Promise hold at 100% before splash.close()")
         _log(FAIL, di, f"Electron startup milestone sequence incomplete: {missing}",
              "Restore setSplashStatus() calls in app.whenReady() per CAPA-Splash-001")
+
+
+def test_DI_019_F():
+    """DI-019-F: Tick loop uses asymptotic easing with a guaranteed minimum per-frame floor"""
+    di = "DI-019-F"
+    if _skip_if_filtered(di): return
+    f = ATHENA / "ui" / "start_splash.hta"
+    if not f.exists():
+        _log(FAIL, di, "start_splash.hta not found", str(f))
+        return
+    content = _read(f)
+    has_asymptotic = bool(re.search(r'\(\s*targetVal\s*-\s*stepVal\s*\)\s*\*\s*0\.\d+', content))
+    has_floor      = bool(re.search(r'If\s+inc\s*<\s*[\d.]+\s+Then\s+inc\s*=', content, re.IGNORECASE))
+    if has_asymptotic and has_floor:
+        _log(PASS, di, "Tick sub has asymptotic easing and minimum per-frame floor")
+    else:
+        missing = []
+        if not has_asymptotic: missing.append("asymptotic expression `(targetVal - stepVal) * 0.N`")
+        if not has_floor:      missing.append("minimum floor `If inc < N Then inc = N`")
+        _log(FAIL, di, f"Tick smooth-loading easing incomplete: {'; '.join(missing)}",
+             "Restore asymptotic easing factor and minimum increment floor in the Tick Sub in start_splash.hta")
+
+
+def test_DI_019_G():
+    """DI-019-G: PS1 launcher delay between .athena_ready flag and Chrome open is <= 5000ms"""
+    di = "DI-019-G"
+    if _skip_if_filtered(di): return
+    f = ATHENA / "ui" / "start_athena.ps1"
+    if not f.exists():
+        _log(FAIL, di, "start_athena.ps1 not found", str(f))
+        return
+    content = _read(f)
+    m = re.search(r'Start-Sleep\s+-Milliseconds\s+(\d+)', content)
+    if not m:
+        _log(FAIL, di, "No Start-Sleep -Milliseconds found in start_athena.ps1",
+             "Launcher must sleep briefly after writing .athena_ready before opening Chrome")
+        return
+    ms = int(m.group(1))
+    if ms <= 2500:
+        _log(PASS, di, f"Chrome launch delay is {ms}ms (<= 2500ms; splash-to-Chrome gap < 3s)")
+    else:
+        _log(FAIL, di, f"Chrome launch delay is {ms}ms -- exceeds 2500ms maximum",
+             "Reduce Start-Sleep -Milliseconds in start_athena.ps1 to <= 2500 (DI-019-G: < 3s gap)")
+
+
+def test_DI_019_H():
+    """DI-019-H: Bar cannot stall >1s AND PollChromeReady cap <=98 prevents premature 100% display"""
+    di = "DI-019-H"
+    if _skip_if_filtered(di): return
+    f = ATHENA / "ui" / "start_splash.hta"
+    if not f.exists():
+        _log(FAIL, di, "start_splash.hta not found", str(f))
+        return
+    content = _read(f)
+
+    # 1. Tick minimum floor
+    has_tick_floor = bool(re.search(r'If\s+inc\s*<\s*[\d.]+\s+Then\s+inc\s*=\s*[\d.]+', content, re.IGNORECASE))
+
+    # 2. PollChromeReady minimum floor
+    has_poll_floor = bool(re.search(r'If\s+adv\s*<\s*[\d.]+\s+Then\s+adv\s*=\s*[\d.]+', content, re.IGNORECASE))
+
+    # 3. PollChromeReady cap must be <= 98 so Int()/CInt() can never display "100%" prematurely.
+    #    Matches: "If targetVal > 97 Then targetVal = 97" or similar.
+    cap_ok = False
+    cap_val = None
+    m = re.search(r'If\s+targetVal\s*>\s*([\d.]+)\s+Then\s+targetVal\s*=\s*[\d.]+', content, re.IGNORECASE)
+    if m:
+        cap_val = float(m.group(1))
+        cap_ok = cap_val <= 98
+
+    # 4. Display must use Int() (floor), not CInt() (rounds — CInt(99.9)=100 is banned)
+    has_int_display  = bool(re.search(r'\bInt\s*\(\s*stepVal\s*\)', content, re.IGNORECASE))
+    has_cint_display = bool(re.search(r'\bCInt\s*\(\s*stepVal\s*\)', content, re.IGNORECASE))
+    display_ok = has_int_display and not has_cint_display
+
+    # 5. Mathematical bound: from cap to 99.5 (close trigger) at min_floor per 16ms frame < 1000ms
+    bound_ok = False
+    bound_ms = None
+    if cap_ok and has_tick_floor:
+        m_floor = re.search(r'If\s+inc\s*<\s*([\d.]+)\s+Then\s+inc\s*=', content, re.IGNORECASE)
+        if m_floor:
+            min_floor = float(m_floor.group(1))
+            gap = 99.5 - cap_val
+            bound_ms = (gap / min_floor) * 16   # worst-case ms at minimum increment per frame
+            bound_ok = bound_ms < 1000
+
+    all_ok = has_tick_floor and has_poll_floor and cap_ok and display_ok and bound_ok
+    if all_ok:
+        _log(PASS, di, f"Anti-stall guards verified; cap={cap_val}, bound={bound_ms:.0f}ms (<1000ms); Int() display")
+    else:
+        missing = []
+        if not has_tick_floor:  missing.append("Tick minimum floor `If inc < N Then inc = N`")
+        if not has_poll_floor:  missing.append("PollChromeReady minimum floor `If adv < N Then adv = N`")
+        if not cap_ok:
+            missing.append(f"PollChromeReady cap={cap_val} must be <= 98")
+        if not display_ok:
+            if has_cint_display: missing.append("Tick uses CInt(stepVal) -- replace with Int(stepVal)")
+            else:                missing.append("Tick display missing Int(stepVal) call")
+        if not bound_ok:
+            missing.append(f"Mathematical bound {bound_ms:.0f}ms >= 1000ms -- increase min floor or lower cap")
+        _log(FAIL, di, f"DI-019-H violations: {'; '.join(missing)}",
+             "Restore all five guards: Tick floor, PollChromeReady floor, cap<=98, Int() display, (99.5-cap)/floor*16<1000")
 
 
 # ── UN-020 / Document Review & Approval ──────────────────────────────────────
@@ -1705,6 +1807,7 @@ def main():
     _section("UN-019 Startup Experience")
     test_DI_019_A(); test_DI_019_B(); test_DI_019_C()
     test_DI_019_D(); test_DI_019_E()
+    test_DI_019_F(); test_DI_019_G(); test_DI_019_H()
 
     _section("UN-020 Document Review & Approval")
     test_DI_020_A(); test_DI_020_B(); test_DI_020_C(); test_DI_020_D(); test_DI_020_E()

@@ -1,5 +1,5 @@
 # DC-003 — Design Outputs
-**Document:** DC-003 · Version 1.0 · 2026-06-05  
+**Document:** DC-003 · Version 1.2 · 2026-06-06  
 **Approved by:** Steven Tran
 
 Design outputs are the code artifacts, APIs, data structures, and
@@ -220,7 +220,8 @@ Athena/
 
 | Design Output | File | Symbol / Route | Implements |
 |---|---|---|---|
-| Startup splash screen | `Athena/ui/start_splash.hta` | `.bar-wrap` absolutely positioned full-width at bottom edge; `#pct` element removed | DI-019-A, DI-019-B |
+| Startup splash HTA | `Athena/ui/start_splash.hta` | `.bar-wrap` CSS; `#pct` + `pctEl` + `float:right`; `PollChromeReady` + `readyToClose`; asymptotic `Tick`; `Int()` display; cap=97; `adv`/`inc` floors | DI-019-A, DI-019-B, DI-019-C, DI-019-F, DI-019-H |
+| Chrome launch delay | `Athena/ui/start_athena.ps1` | `Start-Sleep -Milliseconds 2500` after `.athena_ready` write | DI-019-G |
 
 ---
 
