@@ -258,7 +258,7 @@ def test_live_api():
             try:
                 r    = urllib.request.urlopen(req, timeout=5)
                 data = json.loads(r.read())
-                if "ok" in data:
+                if data.get("ok"):
                     log(PASS, "API: /api/voice/listen route responding")
                 else:
                     log(WARN, "API: /api/voice/listen", f"Unexpected: {str(data)[:80]}")
