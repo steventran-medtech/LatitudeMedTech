@@ -190,6 +190,106 @@ def test_DI_002_D():
              "POST /api/review/{id}/edit should exist")
 
 
+def test_DI_002_E():
+    """DI-002-E: ReviewView.jsx Approved filter fetches from /api/documents"""
+    di = "DI-002-E"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = UI_FRONT / "ReviewView.jsx"
+    if not f.exists():
+        _log(FAIL, di, "ReviewView.jsx not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT — Approved filter must fetch from /api/documents (approved-only backend gate)
+    has_docs_fetch = "/api/documents" in content
+
+    # ASSERT
+    if has_docs_fetch:
+        _log(PASS, di, "ReviewView.jsx Approved filter fetches from /api/documents")
+    else:
+        _log(FAIL, di,
+             "DI-002-E: ReviewView.jsx has no /api/documents fetch — Approved filter is missing",
+             "Fix: Add a fetch('/api/documents') call in the 'approved' tab handler of ReviewView.jsx")
+    return True
+
+
+def test_DI_002_F():
+    """DI-002-F: ReviewView.jsx tab state initialises to 'pending'; legacy 'queue' state absent"""
+    di = "DI-002-F"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = UI_FRONT / "ReviewView.jsx"
+    if not f.exists():
+        _log(FAIL, di, "ReviewView.jsx not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT
+    # Initial tab state must be "pending" — not the legacy "queue"
+    uses_pending_init = 'useState("pending")' in content
+    still_uses_queue  = 'useState("queue")'   in content
+    # All three filter tab keys must be present as tab-array entries
+    has_approved_tab = '["approved"' in content or '"approved",' in content
+    has_rejected_tab = '["rejected"' in content or '"rejected",' in content
+
+    # ASSERT
+    failures = []
+    if not uses_pending_init:
+        failures.append('useState("pending") not found — initial tab state must be "pending"')
+    if still_uses_queue:
+        failures.append('useState("queue") still present — legacy tab state must be removed')
+    if not has_approved_tab:
+        failures.append('"approved" tab key not found in tabs array')
+    if not has_rejected_tab:
+        failures.append('"rejected" tab key not found in tabs array')
+
+    if not failures:
+        _log(PASS, di, "ReviewView.jsx uses three-state filter: pending / approved / rejected")
+    else:
+        _log(FAIL, di,
+             "DI-002-F: " + "; ".join(failures),
+             "Fix: Change useState('queue') to useState('pending') and add approved/rejected tab entries in ReviewView.jsx")
+    return True
+
+
+def test_DI_002_G():
+    """DI-002-G: App.jsx NAV_ITEMS has id:'queue' and no id:'documents' or id:'review'"""
+    di = "DI-002-G"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = UI_FRONT / "App.jsx"
+    if not f.exists():
+        _log(FAIL, di, "App.jsx not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT — check NAV_ITEMS contains queue, not the retired documents/review entries
+    has_queue     = 'id:"queue"'     in content
+    has_documents = 'id:"documents"' in content
+    has_review    = 'id:"review"'    in content
+
+    # ASSERT
+    failures = []
+    if not has_queue:
+        failures.append('id:"queue" missing from App.jsx NAV_ITEMS')
+    if has_documents:
+        failures.append('id:"documents" still present in App.jsx NAV_ITEMS — must be removed')
+    if has_review:
+        failures.append('id:"review" still present in App.jsx NAV_ITEMS — must be removed')
+
+    if not failures:
+        _log(PASS, di, "App.jsx NAV_ITEMS has id:'queue'; id:'documents' and id:'review' are absent")
+    else:
+        _log(FAIL, di,
+             "DI-002-G: " + "; ".join(failures),
+             "Fix: Replace id:'documents' and id:'review' entries with id:'queue' in App.jsx NAV_ITEMS")
+    return True
+
+
 # ── UN-003 / Knowledge Base ────────────────────────────────────────────────────
 
 def test_DI_003_A():
@@ -1550,6 +1650,7 @@ def test_DI_020_A():
         ("deck_agent.py",                  AGENTS / "deck_agent.py"),
         ("ma_intelligence_agent.py",       AGENTS / "ma_intelligence_agent.py"),
         ("rag_agent.py",                   AGENTS / "rag_agent.py"),
+        ("consulting_agent.py",            AGENTS / "consulting_agent.py"),
     ]
     missing = []
     for name, path in REQUIRED_AGENTS:
@@ -1924,6 +2025,108 @@ def test_DI_023_C():
     return True
 
 
+def test_DI_023_D():
+    """DI-023-D: HISTORICAL_CONSULTING_SOURCES in consulting_agent.py has >=5 entries with historical marker terms"""
+    di = "DI-023-D"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = AGENTS / "consulting_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "consulting_agent.py not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT — check HISTORICAL_CONSULTING_SOURCES list exists
+    if "HISTORICAL_CONSULTING_SOURCES" not in content:
+        _log(FAIL, di, "HISTORICAL_CONSULTING_SOURCES not defined in consulting_agent.py",
+             "Fix: Add HISTORICAL_CONSULTING_SOURCES = [...] list with >=5 historically-scoped entries")
+        return
+
+    # Count entries whose "name" value contains a historical marker term
+    historical_pattern = re.compile(
+        r'history|historical|evolution|origin|1970|1980|1990|2000s|50.year|classic', re.IGNORECASE)
+    block_m = re.search(r'HISTORICAL_CONSULTING_SOURCES\s*=\s*\[(.+?)\]', content, re.DOTALL)
+    if not block_m:
+        _log(FAIL, di, "HISTORICAL_CONSULTING_SOURCES could not be parsed as a list literal",
+             "Fix: Ensure HISTORICAL_CONSULTING_SOURCES = [...] is a module-level list literal")
+        return
+    # Extract name values from dict entries
+    name_values = re.findall(r'"name"\s*:\s*"([^"]+)"', block_m.group(1))
+    historical_count = sum(1 for n in name_values if historical_pattern.search(n))
+
+    # ASSERT
+    if historical_count >= 5:
+        _log(PASS, di, f"HISTORICAL_CONSULTING_SOURCES has {historical_count}/{len(name_values)} entries with historical marker terms (>= 5)")
+    else:
+        _log(FAIL, di,
+             f"Only {historical_count}/{len(name_values)} HISTORICAL_CONSULTING_SOURCES entries contain historical marker terms; need >= 5",
+             "Fix: Add entries whose 'name' field contains: history, historical, evolution, origin, 1970, 1980, 1990, 2000s, '50 year', or classic")
+    return True
+
+
+# ── UN-032 / Consulting Agent Learning Visibility ────────────────────────────
+
+def test_DI_032_A():
+    """DI-032-A: consulting_agent.py learn() generates '## Newly Ingested Items' report and calls submit_for_review()"""
+    di = "DI-032-A"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = AGENTS / "consulting_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "consulting_agent.py not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT
+    has_submit  = "submit_for_review(" in content
+    has_section = "## Newly Ingested Items" in content
+
+    # ASSERT
+    if has_submit and has_section:
+        _log(PASS, di, "consulting_agent.py calls submit_for_review() and includes '## Newly Ingested Items' section")
+    else:
+        missing = []
+        if not has_submit:
+            missing.append("submit_for_review() call missing from learn() in consulting_agent.py")
+        if not has_section:
+            missing.append('"## Newly Ingested Items" section header missing from report template')
+        _log(FAIL, di, f"DI-032-A requirements not met: {'; '.join(missing)}",
+             "Fix: Update learn() in consulting_agent.py to include '## Newly Ingested Items' and submit via submit_for_review()")
+    return True
+
+
+def test_DI_032_B():
+    """DI-032-B: consulting_agent.py writes consulting_learning_ report with 'No new items ingested' fallback"""
+    di = "DI-032-B"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = AGENTS / "consulting_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "consulting_agent.py not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT
+    has_path_pattern = "consulting_learning_" in content
+    has_fallback     = "No new items ingested this run." in content
+
+    # ASSERT
+    if has_path_pattern and has_fallback:
+        _log(PASS, di, "consulting_agent.py writes consulting_learning_<ts>.md and includes 'No new items ingested' fallback")
+    else:
+        missing = []
+        if not has_path_pattern:
+            missing.append("consulting_learning_ path pattern missing — report filename must match this prefix")
+        if not has_fallback:
+            missing.append('"No new items ingested this run." fallback string missing from report template')
+        _log(FAIL, di, f"DI-032-B requirements not met: {'; '.join(missing)}",
+             "Fix: Update learn() report path to f'consulting_learning_{{ts}}.md' and add fallback message")
+    return True
+
+
 # ── UN-024 / SOW Agent (Phase 2C) ────────────────────────────────────────────
 
 def test_DI_024_A():
@@ -2240,11 +2443,11 @@ def test_DI_030_C():
 
 #
 
-# ── UN-031 / Voice Query Readiness Latency ───────────────────────────────────
+# ── UN-032 / Voice Query Readiness Latency ───────────────────────────────────
 
-def test_DI_031_A():
-    """DI-031-A: _listen_for_wake accepts a stream parameter and does not open sd.InputStream internally"""
-    di = "DI-031-A"
+def test_DI_032_A():
+    """DI-032-A: _listen_for_wake accepts a stream parameter and does not open sd.InputStream internally"""
+    di = "DI-032-A"
     if _skip_if_filtered(di): return
     f = VOICE / "voice_bridge.py"
     if not f.exists():
@@ -2265,9 +2468,9 @@ def test_DI_031_A():
     _log(PASS, di, "_listen_for_wake accepts stream parameter; no internal sd.InputStream")
 
 
-def test_DI_031_B():
-    """DI-031-B: _record_query accepts a stream parameter and does not open sd.InputStream internally"""
-    di = "DI-031-B"
+def test_DI_032_B():
+    """DI-032-B: _record_query accepts a stream parameter and does not open sd.InputStream internally"""
+    di = "DI-032-B"
     if _skip_if_filtered(di): return
     f = VOICE / "voice_bridge.py"
     if not f.exists():
@@ -2288,9 +2491,9 @@ def test_DI_031_B():
     _log(PASS, di, "_record_query accepts stream parameter; no internal sd.InputStream")
 
 
-def test_DI_031_C():
-    """DI-031-C: _voice_loop opens one sd.InputStream and passes it to _listen_for_wake and _record_query"""
-    di = "DI-031-C"
+def test_DI_032_C():
+    """DI-032-C: _voice_loop opens one sd.InputStream and passes it to _listen_for_wake and _record_query"""
+    di = "DI-032-C"
     if _skip_if_filtered(di): return
     f = VOICE / "voice_bridge.py"
     if not f.exists():
@@ -2439,6 +2642,7 @@ def main():
     _section("UN-001/002 Coaching Brief & Review Gate")
     test_DI_001_C(); test_DI_001_D()
     test_DI_002_A(); test_DI_002_B(); test_DI_002_C(); test_DI_002_D()
+    test_DI_002_E(); test_DI_002_F(); test_DI_002_G()
 
     _section("UN-003 Knowledge Base")
     test_DI_003_A(); test_DI_003_B(); test_DI_003_C(); test_DI_003_D()
@@ -2503,8 +2707,8 @@ def main():
     _section("UN-030 McKinsey/Latitude Brand Formatting Standard")
     test_DI_030_A(); test_DI_030_B(); test_DI_030_C()
 
-    _section("UN-031 Voice Query Readiness Latency")
-    test_DI_031_A(); test_DI_031_B(); test_DI_031_C()
+    _section("UN-032 Voice Query Readiness Latency")
+    test_DI_032_A(); test_DI_032_B(); test_DI_032_C()
 
     if args.live or args.full:
         test_live_api()

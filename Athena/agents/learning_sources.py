@@ -84,6 +84,11 @@ AGENT_SOURCES = {
         # Historical — AI/ML research evolution (arXiv preprints + Semantic Scholar)
         {"name": "arXiv cs.AI",         "url": "https://export.arxiv.org/rss/cs.AI",                          "domain": "AI Research History",  "type": "rss"},
         {"name": "arXiv cs.IR",         "url": "https://export.arxiv.org/rss/cs.IR",                          "domain": "IR/RAG History",       "type": "rss"},
+        # QARA regulatory sources — 50-year knowledge base
+        {"name": "RAPS Regulatory Focus", "url": "https://www.raps.org/news-and-articles/rss",                 "domain": "Regulatory Affairs",   "type": "rss"},
+        {"name": "Federal Register MedDev","url": "https://www.federalregister.gov/documents/search.rss?conditions%5Bagencies%5D%5B%5D=food-and-drug-administration&conditions%5Btopic%5D%5B%5D=medical-devices", "domain": "FDA Federal Register", "type": "rss"},
+        {"name": "IMDRF Documents",       "url": "https://www.imdrf.org/rss.xml",                              "domain": "Global Harmonization", "type": "rss"},
+        {"name": "FDA Medical Devices",   "url": "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/medical-devices/rss.xml", "domain": "FDA CDRH",          "type": "rss"},
     ],
 
     "consulting": [

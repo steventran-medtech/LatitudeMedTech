@@ -223,6 +223,8 @@ Update this file's version line (date + vN) in the same final commit.
 
 | Date | Change | DC Reference |
 |---|---|---|
+| 2026-06-07 | UN-003, UN-023 (CO-003): RAG reviewable reports + 50-year QARA knowledge — rich ingestion report with `## Newly Ingested Documents` table; 7 historical Tavily queries; `tm_yday` deterministic rotation; QARA RSS sources in `learning_sources.py` | DI-003-C, DI-003-D, DI-023-B, DI-023-C |
+| 2026-06-07 | CO-006 (UN-032/UN-023): Consulting Agent `learn()` now generates `consulting_learning_<ts>.md` report + submits to review queue after every run; `HISTORICAL_CONSULTING_SOURCES` + `HISTORICAL_CONSULTING_KNOWLEDGE` (7 eras, 1970s–2020s) added to KB | DI-032-A, DI-032-B, DI-023-D |
 | 2026-06-07 | UN-031 (CO-004): Browser tab singleton guard added — second Athena tab in Chrome now shows blocking overlay and never mounts React; `tabGuard.js` uses BroadcastChannel + localStorage heartbeat | DI-031-A, DI-031-B |
 | 2026-06-06 | UN-028: VAD aggressiveness raised to 2; VAD-only silence detection; greeting routed through `_notification_queue` to eliminate startup echo | DI-028-A/B/C/D |
 | 2026-06-06 | UN-029: `_device_monitor_loop` polls system default mic every 3 s; `_device_changed` Event triggers stream reopen on headphone/speaker switch | DI-029-A/B/C |

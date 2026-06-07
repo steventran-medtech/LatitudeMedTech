@@ -188,6 +188,86 @@ SLIDE_STRUCTURES = {
     ],
 }
 
+# ── Historical consulting knowledge sources (50-year arc: 1970s–2020s) ───────
+# DI-023-D: ≥5 entries with historical marker terms in "name" field
+
+HISTORICAL_CONSULTING_SOURCES = [
+    {"name": "BCG 1970s Historical Origin Growth-Share Matrix Strategy",
+     "url": "https://www.bcg.com/about/overview/our-history",
+     "category": "history", "type": "web", "era": "1970s"},
+    {"name": "McKinsey Historical Framework Evolution 1970–1985",
+     "url": "https://www.mckinsey.com/about-us/overview",
+     "category": "history", "type": "web", "era": "1970s"},
+    {"name": "Porter Five Forces 1980s Strategic Analysis Evolution",
+     "url": "https://hbr.org/2008/01/the-five-competitive-forces-that-shape-strategy",
+     "category": "framework", "type": "web", "era": "1980s"},
+    {"name": "1990s Knowledge Management and Consulting Evolution",
+     "url": "https://en.wikipedia.org/wiki/Management_consulting",
+     "category": "history", "type": "web", "era": "1990s"},
+    {"name": "Big Four 2000s Post-Enron Consulting Evolution",
+     "url": "https://en.wikipedia.org/wiki/Big_Four_accounting_organizations",
+     "category": "history", "type": "web", "era": "2000s"},
+    {"name": "50 Year History of Strategy Consulting 1970–2020",
+     "url": "https://www.strategy-business.com/article/rethinking-the-strategy",
+     "category": "history", "type": "web", "era": "1970s–2020s"},
+    {"name": "HBR Classic Historical Management Consulting Archive",
+     "url": "https://hbr.org/topic/subject/strategy",
+     "category": "framework", "type": "web", "era": "historical"},
+]
+
+# Static 50-year management consulting history — curated, reliable, network-independent
+HISTORICAL_CONSULTING_KNOWLEDGE = {
+    "mckinsey_1970s": {
+        "era": "1970s",
+        "title": "The McKinsey-isation of Management Consulting (1970s)",
+        "description": "McKinsey & Company established the Firm-Advice model: all-generalists, no industry silos. Barbara Minto codified the Pyramid Principle (1970). The Firm grew from 400 to 2,000 consultants by 1980. Marvin Bower's emphasis on professional standards differentiated consulting from accounting.",
+        "key_people": "Marvin Bower, Barbara Minto, Ed Wrapp",
+        "key_frameworks": "Pyramid Principle (1970), Hypothesis-driven problem solving, MECE structuring",
+    },
+    "bcg_1970s": {
+        "era": "1970s",
+        "title": "BCG and the Strategy Revolution (1970s)",
+        "description": "Boston Consulting Group under Bruce Henderson invented portfolio strategy: the Growth-Share Matrix (1970) and the Experience Curve (1966). BCG pioneered quantitative strategy consulting. The concept of cash cows, stars, dogs, and question marks redefined capital allocation decisions.",
+        "key_people": "Bruce Henderson, Barry Hedley",
+        "key_frameworks": "BCG Growth-Share Matrix (1970), Experience Curve, portfolio theory",
+    },
+    "strategy_1980s": {
+        "era": "1980s",
+        "title": "Strategy as Competitive Positioning (1980s)",
+        "description": "Michael Porter's Competitive Strategy (1980) and Competitive Advantage (1985) defined strategy as industry structure analysis. McKinsey 7-S Framework (Peters & Waterman, 1980) introduced soft factors. Bain & Company focused on measurable results. The Big 8 accounting firms began consulting arms.",
+        "key_people": "Michael Porter, Tom Peters, Robert Waterman, Bill Bain",
+        "key_frameworks": "Porter's Five Forces (1979), Value Chain (1985), McKinsey 7-S (1980)",
+    },
+    "knowledge_1990s": {
+        "era": "1990s",
+        "title": "Knowledge Management and Reengineering (1990s)",
+        "description": "Hammer & Champy's Business Process Reengineering (1993) drove transformation consulting. Kaplan & Norton's Balanced Scorecard (1992) redefined performance management. The Big 6 collapsed to Big 5 post-Andersen separation. Consulting revenues grew 10–15% annually. Knowledge management emerged as a practice.",
+        "key_people": "Michael Hammer, James Champy, Robert Kaplan, David Norton",
+        "key_frameworks": "Business Process Reengineering (1993), Balanced Scorecard (1992), Knowledge Management",
+    },
+    "digital_2000s": {
+        "era": "2000s",
+        "title": "Post-Enron Restructuring and Digital Consulting (2000s)",
+        "description": "Sarbanes-Oxley (2002) forced Big 5 to divest consulting arms: Andersen Consulting became Accenture (2001), PwC Consulting became IBM Global Services (2002). The Big 4 advisory practices rebuilt. Digital strategy, offshoring consulting, and ERP implementation consulting dominated the decade.",
+        "key_people": "SOX architects, Accenture leadership",
+        "key_frameworks": "SOX compliance, IT governance (COBIT), Lean Six Sigma, ERP transformation",
+    },
+    "agile_2010s": {
+        "era": "2010s",
+        "title": "Agile, Analytics, and Platform Strategy (2010s)",
+        "description": "McKinsey Digital, BCG Digital Ventures, Deloitte Digital launched. Agile methodologies entered consulting delivery models. Big data and analytics became core service lines. Platform business model consulting emerged from Amazon/Airbnb patterns. ESG consulting began early adoption.",
+        "key_people": "Digital transformation leaders across all major firms",
+        "key_frameworks": "Agile/SAFe, Jobs-to-be-Done, Platform strategy, OKRs, ESG early frameworks",
+    },
+    "ai_2020s": {
+        "era": "2020s",
+        "title": "AI-Powered Consulting Transformation (2020s)",
+        "description": "COVID-19 (2020) accelerated digital transformation consulting. Generative AI (2022–) disrupted research and analysis work: McKinsey launched QuantumBlack AI, BCG launched BCG X. Boutique AI-native consultancies emerged. ESG materiality became mandatory. Supply chain resilience consulting surged post-pandemic.",
+        "key_people": "AI/consulting transformation leaders",
+        "key_frameworks": "AI maturity models, ESG materiality, Supply Chain 4.0, digital twin strategy",
+    },
+}
+
 # ── Learning run ──────────────────────────────────────────────────────────────
 
 def _chunk_text(text: str, size: int = 400) -> list:
@@ -251,11 +331,39 @@ def ingest_frameworks():
         json.dumps(data2, ensure_ascii=False, indent=2), encoding="utf-8")
     log.info(f"Frameworks library: {len(FRAMEWORKS_LIBRARY)} frameworks + {len(SLIDE_STRUCTURES)} slide structures saved to KB")
 
+
+def ingest_historical_knowledge():
+    """Save the built-in 50-year management consulting history to the KB (DI-023-D)."""
+    all_text = "50-YEAR MANAGEMENT CONSULTING HISTORY — Latitude MedTech Reference\n\n"
+    for key, item in HISTORICAL_CONSULTING_KNOWLEDGE.items():
+        all_text += f"## {item['title']} ({item['era']})\n"
+        all_text += f"{item['description']}\n"
+        all_text += f"Key People: {item.get('key_people', 'N/A')}\n"
+        all_text += f"Key Frameworks: {item.get('key_frameworks', 'N/A')}\n\n"
+    chunks = _chunk_text(all_text)
+    data = {
+        "agent":    "consulting",
+        "doc_name": "50-Year Management Consulting History",
+        "category": "consulting_history",
+        "source":   "Latitude MedTech Synthesis — Historical",
+        "url":      "internal://consulting-history-50yr",
+        "ingested": datetime.now().isoformat(),
+        "chunks":   [{"text": c, "doc_name": "50-Year Management Consulting History",
+                      "category": "consulting_history"} for c in chunks],
+    }
+    (KB_DIR / "consulting_history_50yr.json").write_text(
+        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    log.info(f"Historical knowledge: {len(HISTORICAL_CONSULTING_KNOWLEDGE)} eras saved to KB")
+
+
 def learn(max_new: int = 8):
     ingest_frameworks()
+    ingest_historical_knowledge()
     new_items, new_chunks = 0, 0
+    learned_items = []
     headers = {"User-Agent": "LatitudeMedTech-ConsultingAgent/1.0"}
 
+    # Current RSS sources
     for source in CONSULTING_SOURCES:
         if new_items >= max_new: break
         try:
@@ -272,9 +380,81 @@ def learn(max_new: int = 8):
                 mem.log_learning("consulting", source["name"], title, url, source["category"], chunks)
                 new_items  += 1
                 new_chunks += chunks
+                learned_items.append({"title": title, "source": source["name"], "url": url,
+                                       "category": source["category"], "chunks": chunks})
                 log.info(f"  [consulting] Learned: {title[:60]} ({chunks} chunks)")
         except Exception as e:
             log.warning(f"  [consulting] {source['name']}: {e}")
+
+    # Historical web sources (50-year arc, DI-023-D)
+    hist_budget = max(2, max_new // 4)
+    hist_new = 0
+    for source in HISTORICAL_CONSULTING_SOURCES:
+        if hist_new >= hist_budget: break
+        try:
+            url = source["url"]
+            if mem.learning_ingested(url): continue
+            resp = requests.get(url, headers=headers, timeout=12)
+            resp.raise_for_status()
+            text = re.sub(r"<[^>]+>", "", resp.text)[:3000]
+            title = source["name"]
+            chunks = _save_to_kb(source["name"], source["category"], title, url, text)
+            if not chunks: continue
+            mem.log_learning("consulting", source["name"], title, url, source["category"], chunks)
+            hist_new   += 1
+            new_items  += 1
+            new_chunks += chunks
+            learned_items.append({"title": title, "source": source["name"], "url": url,
+                                   "category": source["category"], "chunks": chunks,
+                                   "era": source.get("era", "historical")})
+            log.info(f"  [consulting/hist] Learned: {title[:60]} ({chunks} chunks)")
+        except Exception as e:
+            log.warning(f"  [consulting/hist] {source['name']}: {e}")
+
+    # Learning summary report (DI-032-A, DI-032-B)
+    ts = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    report_path = LOG_DIR / f"consulting_learning_{ts}.md"
+    lines = [
+        "# Consulting Agent — Learning Summary",
+        f"*Generated {datetime.now().strftime('%B %d, %Y at %H:%M')}*",
+        "",
+        "**Alpha — Steve Review Required**",
+        "",
+        "> This summary lists all items ingested by the Consulting Agent in this run.",
+        "> Approve to confirm the knowledge is appropriate for the KB.",
+        "> Reject to flag items for removal.",
+        "",
+        "---",
+        "",
+        "## Newly Ingested Items",
+        "",
+    ]
+    if learned_items:
+        for item in learned_items:
+            era_tag = f" *(Era: {item['era']})*" if item.get("era") else ""
+            lines.append(f"- **{item['title']}**{era_tag}")
+            lines.append(f"  Source: {item['source']} | Category: {item['category']} | Chunks: {item['chunks']}")
+            lines.append(f"  URL: <{item['url']}>")
+            lines.append("")
+    else:
+        lines.append("No new items ingested this run.")
+        lines.append("")
+    lines += [
+        "---",
+        "",
+        f"**Run total:** {new_items} new items · {new_chunks} chunks",
+        "",
+        "*Latitude MedTech LLC — Alpha. All AI-generated outputs require Steven Tran review before any downstream use.*",
+    ]
+    report_path.write_text("\n".join(lines), encoding="utf-8")
+    try:
+        mem.submit_for_review(
+            "consulting", "learning_report",
+            f"Consulting Learning Summary {datetime.now().strftime('%Y-%m-%d')}",
+            str(report_path),
+        )
+    except Exception as e:
+        log.warning(f"Could not submit learning report for review: {e}")
 
     mem.upsert_agent_health("consulting", last_learning=datetime.now().isoformat() if new_items > 0 else None)
     log.info(f"Consulting agent: {new_items} new items, {new_chunks} chunks")

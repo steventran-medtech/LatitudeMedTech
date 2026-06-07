@@ -97,6 +97,14 @@ TAVILY_QUERIES = [
     # San Diego / SoCal
     "San Diego medical device company FDA approval 2025 2026",
     "Biocom California medical device regulatory news",
+    # Historical QARA — 50-year knowledge base
+    "FDA medical device regulatory history Medical Device Amendments 1976 evolution",
+    "21 CFR 820 Quality System Regulation history evolution GMP 1978 1996",
+    "ISO 13485 medical devices quality management history evolution standard 1990s 2000s",
+    "EU medical devices directive MDD 93/42/EEC history evolution MDR 2017",
+    "good manufacturing practice GMP history pharmaceutical medical device FDA origin 1970s",
+    "CAPA corrective action preventive action history origin ISO quality management 1980s 1990s",
+    "IMDRF GHTF history origin global harmonization medical device regulatory 2000s",
 ]
 
 CHUNK_SIZE    = 512
@@ -324,9 +332,11 @@ def ingest_tavily(index):
         log.info("-- Tavily: skipped (TAVILY_API_KEY not set) --")
         return index
 
-    import random
-    # Rotate queries - pick different subset each run to maximize coverage
-    run_queries = random.sample(TAVILY_QUERIES, min(8, len(TAVILY_QUERIES)))
+    # Deterministic day-of-year rotation — same weekday always hits same query window
+    day_bucket  = datetime.now().timetuple().tm_yday
+    n           = len(TAVILY_QUERIES)
+    offset      = (day_bucket * 8) % n
+    run_queries = [TAVILY_QUERIES[(offset + i) % n] for i in range(min(8, n))]
     log.info(f"-- Tavily search ({len(run_queries)}/{len(TAVILY_QUERIES)} queries, rotated) --")
     total_new = 0
 
@@ -387,7 +397,7 @@ def main():
     log.info("=" * 44)
 
     index = load_index()
-    docs_before = len(index["documents"])
+    docs_before_set = set(index["documents"].keys())
     index = ingest_static_docs(index)
     index = ingest_rss(index)
     index = ingest_tavily(index)
@@ -396,20 +406,44 @@ def main():
     print_summary(index)
     log.info("RAG ingestion complete.")
 
-    # Submit an ingestion summary to the review queue so Athena can read it back.
+    # Submit a rich ingestion report to the review queue for Steven's approval.
     try:
         from memory import Memory as _Mem
-        _dt       = datetime.now()
-        new_docs  = len(index["documents"]) - docs_before
-        total     = len(index["documents"])
-        cats: dict = {}
+        _dt         = datetime.now()
+        new_doc_ids = set(index["documents"].keys()) - docs_before_set
+        new_docs    = len(new_doc_ids)
+        total       = len(index["documents"])
+        cats: dict  = {}
         for _d in index["documents"].values():
             _c = _d.get("category", "General")
             cats[_c] = cats.get(_c, 0) + 1
-        cat_line  = ", ".join(f"{v} {k}" for k, v in sorted(cats.items()))
-        _date_h   = f"{_dt.strftime('%B')} {_dt.day}, {_dt.year}"
-        title     = (f"RAG Ingestion — {new_docs} new doc{'s' if new_docs != 1 else ''} "
-                     f"({cat_line}), {_date_h}")
+        cat_line = ", ".join(f"{v} {k}" for k, v in sorted(cats.items()))
+        _date_h  = f"{_dt.strftime('%B')} {_dt.day}, {_dt.year}"
+        title    = (f"RAG Ingestion — {new_docs} new doc{'s' if new_docs != 1 else ''} "
+                    f"({cat_line}), {_date_h}")
+
+        # Build newly-ingested table rows
+        if new_doc_ids:
+            table_rows = []
+            for _id in sorted(new_doc_ids):
+                _meta   = index["documents"][_id]
+                _title  = _meta.get("name", _id)
+                _url    = _meta.get("url", "")
+                _cat    = _meta.get("category", "General")
+                _chunks = _meta.get("chunks", 0)
+                _link   = f"[{_title}]({_url})" if _url else _title
+                table_rows.append(f"| {_link} | {_cat} | {_chunks} |")
+            newly_ingested_section = (
+                "## Newly Ingested Documents\n\n"
+                "| Document | Category | Chunks |\n"
+                "|---|---|---|\n" +
+                "\n".join(table_rows)
+            )
+        else:
+            newly_ingested_section = (
+                "## Newly Ingested Documents\n\n"
+                "No new documents ingested this run."
+            )
 
         summary_path = LOG_DIR / f"rag_summary_{_dt.strftime('%Y%m%d_%H%M%S')}.md"
         summary_path.write_text(
@@ -418,7 +452,9 @@ def main():
             f"**Total KB documents:** {total}\n"
             f"**New this run:** {new_docs}\n\n"
             "## By Category\n\n" +
-            "\n".join(f"- **{k}**: {v} document{'s' if v != 1 else ''}" for k, v in sorted(cats.items())),
+            "\n".join(f"- **{k}**: {v} document{'s' if v != 1 else ''}"
+                      for k, v in sorted(cats.items())) +
+            f"\n\n{newly_ingested_section}\n",
             encoding="utf-8",
         )
         _Mem().submit_for_review("rag_agent", "ingestion_summary", title, str(summary_path))

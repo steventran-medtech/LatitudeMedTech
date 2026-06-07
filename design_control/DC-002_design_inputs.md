@@ -142,6 +142,7 @@ Each entry:
 | DI-023-A | UN-023 | The knowledge base ingestion pipeline shall not apply a date filter that excludes documents published or effective more than 50 years before the current year; RAG search queries shall include non-date-restricted and historically-scoped terms alongside current-year queries, so that agents can access and cite source material spanning at least 50 years | `rag_agent.py` contains no hard `cutoff_year`, `min_year`, or equivalent date filter rejecting documents older than 50 years; KB seed queries include at least one historically-scoped term not restricted to a specific recent year | P1 | VERIFIED |
 | DI-023-B | UN-023 | `TAVILY_QUERIES` in `rag_agent.py` shall include at least 5 entries that contain a historical marker term — one of: "history", "historical", "evolution", "origin", "1970", "1980", "1990", "2000s" — so that the Tavily search pipeline actively retrieves pre-2020 QARA source material spanning the 50-year scope defined in UN-023 | Count of `TAVILY_QUERIES` entries matching `history\|historical\|evolution\|origin\|1970\|1980\|1990\|2000s` ≥ 5 | P1 | OPEN |
 | DI-023-C | UN-023 | Tavily query selection per run shall use deterministic day-of-year modulo bucketing (`datetime.now().timetuple().tm_yday`) rather than `random.sample()` so that the same calendar day always executes the same query bucket and adjacent days execute different buckets, enabling predictable full-corpus coverage | `rag_agent.py` contains `tm_yday` and does NOT contain `random.sample` | P1 | OPEN |
+| DI-023-D | UN-023 | `consulting_agent.py` shall define a `HISTORICAL_CONSULTING_SOURCES` list with at least 5 entries whose `"name"` field contains a historical marker term — one of: "history", "historical", "evolution", "origin", "1970", "1980", "1990", "2000s", "50 year", "classic" — so that the consulting learning pipeline actively retrieves management consulting knowledge spanning the 50-year scope defined in UN-023 | Count of `HISTORICAL_CONSULTING_SOURCES` entries in `consulting_agent.py` whose `"name"` value matches `history\|historical\|evolution\|origin\|1970\|1980\|1990\|2000s\|50.year\|classic` ≥ 5 | P1 | OPEN |
 
 ---
 
@@ -299,6 +300,17 @@ Each entry:
 |---|---|---|---|---|---|
 | DI-031-A | UN-031 | When the Athena frontend loads in a browser tab, it shall acquire a named singleton lock via `BroadcastChannel`; if another tab already holds the lock (detected via a `localStorage` heartbeat key that is updated at least once per second and expires after 3 seconds), the second tab shall immediately display a "Athena is already open in another tab — close this tab." blocking overlay and shall not initialize the React application | Static: `tabGuard.js` in `ui/frontend/src/` exists and contains `BroadcastChannel` and a blocking overlay render; `main.jsx` imports and calls `initTabGuard` and only mounts React when the call returns truthy | P0 | VERIFIED |
 | DI-031-B | UN-031 | The singleton lock shall be released automatically when the holding tab closes or navigates away — on `beforeunload` the lock holder shall broadcast a `release` message via the `BroadcastChannel` and remove the `localStorage` lock key, so that a reloaded or replacement tab can acquire the lock immediately without waiting for a stale-lock timeout | Static: `tabGuard.js` contains a `beforeunload` event listener that calls `ch.postMessage({ type: "release" ... })` and removes the `localStorage` lock key | P0 | VERIFIED |
+
+---
+
+## Agent Learning Visibility
+
+### UN-032 — Consulting Agent Learning Reports
+
+| ID | Source | Requirement Statement | Verification | Priority | Status |
+|---|---|---|---|---|---|
+| DI-032-A | UN-032 | `consulting_agent.py`'s `learn()` shall generate a Markdown learning summary report after each run and submit it to the review queue via `submit_for_review()`, with a report body that includes a "## Newly Ingested Items" section listing each new item (title, source, URL, category, chunk count) or an explicit "No new items ingested this run." message if none were found | `consulting_agent.py` contains `submit_for_review(` call AND "## Newly Ingested Items" section header string | P1 | OPEN |
+| DI-032-B | UN-032 | The consulting learning report shall be written to a file matching the `consulting_learning_` path pattern under the logs directory and shall include a fallback "No new items ingested this run." message when zero items were ingested in the run | `consulting_agent.py` source contains both `consulting_learning_` path pattern and `"No new items ingested this run."` string | P1 | OPEN |
 
 ---
 
