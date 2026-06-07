@@ -121,23 +121,14 @@ if (-not $backendUp) {
     exit 1
 }
 
-# ── Wait for voice models to finish loading ────────────────────────────────
-# Models preload in a background thread; we block here so Chrome never opens
-# before Athena is fully ready to take requests.
-$modelTimeout = 180  # seconds — Kokoro model download can take ~2 min on first run
-$modelElapsed = 0
-while ($modelElapsed -lt $modelTimeout) {
-    try {
-        $r = Invoke-RestMethod "http://127.0.0.1:8000/api/voice/status" -TimeoutSec 3 -ErrorAction Stop
-        if ($r.models_ready -eq $true) { break }
-    } catch { }
-    Start-Sleep -Milliseconds 500
-    $modelElapsed += 0.5
-}
+# Voice models preload asynchronously in a background thread (voice_bridge.py
+# _preload_models). Chrome opens as soon as backend + frontend are ready;
+# the voice WS status event carries models_ready so the UI reflects loading state.
+# Removing the blocking model-wait (DI-019-K CO-008): startup time under 10s on warm start.
 $session.backend_up   = $true
 $session.frontend_up  = $frontendUp
-$session.models_ready = ($modelElapsed -lt $modelTimeout)
-$session.model_load_s = [math]::Round($modelElapsed, 1)
+$session.models_ready = $false   # updated async by voice_bridge; not tracked here
+$session.model_load_s = $null
 
 # ── Signal the splash BEFORE opening Chrome ───────────────────────────────
 # Writing the flag now lets the splash finish its 95→100% countdown and

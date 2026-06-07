@@ -1634,6 +1634,33 @@ def test_DI_019_J():
     return True
 
 
+def test_DI_019_K():
+    """DI-019-K: startup script does not gate .athena_ready on voice model preload (modelTimeout loop absent)"""
+    di = "DI-019-K"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = ATHENA / "ui" / "start_athena.ps1"
+    assert f.exists(), (
+        f"FAIL {di}: start_athena.ps1 not found at {f}\n"
+        "Fix: Confirm Athena/ui/start_athena.ps1 exists"
+    )
+
+    # ACT
+    content = _read(f)
+
+    # ASSERT — the model-polling timeout loop must be absent
+    assert "$modelTimeout" not in content, (
+        f"FAIL {di}: $modelTimeout polling loop still present in start_athena.ps1 — "
+        "voice model wait blocks Chrome open for up to 180 s on every cold start\n"
+        "Fix: Remove the $modelTimeout while-loop (~lines 124-136) that polls "
+        "/api/voice/status for models_ready before writing .athena_ready"
+    )
+
+    _log(PASS, di, "No $modelTimeout polling loop — .athena_ready fires on backend+frontend ready; voice models load async")
+    return True
+
+
 # ── UN-020 / Document Review & Approval ──────────────────────────────────────
 
 def test_DI_020_A():
@@ -2067,7 +2094,7 @@ def test_DI_023_D():
 
 # ── UN-032 / Consulting Agent Learning Visibility ────────────────────────────
 
-def test_DI_032_A():
+def test_DI_consulting_032_A():
     """DI-032-A: consulting_agent.py learn() generates '## Newly Ingested Items' report and calls submit_for_review()"""
     di = "DI-032-A"
     if _skip_if_filtered(di): return
@@ -2097,7 +2124,7 @@ def test_DI_032_A():
     return True
 
 
-def test_DI_032_B():
+def test_DI_consulting_032_B():
     """DI-032-B: consulting_agent.py writes consulting_learning_ report with 'No new items ingested' fallback"""
     di = "DI-032-B"
     if _skip_if_filtered(di): return
@@ -2679,6 +2706,7 @@ def main():
     test_DI_019_A(); test_DI_019_B(); test_DI_019_C()
     test_DI_019_D(); test_DI_019_E()
     test_DI_019_F(); test_DI_019_G(); test_DI_019_H(); test_DI_019_I(); test_DI_019_J()
+    test_DI_019_K()
 
     _section("UN-020 Document Review & Approval")
     test_DI_020_A(); test_DI_020_B(); test_DI_020_C(); test_DI_020_D(); test_DI_020_E()
@@ -2690,7 +2718,7 @@ def main():
     test_DI_031_A(); test_DI_031_B()
 
     _section("UN-023 Historical Data Depth")
-    test_DI_023_A(); test_DI_023_B(); test_DI_023_C()
+    test_DI_023_A(); test_DI_023_B(); test_DI_023_C(); test_DI_023_D()
 
     _section("UN-024/025 Phase 2C — SOW & Regulatory Strategy")
     test_DI_024_A(); test_DI_025_A()
@@ -2706,6 +2734,9 @@ def main():
 
     _section("UN-030 McKinsey/Latitude Brand Formatting Standard")
     test_DI_030_A(); test_DI_030_B(); test_DI_030_C()
+
+    _section("UN-032 Consulting Learning Visibility")
+    test_DI_consulting_032_A(); test_DI_consulting_032_B()
 
     _section("UN-032 Voice Query Readiness Latency")
     test_DI_032_A(); test_DI_032_B(); test_DI_032_C()
