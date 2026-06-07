@@ -1270,7 +1270,7 @@ def test_DI_019_G():
 
 
 def test_DI_019_H():
-    """DI-019-H: Bar cannot stall >1s AND PollChromeReady cap <=98 prevents premature 100% display"""
+    """DI-019-H: Bar never stalls >1s -- keep-alive branch + cap + math bound + no premature 100%"""
     di = "DI-019-H"
     if _skip_if_filtered(di): return
     f = ATHENA / "ui" / "start_splash.hta"
@@ -1279,14 +1279,13 @@ def test_DI_019_H():
         return
     content = _read(f)
 
-    # 1. Tick minimum floor
+    # 1. Tick minimum floor (normal asymptotic branch)
     has_tick_floor = bool(re.search(r'If\s+inc\s*<\s*[\d.]+\s+Then\s+inc\s*=\s*[\d.]+', content, re.IGNORECASE))
 
     # 2. PollChromeReady minimum floor
     has_poll_floor = bool(re.search(r'If\s+adv\s*<\s*[\d.]+\s+Then\s+adv\s*=\s*[\d.]+', content, re.IGNORECASE))
 
     # 3. PollChromeReady cap must be <= 98 so Int()/CInt() can never display "100%" prematurely.
-    #    Matches: "If targetVal > 97 Then targetVal = 97" or similar.
     cap_ok = False
     cap_val = None
     m = re.search(r'If\s+targetVal\s*>\s*([\d.]+)\s+Then\s+targetVal\s*=\s*[\d.]+', content, re.IGNORECASE)
@@ -1294,12 +1293,12 @@ def test_DI_019_H():
         cap_val = float(m.group(1))
         cap_ok = cap_val <= 98
 
-    # 4. Display must use Int() (floor), not CInt() (rounds — CInt(99.9)=100 is banned)
+    # 4. Display must use Int() (floor), not CInt() (rounds -- CInt(99.9)=100 is banned)
     has_int_display  = bool(re.search(r'\bInt\s*\(\s*stepVal\s*\)', content, re.IGNORECASE))
     has_cint_display = bool(re.search(r'\bCInt\s*\(\s*stepVal\s*\)', content, re.IGNORECASE))
     display_ok = has_int_display and not has_cint_display
 
-    # 5. Mathematical bound: from cap to 99.5 (close trigger) at min_floor per 16ms frame < 1000ms
+    # 5. Mathematical bound: close-sprint from PollChromeReady cap to 99.5 < 1000ms
     bound_ok = False
     bound_ms = None
     if cap_ok and has_tick_floor:
@@ -1307,25 +1306,76 @@ def test_DI_019_H():
         if m_floor:
             min_floor = float(m_floor.group(1))
             gap = 99.5 - cap_val
-            bound_ms = (gap / min_floor) * 16   # worst-case ms at minimum increment per frame
+            bound_ms = (gap / min_floor) * 16
             bound_ok = bound_ms < 1000
 
-    all_ok = has_tick_floor and has_poll_floor and cap_ok and display_ok and bound_ok
+    # 6. Tick keep-alive branch: "ElseIf Not readyToClose" fires when stepVal >= targetVal
+    #    while loading is not done, preventing convergence stall at the animation ceiling.
+    #    Root-cause fix for the 97%-stall regression (2026-06-06).
+    has_keepalive = bool(re.search(r'ElseIf\s+Not\s+readyToClose\b', content, re.IGNORECASE))
+
+    # 7. Keep-alive ceiling: "stepVal < N" in the ElseIf Not readyToClose branch.
+    #    Must satisfy: N < 99.5 (below readyToClose trigger) AND Int(N) < 100 (no premature 100%).
+    keepalive_ceiling_ok = False
+    keepalive_ceiling_val = None
+    m_ceil = re.search(
+        r'ElseIf\s+Not\s+readyToClose\s+And\s+stepVal\s*<\s*([\d.]+)',
+        content, re.IGNORECASE
+    )
+    if m_ceil:
+        keepalive_ceiling_val = float(m_ceil.group(1))
+        keepalive_ceiling_ok = keepalive_ceiling_val < 99.5 and int(keepalive_ceiling_val) < 100
+
+    # 8. Keep-alive floor: "stepVal = stepVal + N" in the keep-alive block.
+    #    Must satisfy: 1.0 / N * 16ms < 1000ms (each percentage point traverses in < 1s).
+    keepalive_floor_ok = False
+    keepalive_floor_val = None
+    keepalive_ms = None
+    if has_keepalive:
+        m_ka = re.search(r'stepVal\s*=\s*stepVal\s*\+\s*([\d.]+)', content, re.IGNORECASE)
+        if m_ka:
+            keepalive_floor_val = float(m_ka.group(1))
+            keepalive_ms = (1.0 / keepalive_floor_val) * 16
+            keepalive_floor_ok = keepalive_ms < 1000
+
+    all_ok = (has_tick_floor and has_poll_floor and cap_ok and display_ok and bound_ok
+              and has_keepalive and keepalive_ceiling_ok and keepalive_floor_ok)
     if all_ok:
-        _log(PASS, di, f"Anti-stall guards verified; cap={cap_val}, bound={bound_ms:.0f}ms (<1000ms); Int() display")
+        _log(PASS, di, (
+            f"All 8 anti-stall guards verified: cap={cap_val}, close-sprint={bound_ms:.0f}ms; "
+            f"keep-alive ceiling={keepalive_ceiling_val} ({keepalive_ms:.0f}ms/pt); Int() display"
+        ))
     else:
         missing = []
-        if not has_tick_floor:  missing.append("Tick minimum floor `If inc < N Then inc = N`")
-        if not has_poll_floor:  missing.append("PollChromeReady minimum floor `If adv < N Then adv = N`")
+        if not has_tick_floor:
+            missing.append("Tick minimum floor `If inc < N Then inc = N`")
+        if not has_poll_floor:
+            missing.append("PollChromeReady minimum floor `If adv < N Then adv = N`")
         if not cap_ok:
             missing.append(f"PollChromeReady cap={cap_val} must be <= 98")
         if not display_ok:
             if has_cint_display: missing.append("Tick uses CInt(stepVal) -- replace with Int(stepVal)")
             else:                missing.append("Tick display missing Int(stepVal) call")
         if not bound_ok:
-            missing.append(f"Mathematical bound {bound_ms:.0f}ms >= 1000ms -- increase min floor or lower cap")
-        _log(FAIL, di, f"DI-019-H violations: {'; '.join(missing)}",
-             "Restore all five guards: Tick floor, PollChromeReady floor, cap<=98, Int() display, (99.5-cap)/floor*16<1000")
+            missing.append(f"Close-sprint bound {bound_ms:.0f}ms >= 1000ms -- increase min floor or lower cap")
+        if not has_keepalive:
+            missing.append(
+                "Tick keep-alive branch missing: add `ElseIf Not readyToClose And stepVal < 99.4 Then` "
+                "with `stepVal = stepVal + 0.05` to prevent convergence stall at animation ceiling"
+            )
+        if not keepalive_ceiling_ok:
+            missing.append(
+                f"Keep-alive ceiling={keepalive_ceiling_val} violates constraints: "
+                "must be < 99.5 (readyToClose trigger) and Int(ceiling) < 100"
+            )
+        if not keepalive_floor_ok:
+            missing.append(
+                f"Keep-alive traversal={keepalive_ms:.0f}ms/pt >= 1000ms -- "
+                "increase stepVal increment in ElseIf Not readyToClose branch"
+            )
+        _log(FAIL, di, f"DI-019-H violations ({len(missing)}): {'; '.join(missing)}",
+             "Restore all 8 guards in start_splash.hta: Tick floor, poll floor, cap<=98, "
+             "Int() display, close-sprint bound, keep-alive branch, ceiling <99.5, floor <1000ms/pt")
 
 
 def test_DI_019_I():

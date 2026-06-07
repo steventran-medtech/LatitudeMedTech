@@ -44,6 +44,9 @@ record of what changed between each version. Keep them in lock-step — see
 
 _Changes landed on `main` but not yet stamped into a numbered release go here._
 
+### Fixed
+- **BUG-DI-019-H:** Splash progress bar could freeze at 97% indefinitely when `.athena_ready` was delayed. Root cause: `PollChromeReady` asymptotically converged `targetVal` to 97 (hard cap); once `stepVal` caught up, `Tick`'s `If stepVal < targetVal` condition was permanently false. Fix: added `ElseIf Not readyToClose And stepVal < 99.4 Then stepVal = stepVal + 0.05` keep-alive branch in `Tick` — bar now traverses 97%→98%→99% at 320 ms/point while waiting for Chrome. `test_DI_019_H` strengthened with three additional checks (keep-alive presence, ceiling < 99.5, floor traversal rate < 1000 ms/pt).
+
 ### Added
 - **DI-019-J (C2):** Splash screen `#dots` element now cycles sequentially (`.` → `..` → `...`) via VBScript `TickDots` timer at 400 ms/state — matching Claude Code's in-progress indicator pattern. Replaces CSS `dotFlash` wave animation. `test_DI_019_J` added to `dc_verify.py`.
 - **UN-030 (C2): McKinsey/Latitude Brand Formatting Standard** — Formal DC trace for cross-cutting deliverable formatting quality: DI-030-A (exec_summary in all 6 deck types, including pitch which was missing it), DI-030-B (McKinsey/Big-4 quality directive verified across all 6 deliverable agents), DI-030-C (Latitude MedTech LLC brand identity via agent_base.py). Three new `test_DI_030_A/B/C` verification tests. DC-001 v1.3 / DC-002 v2.4 / DC-003 v1.3 / DC-004 v2.4 / DC-005 v1.5 updated.

@@ -1,5 +1,5 @@
 # DC-005 — Verification Protocol
-**Document:** DC-005 · Version 1.5 · 2026-06-06  
+**Document:** DC-005 · Version 1.6 · 2026-06-06  
 **Approved by:** Steven Tran
 
 ---
@@ -292,14 +292,17 @@ Fail action: Restore the asymptotic factor and minimum floor in the Tick Sub so 
 Check: `start_athena.ps1` `Start-Sleep -Milliseconds` value is ≤ 2500.  
 Fail action: Reduce `Start-Sleep -Milliseconds` in `start_athena.ps1` to ≤ 2500. Values > 2500 produce a blank-screen gap exceeding the 3-second product requirement (accounting for ~500 ms of splash close animation).
 
-**test_DI_019_H** — No stall > 1 s; mathematical bound + premature 100% prevention  
-Check five conditions in `start_splash.hta`:  
+**test_DI_019_H** — No stall > 1 s; keep-alive branch + mathematical bound + premature 100% prevention  
+Check eight conditions in `start_splash.hta`:  
 1. Tick sub has `If inc < N Then inc = N` floor — parse `min_floor` value.  
 2. PollChromeReady has `If adv < N Then adv = N` floor.  
 3. PollChromeReady cap `If targetVal > CAP` where CAP ≤ 98.  
 4. Tick display uses `Int(stepVal)` not `CInt(stepVal)`.  
-5. Mathematical bound: `(99.5 − cap) / min_floor × 16 ms < 1000 ms` — proves Tick can traverse from the cap to the 99.5 close-trigger in under 1 second at worst-case minimum frame rate.  
-Fail action: Missing floors → stalling. Cap > 98 → premature "100%" for minutes during model loading. Mathematical bound failure → bar provably cannot close within 1 s even with correct guards. Restore all five conditions in `start_splash.hta`.
+5. Mathematical bound: `(99.5 − cap) / min_floor × 16 ms < 1000 ms` — proves close-sprint from PollChromeReady cap to 99.5 is < 1 s.  
+6. Tick has an `ElseIf Not readyToClose` keep-alive branch that prevents convergence stall at the animation ceiling (root-cause fix for the 97%-stall regression observed 2026-06-06).  
+7. Keep-alive ceiling < 99.5 (the readyToClose trigger) and `Int(ceiling) < 100` — bar can never display "100%" while loading is incomplete via the keep-alive path.  
+8. Keep-alive floor: `1.0 / keep_alive_step × 16 ms < 1000 ms` — each percentage point traverses in under 1 second via the keep-alive path.  
+Fail action: Missing Tick floor or poll floor → bar stalls once stepVal catches targetVal. Cap > 98 → premature "100%". Missing keep-alive branch (`ElseIf Not readyToClose`) → bar freezes at animation ceiling indefinitely if `.athena_ready` is delayed (the original regression). Keep-alive ceiling ≥ 99.5 → keep-alive can trigger early window close. Restore all eight conditions in `start_splash.hta`.
 
 **test_DI_019_I** — Athena title font-size is 101px in both splash implementations  
 Check: (1) `start_splash.hta` `.name` CSS contains `font-size:101px`. (2) `electron/main.js` `.name` CSS contains `font-size:clamp(61px,7vw,101px)`.  

@@ -1,5 +1,5 @@
 # DC-004 — Requirements Traceability Matrix (RTM)
-**Document:** DC-004 · Version 2.4 · 2026-06-06  
+**Document:** DC-004 · Version 2.5 · 2026-06-06  
 **Approved by:** Steven Tran
 
 This is the single source of truth for end-to-end coverage. Every user need
@@ -89,7 +89,7 @@ column are open findings requiring immediate remediation.
 | UN-019 | | DI-019-C | Bar advances through real loading stages; reaches 100% only on `.athena_ready`; splash closes only after `stepVal >= 99.5` | `start_splash.hta` `PollChromeReady` + `readyToClose` + `stepVal >= 99.5` gate | `test_DI_019_C` | VERIFIED |
 | UN-019 | | DI-019-F | Smooth loading — asymptotic easing + minimum per-frame floor in Tick | `start_splash.hta` Tick asymptotic factor + `If inc <` floor | `test_DI_019_F` | VERIFIED |
 | UN-019 | | DI-019-G | Splash→Chrome gap < 3 seconds | `start_athena.ps1` `Start-Sleep` ≤ 2500 ms | `test_DI_019_G` | VERIFIED |
-| UN-019 | | DI-019-H | Bar never stalls > 1 s; cap ≤ 98 + mathematical bound `(99.5−cap)/floor×16 ms < 1000 ms` | `start_splash.hta` floors; cap ≤ 98; `Int()` display; computed bound | `test_DI_019_H` | VERIFIED |
+| UN-019 | | DI-019-H | Bar never stalls > 1 s; cap ≤ 98 + mathematical bound `(99.5−cap)/floor×16 ms < 1000 ms`; Tick keep-alive `ElseIf Not readyToClose And stepVal < 99.4` prevents convergence stall at ceiling | `start_splash.hta` floors; cap ≤ 98; `Int()` display; computed bound; keep-alive branch + ceiling + floor | `test_DI_019_H` | OPEN |
 | UN-019 | | DI-019-I | Athena title `.name` font-size is 101px in both splash files | `start_splash.hta` `font-size:101px`; `electron/main.js` clamp(61px,7vw,101px) | `test_DI_019_I` | VERIFIED |
 | UN-019 | | DI-019-J | `#dots` cycles `.` / `..` / `...` via VBScript `TickDots` at ≤ 500 ms/state; hidden on done | `start_splash.hta` `TickDots` sub; `setInterval("TickDots", N)` N ≤ 500; `dotsEl.style.display = "none"` | `test_DI_019_J` | VERIFIED |
 | UN-020 | Document review & approval | DI-020-A | All reviewable agents call submit_for_review() | `agents/` source grep for `submit_for_review` | `test_DI_020_A` | VERIFIED |

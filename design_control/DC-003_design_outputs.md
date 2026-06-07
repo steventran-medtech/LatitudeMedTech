@@ -1,5 +1,5 @@
 # DC-003 — Design Outputs
-**Document:** DC-003 · Version 1.4 · 2026-06-06  
+**Document:** DC-003 · Version 1.5 · 2026-06-06  
 **Approved by:** Steven Tran
 
 Design outputs are the code artifacts, APIs, data structures, and
@@ -220,7 +220,7 @@ Athena/
 
 | Design Output | File | Symbol / Route | Implements |
 |---|---|---|---|
-| Startup splash HTA | `Athena/ui/start_splash.hta` | `.bar-wrap` CSS; `#pct` + `pctEl` + `float:right`; `PollChromeReady` + `readyToClose`; asymptotic `Tick`; `Int()` display; cap=97; `adv`/`inc` floors; `.name` font-size 101px; `TickDots` + `dots_id` VBScript cycling; `#dots` single-span | DI-019-A, DI-019-B, DI-019-C, DI-019-F, DI-019-H, DI-019-I, DI-019-J |
+| Startup splash HTA | `Athena/ui/start_splash.hta` | `.bar-wrap` CSS; `#pct` + `pctEl` + `float:right`; `PollChromeReady` + `readyToClose`; asymptotic `Tick` + keep-alive branch (`ElseIf Not readyToClose And stepVal < 99.4`); `Int()` display; cap=97; `adv`/`inc` floors; `.name` font-size 101px; `TickDots` + `dots_id` VBScript cycling; `#dots` single-span | DI-019-A, DI-019-B, DI-019-C, DI-019-F, DI-019-H, DI-019-I, DI-019-J |
 | Chrome launch delay | `Athena/ui/start_athena.ps1` | `Start-Sleep -Milliseconds 2500` after `.athena_ready` write | DI-019-G |
 | Electron splash | `Athena/electron/main.js` | `.name` CSS `font-size:clamp(61px,7vw,101px)` | DI-019-I |
 
