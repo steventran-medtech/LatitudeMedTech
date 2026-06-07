@@ -190,6 +190,106 @@ def test_DI_002_D():
              "POST /api/review/{id}/edit should exist")
 
 
+def test_DI_002_E():
+    """DI-002-E: ReviewView.jsx Approved filter fetches from /api/documents"""
+    di = "DI-002-E"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = UI_FRONT / "ReviewView.jsx"
+    if not f.exists():
+        _log(FAIL, di, "ReviewView.jsx not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT — Approved filter must fetch from /api/documents (approved-only backend gate)
+    has_docs_fetch = "/api/documents" in content
+
+    # ASSERT
+    if has_docs_fetch:
+        _log(PASS, di, "ReviewView.jsx Approved filter fetches from /api/documents")
+    else:
+        _log(FAIL, di,
+             "DI-002-E: ReviewView.jsx has no /api/documents fetch — Approved filter is missing",
+             "Fix: Add a fetch('/api/documents') call in the 'approved' tab handler of ReviewView.jsx")
+    return True
+
+
+def test_DI_002_F():
+    """DI-002-F: ReviewView.jsx tab state initialises to 'pending'; legacy 'queue' state absent"""
+    di = "DI-002-F"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = UI_FRONT / "ReviewView.jsx"
+    if not f.exists():
+        _log(FAIL, di, "ReviewView.jsx not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT
+    # Initial tab state must be "pending" — not the legacy "queue"
+    uses_pending_init = 'useState("pending")' in content
+    still_uses_queue  = 'useState("queue")'   in content
+    # All three filter tab keys must be present as tab-array entries
+    has_approved_tab = '["approved"' in content or '"approved",' in content
+    has_rejected_tab = '["rejected"' in content or '"rejected",' in content
+
+    # ASSERT
+    failures = []
+    if not uses_pending_init:
+        failures.append('useState("pending") not found — initial tab state must be "pending"')
+    if still_uses_queue:
+        failures.append('useState("queue") still present — legacy tab state must be removed')
+    if not has_approved_tab:
+        failures.append('"approved" tab key not found in tabs array')
+    if not has_rejected_tab:
+        failures.append('"rejected" tab key not found in tabs array')
+
+    if not failures:
+        _log(PASS, di, "ReviewView.jsx uses three-state filter: pending / approved / rejected")
+    else:
+        _log(FAIL, di,
+             "DI-002-F: " + "; ".join(failures),
+             "Fix: Change useState('queue') to useState('pending') and add approved/rejected tab entries in ReviewView.jsx")
+    return True
+
+
+def test_DI_002_G():
+    """DI-002-G: App.jsx NAV_ITEMS has id:'queue' and no id:'documents' or id:'review'"""
+    di = "DI-002-G"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = UI_FRONT / "App.jsx"
+    if not f.exists():
+        _log(FAIL, di, "App.jsx not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT — check NAV_ITEMS contains queue, not the retired documents/review entries
+    has_queue     = 'id:"queue"'     in content
+    has_documents = 'id:"documents"' in content
+    has_review    = 'id:"review"'    in content
+
+    # ASSERT
+    failures = []
+    if not has_queue:
+        failures.append('id:"queue" missing from App.jsx NAV_ITEMS')
+    if has_documents:
+        failures.append('id:"documents" still present in App.jsx NAV_ITEMS — must be removed')
+    if has_review:
+        failures.append('id:"review" still present in App.jsx NAV_ITEMS — must be removed')
+
+    if not failures:
+        _log(PASS, di, "App.jsx NAV_ITEMS has id:'queue'; id:'documents' and id:'review' are absent")
+    else:
+        _log(FAIL, di,
+             "DI-002-G: " + "; ".join(failures),
+             "Fix: Replace id:'documents' and id:'review' entries with id:'queue' in App.jsx NAV_ITEMS")
+    return True
+
+
 # ── UN-003 / Knowledge Base ────────────────────────────────────────────────────
 
 def test_DI_003_A():
@@ -218,6 +318,66 @@ def test_DI_003_B():
     else:
         _log(WARN, di, f"KB subdirectories missing: {', '.join(missing)}",
              "Run run_rag.bat to populate; create directories if needed")
+
+
+def test_DI_003_C():
+    """DI-003-C: RAG ingestion report includes '## Newly Ingested Documents' section and calls submit_for_review()"""
+    di = "DI-003-C"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = AGENTS / "rag_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "rag_agent.py not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT
+    has_submit  = "submit_for_review(" in content
+    has_section = "## Newly Ingested Documents" in content
+
+    # ASSERT
+    if has_submit and has_section:
+        _log(PASS, di, "rag_agent.py calls submit_for_review() and includes '## Newly Ingested Documents' section")
+    else:
+        missing = []
+        if not has_submit:
+            missing.append("submit_for_review() call missing from rag_agent.py")
+        if not has_section:
+            missing.append('"## Newly Ingested Documents" section header missing from rag_agent.py')
+        _log(FAIL, di, f"RAG ingestion report incomplete: {'; '.join(missing)}",
+             "Fix: Update main() in rag_agent.py to include '## Newly Ingested Documents' and submit via submit_for_review()")
+    return True
+
+
+def test_DI_003_D():
+    """DI-003-D: RAG ingestion report uses rag_summary_ filename and includes 'No new documents' fallback"""
+    di = "DI-003-D"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = AGENTS / "rag_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "rag_agent.py not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT
+    has_path_pattern = "rag_summary_" in content
+    has_fallback     = "No new documents ingested" in content
+
+    # ASSERT
+    if has_path_pattern and has_fallback:
+        _log(PASS, di, "rag_agent.py writes rag_summary_<ts>.md and includes 'No new documents ingested' fallback")
+    else:
+        missing = []
+        if not has_path_pattern:
+            missing.append("rag_summary_ path pattern missing from rag_agent.py")
+        if not has_fallback:
+            missing.append('"No new documents ingested" fallback string missing from rag_agent.py')
+        _log(FAIL, di, f"RAG report file spec incomplete: {'; '.join(missing)}",
+             "Fix: Use rag_summary_<timestamp>.md filename; add 'No new documents ingested this run.' when count == 0")
+    return True
 
 
 # ── UN-004 / Voice Interface ───────────────────────────────────────────────────
@@ -1270,7 +1430,7 @@ def test_DI_019_G():
 
 
 def test_DI_019_H():
-    """DI-019-H: Bar cannot stall >1s AND PollChromeReady cap <=98 prevents premature 100% display"""
+    """DI-019-H: Bar cannot stall >1s at any whole-number percentage; keep-alive wrap covers all 100 percentages"""
     di = "DI-019-H"
     if _skip_if_filtered(di): return
     f = ATHENA / "ui" / "start_splash.hta"
@@ -1285,8 +1445,7 @@ def test_DI_019_H():
     # 2. PollChromeReady minimum floor
     has_poll_floor = bool(re.search(r'If\s+adv\s*<\s*[\d.]+\s+Then\s+adv\s*=\s*[\d.]+', content, re.IGNORECASE))
 
-    # 3. PollChromeReady cap must be <= 98 so Int()/CInt() can never display "100%" prematurely.
-    #    Matches: "If targetVal > 97 Then targetVal = 97" or similar.
+    # 3. PollChromeReady cap must be <= 98 so Int() can never display "100%" prematurely.
     cap_ok = False
     cap_val = None
     m = re.search(r'If\s+targetVal\s*>\s*([\d.]+)\s+Then\s+targetVal\s*=\s*[\d.]+', content, re.IGNORECASE)
@@ -1294,12 +1453,12 @@ def test_DI_019_H():
         cap_val = float(m.group(1))
         cap_ok = cap_val <= 98
 
-    # 4. Display must use Int() (floor), not CInt() (rounds — CInt(99.9)=100 is banned)
+    # 4. Display must use Int() (floor), not CInt() (rounds -- CInt(99.9)=100 is banned)
     has_int_display  = bool(re.search(r'\bInt\s*\(\s*stepVal\s*\)', content, re.IGNORECASE))
     has_cint_display = bool(re.search(r'\bCInt\s*\(\s*stepVal\s*\)', content, re.IGNORECASE))
     display_ok = has_int_display and not has_cint_display
 
-    # 5. Mathematical bound: from cap to 99.5 (close trigger) at min_floor per 16ms frame < 1000ms
+    # 5. Mathematical sprint bound: from cap to 99.5 at min_floor per 16ms frame must be < 1000ms
     bound_ok = False
     bound_ms = None
     if cap_ok and has_tick_floor:
@@ -1307,26 +1466,82 @@ def test_DI_019_H():
         if m_floor:
             min_floor = float(m_floor.group(1))
             gap = 99.5 - cap_val
-            bound_ms = (gap / min_floor) * 16   # worst-case ms at minimum increment per frame
+            bound_ms = (gap / min_floor) * 16
             bound_ok = bound_ms < 1000
 
-    all_ok = has_tick_floor and has_poll_floor and cap_ok and display_ok and bound_ok
+    # 6. Keep-alive branch present: ElseIf Not readyToClose (fires whenever stepVal >= targetVal
+    #    and loading is incomplete, covering the convergence stall at the animation ceiling).
+    has_keepalive = bool(re.search(r'ElseIf\s+Not\s+readyToClose\b', content, re.IGNORECASE))
+
+    # 7. Keep-alive must NOT have a blocking ceiling in its condition.
+    #    "ElseIf Not readyToClose And stepVal < N" stops advancing once stepVal reaches N,
+    #    creating a freeze at Int(N). The condition must be just "ElseIf Not readyToClose".
+    has_blocking_ceiling = bool(re.search(
+        r'ElseIf\s+Not\s+readyToClose\s+And\s+stepVal\s*<\s*[\d.]+',
+        content, re.IGNORECASE
+    ))
+    keepalive_no_ceiling = has_keepalive and not has_blocking_ceiling
+
+    # 8. Keep-alive floor: 1/N * 16ms < 1000ms so each percentage point advances in < 1 second.
+    keepalive_floor_ok = False
+    keepalive_floor_val = None
+    keepalive_ms = None
+    if has_keepalive:
+        m_ka = re.search(r'stepVal\s*=\s*stepVal\s*\+\s*([\d.]+)', content, re.IGNORECASE)
+        if m_ka:
+            keepalive_floor_val = float(m_ka.group(1))
+            keepalive_ms = (1.0 / keepalive_floor_val) * 16
+            keepalive_floor_ok = keepalive_ms < 1000
+
+    # 9. Keep-alive wrap at 99.5: resets stepVal to targetVal so the bar cycles continuously --
+    #    no whole-number percentage can freeze forever. Pattern: If stepVal >= 99.5 Then stepVal = targetVal
+    has_keepalive_wrap = bool(re.search(
+        r'If\s+stepVal\s*>=\s*99\.5\s+Then\s+stepVal\s*=\s*targetVal',
+        content, re.IGNORECASE
+    ))
+
+    all_ok = (has_tick_floor and has_poll_floor and cap_ok and display_ok and bound_ok
+              and has_keepalive and keepalive_no_ceiling and keepalive_floor_ok and has_keepalive_wrap)
+
     if all_ok:
-        _log(PASS, di, f"Anti-stall guards verified; cap={cap_val}, bound={bound_ms:.0f}ms (<1000ms); Int() display")
+        _log(PASS, di,
+             f"All 9 anti-stall guards verified: cap={cap_val}, sprint={bound_ms:.0f}ms; "
+             f"keep-alive={keepalive_ms:.0f}ms/pt (no ceiling, wrap@99.5->targetVal); Int() display")
     else:
         missing = []
-        if not has_tick_floor:  missing.append("Tick minimum floor `If inc < N Then inc = N`")
-        if not has_poll_floor:  missing.append("PollChromeReady minimum floor `If adv < N Then adv = N`")
+        if not has_tick_floor:
+            missing.append("Tick minimum floor `If inc < N Then inc = N`")
+        if not has_poll_floor:
+            missing.append("PollChromeReady minimum floor `If adv < N Then adv = N`")
         if not cap_ok:
             missing.append(f"PollChromeReady cap={cap_val} must be <= 98")
         if not display_ok:
             if has_cint_display: missing.append("Tick uses CInt(stepVal) -- replace with Int(stepVal)")
             else:                missing.append("Tick display missing Int(stepVal) call")
         if not bound_ok:
-            missing.append(f"Mathematical bound {bound_ms:.0f}ms >= 1000ms -- increase min floor or lower cap")
-        _log(FAIL, di, f"DI-019-H violations: {'; '.join(missing)}",
-             "Restore all five guards: Tick floor, PollChromeReady floor, cap<=98, Int() display, (99.5-cap)/floor*16<1000")
-
+            missing.append(f"Sprint bound {bound_ms:.0f}ms >= 1000ms -- increase min floor or lower cap")
+        if not has_keepalive:
+            missing.append("Keep-alive branch missing -- add `ElseIf Not readyToClose Then` in Tick")
+        if has_keepalive and has_blocking_ceiling:
+            missing.append(
+                "Keep-alive has blocking ceiling (`ElseIf Not readyToClose And stepVal < N`) "
+                "-- remove the `And stepVal < N` condition so the branch always fires"
+            )
+        if not keepalive_floor_ok:
+            ka_ms_str = f"{keepalive_ms:.0f}ms/pt" if keepalive_ms is not None else "unknown"
+            missing.append(
+                f"Keep-alive step={keepalive_floor_val} -> {ka_ms_str} >= 1000ms "
+                "-- increase the step value (e.g. 0.05)"
+            )
+        if not has_keepalive_wrap:
+            missing.append(
+                "Keep-alive wrap missing -- add "
+                "`If stepVal >= 99.5 Then stepVal = targetVal` inside the keep-alive branch"
+            )
+        _log(FAIL, di, f"DI-019-H violations ({len(missing)}): {'; '.join(missing)}",
+             "All 9 guards required: Tick floor, PollChromeReady floor, cap<=98, Int() display, "
+             "sprint bound <1000ms, keep-alive branch (no ceiling), keep-alive floor <1000ms/pt, "
+             "keep-alive wrap at 99.5->targetVal")
 
 def test_DI_019_I():
     """DI-019-I: Splash .name font-size is 101px in start_splash.hta and clamp(61px,7vw,101px) in electron/main.js"""
@@ -1435,6 +1650,7 @@ def test_DI_020_A():
         ("deck_agent.py",                  AGENTS / "deck_agent.py"),
         ("ma_intelligence_agent.py",       AGENTS / "ma_intelligence_agent.py"),
         ("rag_agent.py",                   AGENTS / "rag_agent.py"),
+        ("consulting_agent.py",            AGENTS / "consulting_agent.py"),
     ]
     missing = []
     for name, path in REQUIRED_AGENTS:
@@ -1584,6 +1800,100 @@ def test_DI_021_A():
              "Restore Test-AthenaRunning in athena_lib.ps1 and the guard block in start_athena.ps1")
 
 
+# ── UN-031 / Browser Tab Singleton ───────────────────────────────────────────
+
+def test_DI_031_A():
+    """DI-031-A: tabGuard.js exists with BroadcastChannel lock + blocking overlay; main.jsx conditionally mounts React"""
+    di = "DI-031-A"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    tab_guard = UI_FRONT / "tabGuard.js"
+    main_jsx  = UI_FRONT / "main.jsx"
+
+    # ACT — tabGuard.js must exist
+    if not tab_guard.exists():
+        _log(FAIL, di, "tabGuard.js not found at Athena/ui/frontend/src/tabGuard.js",
+             "Fix: Create tabGuard.js with initTabGuard() export using BroadcastChannel singleton logic")
+        return
+    guard_content = _read(tab_guard)
+
+    # ACT — must use BroadcastChannel (required by DI-031-A)
+    if "BroadcastChannel" not in guard_content:
+        _log(FAIL, di, "BroadcastChannel not found in tabGuard.js",
+             "Fix: Add 'new BroadcastChannel(CHANNEL_NAME)' inside initTabGuard() in tabGuard.js")
+        return
+
+    # ACT — must render a blocking overlay when a duplicate is detected
+    has_overlay = "document.body" in guard_content and (
+        "overlay" in guard_content or "Duplicate" in guard_content or "already open" in guard_content
+    )
+    if not has_overlay:
+        _log(FAIL, di, "Blocking overlay not found in tabGuard.js",
+             "Fix: Add _showDuplicateOverlay() that appends a full-screen overlay to document.body "
+             "and hides the React root when a duplicate tab is detected")
+        return
+
+    # ACT — main.jsx must import initTabGuard and gate the React mount on its return value
+    if not main_jsx.exists():
+        _log(FAIL, di, "main.jsx not found at Athena/ui/frontend/src/main.jsx",
+             "Fix: Restore main.jsx and import initTabGuard from ./tabGuard.js")
+        return
+    main_content = _read(main_jsx)
+
+    if "initTabGuard" not in main_content:
+        _log(FAIL, di, "initTabGuard not imported in main.jsx",
+             "Fix: Add 'import { initTabGuard } from \"./tabGuard.js\";' to main.jsx")
+        return
+
+    has_conditional_mount = bool(re.search(r'if\s*\(\s*initTabGuard\s*\(\s*\)\s*\)', main_content))
+    if not has_conditional_mount:
+        _log(FAIL, di, "React mount in main.jsx is not gated on initTabGuard() return value",
+             "Fix: Wrap ReactDOM.createRoot().render() in 'if (initTabGuard()) { ... }' in main.jsx")
+        return
+
+    _log(PASS, di, "tabGuard.js: BroadcastChannel + overlay present; main.jsx conditionally mounts React")
+    return True
+
+
+def test_DI_031_B():
+    """DI-031-B: tabGuard.js releases singleton lock on beforeunload via release message + localStorage cleanup"""
+    di = "DI-031-B"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    tab_guard = UI_FRONT / "tabGuard.js"
+
+    if not tab_guard.exists():
+        _log(FAIL, di, "tabGuard.js not found at Athena/ui/frontend/src/tabGuard.js",
+             "Fix: Create tabGuard.js with initTabGuard() including beforeunload release logic")
+        return
+    content = _read(tab_guard)
+
+    # ACT — must register a beforeunload listener
+    if "beforeunload" not in content:
+        _log(FAIL, di, "'beforeunload' event listener not found in tabGuard.js",
+             "Fix: Add window.addEventListener('beforeunload', () => { ... }) inside initTabGuard()")
+        return
+
+    # ACT — beforeunload handler must broadcast a release message
+    has_release_msg = bool(re.search(r'postMessage\s*\(\s*\{[^}]*["\']release["\']', content))
+    if not has_release_msg:
+        _log(FAIL, di, "ch.postMessage({ type: 'release' }) not found in tabGuard.js",
+             "Fix: Inside the beforeunload handler, call ch.postMessage({ type: 'release', from: myId })")
+        return
+
+    # ACT — must remove the localStorage lock key on teardown
+    has_lock_removal = bool(re.search(r'localStorage\.(removeItem|remove)', content))
+    if not has_lock_removal:
+        _log(FAIL, di, "localStorage.removeItem() not found in tabGuard.js",
+             "Fix: Add localStorage.removeItem(LOCK_KEY) in the beforeunload handler (via releaseLock())")
+        return
+
+    _log(PASS, di, "tabGuard.js: beforeunload broadcasts 'release' and removes localStorage lock key")
+    return True
+
+
 # ── UN-023 / Historical Data Depth ───────────────────────────────────────────
 
 def test_DI_023_A():
@@ -1648,6 +1958,173 @@ def test_DI_023_A():
             _log(WARN, di,
                  "No hard date cutoff detected but no pre-1990 sources found in KB",
                  "Run a full RAG ingest and verify at least one pre-1990 source is present in the knowledge base")
+
+
+def test_DI_023_B():
+    """DI-023-B: TAVILY_QUERIES contains >=5 historically-scoped entries (history/evolution/1970s/etc.)"""
+    di = "DI-023-B"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = AGENTS / "rag_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "rag_agent.py not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT — extract TAVILY_QUERIES list and count historically-scoped entries
+    historical_pattern = re.compile(
+        r'history|historical|evolution|origin|1970|1980|1990|2000s', re.IGNORECASE)
+    queries_block_m = re.search(r'TAVILY_QUERIES\s*=\s*\[(.+?)\]', content, re.DOTALL)
+    if not queries_block_m:
+        _log(FAIL, di, "TAVILY_QUERIES list not found in rag_agent.py",
+             "Fix: Define TAVILY_QUERIES = [...] in rag_agent.py")
+        return
+    queries_block = queries_block_m.group(1)
+    all_queries = re.findall(r'"([^"]+)"', queries_block)
+    historical_count = sum(1 for q in all_queries if historical_pattern.search(q))
+
+    # ASSERT
+    if historical_count >= 5:
+        _log(PASS, di, f"TAVILY_QUERIES has {historical_count}/{len(all_queries)} historically-scoped entries (>= 5)")
+    else:
+        _log(FAIL, di,
+             f"Only {historical_count}/{len(all_queries)} TAVILY_QUERIES contain historical marker terms; need >= 5",
+             "Fix: Add historically-scoped queries to TAVILY_QUERIES in rag_agent.py — e.g. "
+             "'FDA medical device regulatory history 1976 Medical Device Amendments'")
+    return True
+
+
+def test_DI_023_C():
+    """DI-023-C: Tavily rotation uses tm_yday deterministic bucketing — not random.sample"""
+    di = "DI-023-C"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = AGENTS / "rag_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "rag_agent.py not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT
+    has_tm_yday       = "tm_yday" in content
+    has_random_sample = "random.sample" in content
+
+    # ASSERT
+    if has_tm_yday and not has_random_sample:
+        _log(PASS, di, "rag_agent.py uses tm_yday deterministic rotation; random.sample not present")
+    else:
+        issues = []
+        if not has_tm_yday:
+            issues.append("tm_yday not found — add day_bucket = datetime.now().timetuple().tm_yday")
+        if has_random_sample:
+            issues.append("random.sample still present — remove from ingest_tavily()")
+        _log(FAIL, di, f"Tavily query rotation non-deterministic: {'; '.join(issues)}",
+             "Fix: Replace random.sample(TAVILY_QUERIES, ...) with tm_yday-based offset in ingest_tavily()")
+    return True
+
+
+def test_DI_023_D():
+    """DI-023-D: HISTORICAL_CONSULTING_SOURCES in consulting_agent.py has >=5 entries with historical marker terms"""
+    di = "DI-023-D"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = AGENTS / "consulting_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "consulting_agent.py not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT — check HISTORICAL_CONSULTING_SOURCES list exists
+    if "HISTORICAL_CONSULTING_SOURCES" not in content:
+        _log(FAIL, di, "HISTORICAL_CONSULTING_SOURCES not defined in consulting_agent.py",
+             "Fix: Add HISTORICAL_CONSULTING_SOURCES = [...] list with >=5 historically-scoped entries")
+        return
+
+    # Count entries whose "name" value contains a historical marker term
+    historical_pattern = re.compile(
+        r'history|historical|evolution|origin|1970|1980|1990|2000s|50.year|classic', re.IGNORECASE)
+    block_m = re.search(r'HISTORICAL_CONSULTING_SOURCES\s*=\s*\[(.+?)\]', content, re.DOTALL)
+    if not block_m:
+        _log(FAIL, di, "HISTORICAL_CONSULTING_SOURCES could not be parsed as a list literal",
+             "Fix: Ensure HISTORICAL_CONSULTING_SOURCES = [...] is a module-level list literal")
+        return
+    # Extract name values from dict entries
+    name_values = re.findall(r'"name"\s*:\s*"([^"]+)"', block_m.group(1))
+    historical_count = sum(1 for n in name_values if historical_pattern.search(n))
+
+    # ASSERT
+    if historical_count >= 5:
+        _log(PASS, di, f"HISTORICAL_CONSULTING_SOURCES has {historical_count}/{len(name_values)} entries with historical marker terms (>= 5)")
+    else:
+        _log(FAIL, di,
+             f"Only {historical_count}/{len(name_values)} HISTORICAL_CONSULTING_SOURCES entries contain historical marker terms; need >= 5",
+             "Fix: Add entries whose 'name' field contains: history, historical, evolution, origin, 1970, 1980, 1990, 2000s, '50 year', or classic")
+    return True
+
+
+# ── UN-032 / Consulting Agent Learning Visibility ────────────────────────────
+
+def test_DI_032_A():
+    """DI-032-A: consulting_agent.py learn() generates '## Newly Ingested Items' report and calls submit_for_review()"""
+    di = "DI-032-A"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = AGENTS / "consulting_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "consulting_agent.py not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT
+    has_submit  = "submit_for_review(" in content
+    has_section = "## Newly Ingested Items" in content
+
+    # ASSERT
+    if has_submit and has_section:
+        _log(PASS, di, "consulting_agent.py calls submit_for_review() and includes '## Newly Ingested Items' section")
+    else:
+        missing = []
+        if not has_submit:
+            missing.append("submit_for_review() call missing from learn() in consulting_agent.py")
+        if not has_section:
+            missing.append('"## Newly Ingested Items" section header missing from report template')
+        _log(FAIL, di, f"DI-032-A requirements not met: {'; '.join(missing)}",
+             "Fix: Update learn() in consulting_agent.py to include '## Newly Ingested Items' and submit via submit_for_review()")
+    return True
+
+
+def test_DI_032_B():
+    """DI-032-B: consulting_agent.py writes consulting_learning_ report with 'No new items ingested' fallback"""
+    di = "DI-032-B"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = AGENTS / "consulting_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "consulting_agent.py not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT
+    has_path_pattern = "consulting_learning_" in content
+    has_fallback     = "No new items ingested this run." in content
+
+    # ASSERT
+    if has_path_pattern and has_fallback:
+        _log(PASS, di, "consulting_agent.py writes consulting_learning_<ts>.md and includes 'No new items ingested' fallback")
+    else:
+        missing = []
+        if not has_path_pattern:
+            missing.append("consulting_learning_ path pattern missing — report filename must match this prefix")
+        if not has_fallback:
+            missing.append('"No new items ingested this run." fallback string missing from report template')
+        _log(FAIL, di, f"DI-032-B requirements not met: {'; '.join(missing)}",
+             "Fix: Update learn() report path to f'consulting_learning_{{ts}}.md' and add fallback message")
+    return True
 
 
 # ── UN-024 / SOW Agent (Phase 2C) ────────────────────────────────────────────
@@ -1964,6 +2441,85 @@ def test_DI_030_C():
              "Add 'Latitude MedTech LLC' to the system prompt template in agent_base.py")
 
 
+#
+
+# ── UN-032 / Voice Query Readiness Latency ───────────────────────────────────
+
+def test_DI_032_A():
+    """DI-032-A: _listen_for_wake accepts a stream parameter and does not open sd.InputStream internally"""
+    di = "DI-032-A"
+    if _skip_if_filtered(di): return
+    f = VOICE / "voice_bridge.py"
+    if not f.exists():
+        _log(FAIL, di, "voice_bridge.py not found", str(f))
+        return
+    content = _read(f)
+    if not re.search(r'def _listen_for_wake\s*\(\s*oww_model\s*,\s*stream', content):
+        _log(FAIL, di,
+             "_listen_for_wake missing 'stream' positional parameter (current: def _listen_for_wake(oww_model))",
+             "Fix: change to def _listen_for_wake(oww_model, stream, ...) and remove internal sd.InputStream")
+        return
+    m = re.search(r'(def _listen_for_wake\b.*?)(?=\ndef |\Z)', content, re.DOTALL)
+    if m and 'sd.InputStream(' in m.group(1):
+        _log(FAIL, di,
+             "_listen_for_wake opens sd.InputStream internally -- stream must be passed in by caller",
+             "Fix: remove sd.InputStream context manager; read from stream parameter directly")
+        return
+    _log(PASS, di, "_listen_for_wake accepts stream parameter; no internal sd.InputStream")
+
+
+def test_DI_032_B():
+    """DI-032-B: _record_query accepts a stream parameter and does not open sd.InputStream internally"""
+    di = "DI-032-B"
+    if _skip_if_filtered(di): return
+    f = VOICE / "voice_bridge.py"
+    if not f.exists():
+        _log(FAIL, di, "voice_bridge.py not found", str(f))
+        return
+    content = _read(f)
+    if not re.search(r'def _record_query\s*\(\s*stream', content):
+        _log(FAIL, di,
+             "_record_query missing 'stream' positional parameter (current: def _record_query())",
+             "Fix: change to def _record_query(stream, ...) and remove internal sd.InputStream")
+        return
+    m = re.search(r'(def _record_query\b.*?)(?=\ndef |\Z)', content, re.DOTALL)
+    if m and 'sd.InputStream(' in m.group(1):
+        _log(FAIL, di,
+             "_record_query opens sd.InputStream internally -- stream must be passed in by caller",
+             "Fix: remove sd.InputStream context manager; read from stream parameter directly")
+        return
+    _log(PASS, di, "_record_query accepts stream parameter; no internal sd.InputStream")
+
+
+def test_DI_032_C():
+    """DI-032-C: _voice_loop opens one sd.InputStream and passes it to _listen_for_wake and _record_query"""
+    di = "DI-032-C"
+    if _skip_if_filtered(di): return
+    f = VOICE / "voice_bridge.py"
+    if not f.exists():
+        _log(FAIL, di, "voice_bridge.py not found", str(f))
+        return
+    content = _read(f)
+    m = re.search(r'(def _voice_loop\b.*?)(?=\ndef |\Z)', content, re.DOTALL)
+    if not m:
+        _log(FAIL, di, "_voice_loop not found in voice_bridge.py",
+             "Fix: define _voice_loop() in voice_bridge.py")
+        return
+    body = m.group(1)
+    has_stream_open = 'sd.InputStream(' in body
+    has_listen_call = bool(re.search(r'_listen_for_wake\s*\(\s*oww\s*,\s*stream', body))
+    has_record_call = bool(re.search(r'_record_query\s*\(\s*stream', body))
+    if has_stream_open and has_listen_call and has_record_call:
+        _log(PASS, di, "_voice_loop opens sd.InputStream and passes stream to both _listen_for_wake and _record_query")
+    else:
+        missing = []
+        if not has_stream_open: missing.append("sd.InputStream( not in _voice_loop body")
+        if not has_listen_call: missing.append("_listen_for_wake(oww, stream not called")
+        if not has_record_call: missing.append("_record_query(stream not called")
+        _log(FAIL, di,
+             f"_voice_loop stream-sharing not implemented: {'; '.join(missing)}",
+             "Fix: open sd.InputStream in _voice_loop and pass stream to _listen_for_wake and _record_query")
+
 # ── Live API Tests ─────────────────────────────────────────────────────────────
 
 def test_live_api():
@@ -2086,9 +2642,10 @@ def main():
     _section("UN-001/002 Coaching Brief & Review Gate")
     test_DI_001_C(); test_DI_001_D()
     test_DI_002_A(); test_DI_002_B(); test_DI_002_C(); test_DI_002_D()
+    test_DI_002_E(); test_DI_002_F(); test_DI_002_G()
 
     _section("UN-003 Knowledge Base")
-    test_DI_003_A(); test_DI_003_B()
+    test_DI_003_A(); test_DI_003_B(); test_DI_003_C(); test_DI_003_D()
 
     _section("UN-004/005/006 Voice Interface")
     test_DI_004_A(); test_DI_004_B(); test_DI_004_D(); test_DI_004_E()
@@ -2129,8 +2686,11 @@ def main():
     _section("UN-021 Single-Instance Enforcement")
     test_DI_021_A()
 
+    _section("UN-031 Browser Tab Singleton")
+    test_DI_031_A(); test_DI_031_B()
+
     _section("UN-023 Historical Data Depth")
-    test_DI_023_A()
+    test_DI_023_A(); test_DI_023_B(); test_DI_023_C()
 
     _section("UN-024/025 Phase 2C — SOW & Regulatory Strategy")
     test_DI_024_A(); test_DI_025_A()
@@ -2146,6 +2706,9 @@ def main():
 
     _section("UN-030 McKinsey/Latitude Brand Formatting Standard")
     test_DI_030_A(); test_DI_030_B(); test_DI_030_C()
+
+    _section("UN-032 Voice Query Readiness Latency")
+    test_DI_032_A(); test_DI_032_B(); test_DI_032_C()
 
     if args.live or args.full:
         test_live_api()

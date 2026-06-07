@@ -223,10 +223,15 @@ Update this file's version line (date + vN) in the same final commit.
 
 | Date | Change | DC Reference |
 |---|---|---|
+| 2026-06-07 | UN-003, UN-023 (CO-003): RAG reviewable reports + 50-year QARA knowledge — rich ingestion report with `## Newly Ingested Documents` table; 7 historical Tavily queries; `tm_yday` deterministic rotation; QARA RSS sources in `learning_sources.py` | DI-003-C, DI-003-D, DI-023-B, DI-023-C |
+| 2026-06-07 | CO-006 (UN-032/UN-023): Consulting Agent `learn()` now generates `consulting_learning_<ts>.md` report + submits to review queue after every run; `HISTORICAL_CONSULTING_SOURCES` + `HISTORICAL_CONSULTING_KNOWLEDGE` (7 eras, 1970s–2020s) added to KB | DI-032-A, DI-032-B, DI-023-D |
+| 2026-06-07 | UN-031 (CO-004): Browser tab singleton guard added — second Athena tab in Chrome now shows blocking overlay and never mounts React; `tabGuard.js` uses BroadcastChannel + localStorage heartbeat | DI-031-A, DI-031-B |
 | 2026-06-06 | UN-028: VAD aggressiveness raised to 2; VAD-only silence detection; greeting routed through `_notification_queue` to eliminate startup echo | DI-028-A/B/C/D |
 | 2026-06-06 | UN-029: `_device_monitor_loop` polls system default mic every 3 s; `_device_changed` Event triggers stream reopen on headphone/speaker switch | DI-029-A/B/C |
 | 2026-06-06 | DI-004-E (C3): `SILENCE_DURATION` tuned to 0.5 s; requirement range updated to [0.4, 0.65] s | DI-004-E |
 | 2026-06-06 | Version 0.5.3 — voice/noise discrimination + audio device detection |  |
+| 2026-06-07 | CO-004 / DI-019-H (C1): keep-alive wrap replaces ceiling -- bar cycles 97->98->99->wrap@99.5 at 320 ms/pt; test_DI_019_H expanded to 9 checks | DI-019-H |
+| 2026-06-07 | Version 0.5.5 -- splash bar all-whole-number freeze prevention |  |
 | 2026-06-06 | DI-019-J (C2): splash `#dots` now cycles `.`/`..`/`...` via VBScript `TickDots` at 400 ms/state; CSS `dotFlash` wave removed | DI-019-J |
 
 ---

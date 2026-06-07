@@ -1,5 +1,5 @@
 # DC-003 — Design Outputs
-**Document:** DC-003 · Version 1.4 · 2026-06-06  
+**Document:** DC-003 · Version 1.6 · 2026-06-07  
 **Approved by:** Steven Tran
 
 Design outputs are the code artifacts, APIs, data structures, and
@@ -57,6 +57,10 @@ Athena/
 | RAG ingestion agent | `agents/rag_agent.py` | `RagAgent`, `learn()` | DI-003-B |
 | Central KB helper | `agents/agent_base.py` | `AgentBase.central_kb_context()` | DI-003-A |
 | KB directory | `Athena/knowledge_base/` | Subdirs: `FDA/`, `EU_MDR/`, `IMDRF/`, `consulting/`, `ma/`, `General/` | DI-003-B |
+| RAG ingestion report | `agents/rag_agent.py` | `main()` — Markdown report written to `logs/rag_summary_<timestamp>.md`; "## Newly Ingested Documents" table; submitted via `submit_for_review()` | DI-003-C, DI-003-D |
+| Historical QARA Tavily query pool | `agents/rag_agent.py` | `TAVILY_QUERIES` list — ≥5 historically-scoped entries covering regulatory history, standards evolution, GMP origins | DI-023-B |
+| Deterministic Tavily rotation | `agents/rag_agent.py` | `ingest_tavily()` — `datetime.now().timetuple().tm_yday`-based offset bucketing | DI-023-C |
+| QARA historical RSS sources | `agents/learning_sources.py` | `AGENT_SOURCES["rag"]` — RAPS, Federal Register, IMDRF, FDA Medical Devices feeds added | DI-023-B |
 
 ---
 
@@ -234,6 +238,15 @@ Athena/
 | Client DB methods | `agents/memory.py` | `Memory.add_client()`, `Memory.get_clients()`, `Memory.update_client()`, `Memory.delete_client()` | DI-018-A |
 | Client intake form | `ui/frontend/src/ClientsView.jsx` | `IntakeForm` — required-field validation for `name`, `email`, `program_tier`; per-field red-border + inline error | DI-018-B |
 | Engagement API | `ui/backend/server.py` | `GET/POST /api/clients/{id}/engagements`, `PUT /api/engagements/{id}` | DI-018-A |
+
+---
+
+## DO-031 — Browser Tab Singleton
+
+| Design Output | File | Symbol / Route | Implements |
+|---|---|---|---|
+| Tab singleton guard | `ui/frontend/src/tabGuard.js` | `initTabGuard()`, `_showDuplicateOverlay()`, `BroadcastChannel("athena-tab-singleton")`, `localStorage` heartbeat | DI-031-A, DI-031-B |
+| Guarded React mount | `ui/frontend/src/main.jsx` | Conditional `ReactDOM.createRoot().render()` gated on `initTabGuard()` return value | DI-031-A |
 
 ---
 

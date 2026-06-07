@@ -1,5 +1,5 @@
 # DC-004 — Requirements Traceability Matrix (RTM)
-**Document:** DC-004 · Version 2.4 · 2026-06-06  
+**Document:** DC-004 · Version 2.6 · 2026-06-07  
 **Approved by:** Steven Tran
 
 This is the single source of truth for end-to-end coverage. Every user need
@@ -33,6 +33,8 @@ column are open findings requiring immediate remediation.
 | UN-002 | | DI-002-E | Only approved items in Docs hub | `server.py` `list_documents()` + `get_approved_reviews()` | `test_DI_027_A` | VERIFIED |
 | UN-003 | Knowledge base | DI-003-A | KBQuery searchable by agents | `kb_query.py` KBQuery | `test_DI_003_A` | VERIFIED |
 | UN-003 | | DI-003-B | RAG indexes FDA/EU/IMDRF | `knowledge_base/` subdirs | `test_DI_003_B` | VERIFIED |
+| UN-003 | | DI-003-C | RAG report with "Newly Ingested Documents" section submitted to review queue | `agents/rag_agent.py` `main()` + `submit_for_review()` | `test_DI_003_C` | OPEN |
+| UN-003 | | DI-003-D | Report written to `rag_summary_<ts>.md` with "No new documents" fallback | `agents/rag_agent.py` report write + fallback string | `test_DI_003_D` | OPEN |
 | UN-004 | Voice interaction | DI-004-A | Wake threshold ≤ 0.35 | `voice_bridge.py` WAKE_THRESHOLD | `test_DI_004_A` | VERIFIED |
 | UN-004 | | DI-004-B | Whisper STT + confidence log | `voice_bridge.py` whisper | `test_DI_004_B` | VERIFIED |
 | UN-004 | | DI-004-C | First audio ≤ 2s | Kokoro streaming pipeline | `test_DI_004_C` | PARTIAL |
@@ -61,6 +63,9 @@ column are open findings requiring immediate remediation.
 | UN-012 | Regulatory briefings | DI-012-A | FDA + EU MDR + IMDRF coverage | `briefing_agent.py` sources | `test_DI_012_A` | VERIFIED |
 | UN-012 | | DI-012-B | Briefings enter review queue | `briefing_agent.py` submit_for_review | `test_DI_012_B` | VERIFIED |
 | UN-023 | Historical data depth | DI-023-A | No date cutoff blocking >50-year-old sources; KB queries include historically-scoped terms | `rag_agent.py` no hard year filter; seed queries include non-date-restricted terms | `test_DI_023_A` | VERIFIED |
+| UN-023 | | DI-023-B | TAVILY_QUERIES includes ≥5 historically-scoped entries (history/evolution/1970s/etc.) | `agents/rag_agent.py` `TAVILY_QUERIES` | `test_DI_023_B` | OPEN |
+| UN-023 | | DI-023-C | Tavily rotation uses `tm_yday` not `random.sample` | `agents/rag_agent.py` `ingest_tavily()` | `test_DI_023_C` | OPEN |
+| UN-023 | | DI-023-D | HISTORICAL_CONSULTING_SOURCES in consulting_agent.py has ≥5 entries with historical marker terms | `agents/consulting_agent.py` `HISTORICAL_CONSULTING_SOURCES` | `test_DI_023_D` | OPEN |
 | UN-013 | Dashboard | DI-013-A | Agent health (green/yellow/red) | `server.py` /api/dashboard | `test_DI_013_A` | VERIFIED |
 | UN-013 | | DI-013-B | Hourly token timeseries | `server.py` /api/dashboard/timeseries | `test_DI_013_B` | VERIFIED |
 | UN-013 | | DI-013-C | KB growth chart | `server.py` /api/dashboard/knowledge-growth | `test_DI_013_C` | VERIFIED |
@@ -98,6 +103,8 @@ column are open findings requiring immediate remediation.
 | UN-020 | | DI-020-D | Queue auto-refreshes on agent_done WebSocket event | `ReviewView.jsx` `useEffect` on `reviewRefreshToken` | `test_DI_020_D` | VERIFIED |
 | UN-020 | | DI-020-E | Document content viewable inline via ReviewViewer | `ReviewView.jsx` `ReviewViewer` fetches content inline | `test_DI_020_E` | VERIFIED |
 | UN-021 | Single-instance enforcement | DI-021-A | Second Athena launch blocked by port/Chrome-PID check + dialog or clean stop-before-restart | `athena_lib.ps1` `Test-AthenaRunning` + `start_athena.ps1` guard block | `test_DI_021_A` | VERIFIED |
+| UN-031 | Browser tab singleton | DI-031-A | Second Athena tab shows blocking overlay; React not mounted | `tabGuard.js` BroadcastChannel + localStorage; `main.jsx` conditional render | `test_DI_031_A` | VERIFIED |
+| UN-031 | | DI-031-B | Tab lock released on close via beforeunload + release message | `tabGuard.js` beforeunload + ch.postMessage release | `test_DI_031_B` | VERIFIED |
 | UN-024 | SOW agent (Phase 2C) | DI-024-A | SOW agent: Gate 10 review submission + Gate 3 confidence score | `agents/sow_agent.py` | `test_DI_024_A` | VERIFIED |
 | UN-025 | Regulatory strategy (Phase 2C) | DI-025-A | Regulatory strategy agent: Gate 10 + Gate 3 confidence | `agents/regulatory_strategy_agent.py` | `test_DI_025_A` | VERIFIED |
 | UN-026 | App startup loading (Phase 2C) | DI-026-A | React loading overlay with animated bar until WS connects | `App.jsx` `startupDone` state | `test_DI_026_A` | VERIFIED |
@@ -112,18 +119,20 @@ column are open findings requiring immediate remediation.
 | UN-030 | McKinsey/Latitude brand formatting | DI-030-A | All 6 `_DECK_GUIDES` entries include exec_summary | `agents/deck_agent.py` `_DECK_GUIDES` all 6 types | `test_DI_030_A` | OPEN |
 | UN-030 | | DI-030-B | McKinsey/Big-4/pyramid quality directive in all 6 deliverable agents | `content_agent.py`, `briefing_agent.py`, `ma_intelligence_agent.py`, `regulatory_strategy_agent.py`, `sow_agent.py`, `deck_agent.py` | `test_DI_030_B` | OPEN |
 | UN-030 | | DI-030-C | Latitude MedTech LLC brand identity injected via agent_base.py | `agents/agent_base.py` system prompt construction | `test_DI_030_C` | OPEN |
+| UN-032 | Consulting learning visibility | DI-032-A | consulting_agent.py learn() generates "## Newly Ingested Items" report and calls submit_for_review() | `agents/consulting_agent.py` `learn()` + `submit_for_review(` | `test_DI_032_A` | OPEN |
+| UN-032 | | DI-032-B | Report written to `consulting_learning_<ts>.md`; "No new items ingested this run." fallback present | `agents/consulting_agent.py` path pattern + fallback string | `test_DI_032_B` | OPEN |
 
 ---
 
-## Coverage Summary (v2.4)
+## Coverage Summary (v2.7)
 
 | Metric | Count |
 |---|---|
-| Total user needs | 30 |
-| Total design inputs | 89 |
-| Design inputs with VERIFIED tests | 78 |
+| Total user needs | 32 |
+| Total design inputs | 98 |
+| Design inputs with VERIFIED tests | 80 |
 | Design inputs with PARTIAL coverage | 7 |
-| Design inputs with OPEN gap | 4 |
+| Design inputs with OPEN gap | 11 |
 | Design inputs with WAIVED status | 0 |
 
 **PARTIAL items** require manual verification currently; automated tests are

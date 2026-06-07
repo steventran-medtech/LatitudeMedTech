@@ -1,5 +1,5 @@
 # DC-005 — Verification Protocol
-**Document:** DC-005 · Version 1.5 · 2026-06-06  
+**Document:** DC-005 · Version 1.7 · 2026-06-07  
 **Approved by:** Steven Tran
 
 ---
@@ -88,6 +88,14 @@ Fail action: File missing or class removed — check git history for last good s
 **test_DI_003_B** — KB subdirectories exist  
 Check: `knowledge_base/FDA`, `knowledge_base/EU_MDR`, `knowledge_base/IMDRF` exist.  
 Fail action: Directory missing — create it and run `run_rag.bat` to populate.
+
+**test_DI_003_C** — RAG ingestion report includes "Newly Ingested Documents" section and calls submit_for_review()  
+Check: `rag_agent.py` contains both `submit_for_review(` call AND the string `"## Newly Ingested Documents"`.  
+Fail action: Update the `main()` function in `rag_agent.py` to write a Markdown report with a `## Newly Ingested Documents` section and submit it via `submit_for_review()`.
+
+**test_DI_003_D** — Ingestion report written to `rag_summary_<ts>.md` with "No new documents" fallback  
+Check: `rag_agent.py` contains both the `rag_summary_` path pattern and the string `"No new documents ingested"`.  
+Fail action: Ensure the report write uses a `rag_summary_<timestamp>.md` filename and includes a fallback message when new_docs == 0.
 
 ---
 
@@ -319,6 +327,14 @@ Check: (1) `rag_agent.py` contains no `cutoff_year`, `min_year`, `year >=`, or e
 Live verification: Manual audit — confirm that the ingestion pipeline can accept a pre-1990 document without rejection, or that at least one historical source is present in the KB after a full RAG run.  
 Fail action: Remove any hard year filter from `rag_agent.py`. Add at least one historically-scoped query (e.g., "FDA medical device regulatory history", "ISO 9001 origins quality management") to the seed query list.
 
+**test_DI_023_B** — TAVILY_QUERIES includes ≥5 historically-scoped entries  
+Check: Count of entries in `TAVILY_QUERIES` in `rag_agent.py` that match the pattern `history|historical|evolution|origin|1970|1980|1990|2000s` (case-insensitive) is ≥ 5.  
+Fail action: Add historically-scoped queries to `TAVILY_QUERIES` in `rag_agent.py`. Examples: "FDA medical device regulatory history 1976 Medical Device Amendments", "ISO 13485 history evolution quality management", "21 CFR 820 Quality System Regulation history".
+
+**test_DI_023_C** — Tavily rotation uses `tm_yday` not `random.sample`  
+Check: `rag_agent.py` contains `tm_yday` AND does NOT contain `random.sample`.  
+Fail action: Replace `random.sample(TAVILY_QUERIES, ...)` in `ingest_tavily()` with a `datetime.now().timetuple().tm_yday`-based offset selection.
+
 ---
 
 ## Interpreting Results
@@ -344,6 +360,18 @@ Fail action: Add a quality directive to the missing agent's system prompt consta
 **test_DI_030_C** — Latitude MedTech LLC brand identity in agent_base.py  
 Check: `agent_base.py` contains "Latitude MedTech LLC" and a system prompt construction pattern (a `parts` list, `build_system_prompt`, or equivalent function).  
 Fail action: Ensure `agent_base.py` injects "Latitude MedTech LLC" into the shared system prompt prefix so all agents carry the brand identity.
+
+---
+
+### DI-031 — Browser Tab Singleton
+
+**test_DI_031_A** — tabGuard.js exists with BroadcastChannel singleton lock and blocking overlay; main.jsx conditionally mounts React  
+Check: `ui/frontend/src/tabGuard.js` exists; contains `BroadcastChannel`; contains a function that appends a blocking overlay to `document.body` and hides the React root; `ui/frontend/src/main.jsx` imports `initTabGuard` and only calls `ReactDOM.createRoot().render()` when the guard returns truthy.  
+Fail action: Create or restore `tabGuard.js` with the `initTabGuard()` export and `_showDuplicateOverlay()` helper; update `main.jsx` to gate the React mount on `initTabGuard()`.
+
+**test_DI_031_B** — beforeunload handler broadcasts release and removes localStorage lock key  
+Check: `tabGuard.js` contains a `window.addEventListener("beforeunload", ...)` handler whose body calls `ch.postMessage` with `type: "release"` and removes the `localStorage` lock key.  
+Fail action: Add the `beforeunload` listener to `initTabGuard()` in `tabGuard.js`; the handler must call `releaseLock()` (removes the `localStorage` key) and `ch.postMessage({ type: "release", ... })`.
 
 ---
 
