@@ -77,8 +77,7 @@ const NAV_ITEMS = [
   {id:"marketing", label:"Marketing",        group:"work"},
   {id:"decks",     label:"Decks",            group:"work"},
   {id:"iso",       label:"ISO Case Studies", group:"work"},
-  {id:"documents", label:"Documents",        group:"work"},
-  {id:"review",    label:"Review Queue",     group:"work"},
+  {id:"queue",     label:"Document Queue",    group:"work"},
   {id:"dashboard", label:"Dashboard",        group:"system"},
   {id:"agents",    label:"Run Agents",       group:"system"},
   {id:"hr",        label:"Workforce",        group:"system"},
@@ -148,7 +147,7 @@ function Sidebar({active,setActive,runningAgents,pendingReview,version,onAbout,t
           {orderedItems.map(item=>{
             const isActive   = active===item.id;
             const isAgents   = item.id==="agents";
-            const isReview   = item.id==="review";
+            const isQueue    = item.id==="queue";
             const isDragging = dragId===item.id;
             const isOver     = dragOverId===item.id && dragId!==item.id;
             return(
@@ -182,7 +181,7 @@ function Sidebar({active,setActive,runningAgents,pendingReview,version,onAbout,t
                         boxShadow:"0 0 6px #1A6FA366",animation:"badgePulse 2s ease-in-out infinite",
                       }}>{numRunning}</span>
                     )}
-                    {isReview && pendingReview>0 && (
+                    {isQueue && pendingReview>0 && (
                       <span style={{background:"#C4922A",color:"#fff",borderRadius:10,
                         padding:"1px 6px",fontSize:9,fontWeight:700,letterSpacing:"0.04em",
                         boxShadow:"0 0 6px #C4922A66",animation:"badgePulse 2s ease-in-out infinite",
@@ -1649,7 +1648,7 @@ function VoiceStatusBadge({ voice, onNavigate }) {
 // Floating card: drag anywhere; click 📌 to re-dock as the top bar.
 const VOICE_BAR_TOP  = 58; // px offset of sticky app header
 const VOICE_BAR_LEFT = 228; // sidebar width
-const VOICE_BAR_H    = 34; // px height of the docked voice bar
+const VOICE_BAR_H    = 50; // px height of the full-page docked voice bar
 
 function FloatingVoiceWidget({ voice, open, onToggle, onFullView, docked, floatPos, onDock, onUndock, onMove }) {
   const { running, state, lastAthena, lastYou, speakingLines, elapsed, startVoice, stopVoice } = voice;
@@ -1664,8 +1663,15 @@ function FloatingVoiceWidget({ voice, open, onToggle, onFullView, docked, floatP
   const startMouseRef = useRef({x:0,y:0});
   const startPosRef   = useRef({x:0,y:0});
 
+  // Card viewport-top must be within SNAP_PX of y=0 to snap-dock.
+  // getBoundingClientRect is used so CSS-transform ancestors don't skew the value.
+  const SNAP_PX = 80;
+
   // Shared drag-tracking helper used by both docked and floating paths.
   const attachDragListeners = (initPos) => {
+    const snapEl     = () => document.getElementById("athena-snap-indicator");
+    const cardTopPx  = () => (dragRef.current ? dragRef.current.getBoundingClientRect().top : null);
+
     const handleMove = (ev) => {
       if (!draggingRef.current || !dragRef.current) return;
       const dx = ev.clientX - startMouseRef.current.x;
@@ -1675,16 +1681,26 @@ function FloatingVoiceWidget({ voice, open, onToggle, onFullView, docked, floatP
       dragRef.current.style.top    = (initPos.y + dy) + "px";
       dragRef.current.style.right  = "auto";
       dragRef.current.style.bottom = "auto";
+      const top = cardTopPx();
+      const el  = snapEl();
+      if (el) el.style.opacity = (didMoveRef.current && top !== null && top < SNAP_PX) ? "1" : "0";
     };
     const handleUp = (ev) => {
       if (!draggingRef.current) return;
       draggingRef.current = false;
-      const dx = ev.clientX - startMouseRef.current.x;
-      const dy = ev.clientY - startMouseRef.current.y;
-      onMove({
-        x: Math.max(0, Math.min(window.innerWidth  - 176, initPos.x + dx)),
-        y: Math.max(0, Math.min(window.innerHeight - 110, initPos.y + dy)),
-      });
+      const el  = snapEl();
+      if (el) el.style.opacity = "0";
+      const dx  = ev.clientX - startMouseRef.current.x;
+      const dy  = ev.clientY - startMouseRef.current.y;
+      const top = cardTopPx();
+      if (didMoveRef.current && top !== null && top < SNAP_PX) {
+        onDock();
+      } else {
+        onMove({
+          x: Math.max(0, Math.min(window.innerWidth  - 176, initPos.x + dx)),
+          y: Math.max(0, Math.min(window.innerHeight - 110, initPos.y + dy)),
+        });
+      }
       document.removeEventListener("mousemove", handleMove);
       document.removeEventListener("mouseup",   handleUp);
     };
@@ -1700,23 +1716,45 @@ function FloatingVoiceWidget({ voice, open, onToggle, onFullView, docked, floatP
     startMouseRef.current = {x:e.clientX, y:e.clientY};
 
     if (docked) {
-      // Detach bar → float card centred on cursor.
-      const initPos = {
-        x: Math.max(0, Math.min(window.innerWidth  - 176, e.clientX - 86)),
-        y: Math.max(0, Math.min(window.innerHeight - 110, e.clientY - 18)),
+      // Docked bar: start tracking movement but do NOT undock yet.
+      // Only undock once the user actually drags (moves > 5px).
+      // A plain click keeps the bar docked and just toggles expand via handleBarClick.
+      const startX = e.clientX;
+      const startY = e.clientY;
+      let undocked = false;
+      const dockedMove = (mv) => {
+        if (undocked || !draggingRef.current) return;
+        const dx = mv.clientX - startX;
+        const dy = mv.clientY - startY;
+        if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+        // User is actually dragging — now undock and hand off to floating drag.
+        undocked = true;
+        didMoveRef.current = true;
+        document.removeEventListener("mousemove", dockedMove);
+        document.removeEventListener("mouseup",   dockedUp);
+        const initPos = {
+          x: Math.max(0, Math.min(window.innerWidth  - 176, startX - 86)),
+          y: Math.max(0, Math.min(window.innerHeight - 110, startY - 18)),
+        };
+        if (dragRef.current) {
+          dragRef.current.style.left   = initPos.x + "px";
+          dragRef.current.style.top    = initPos.y + "px";
+          dragRef.current.style.right  = "auto";
+          dragRef.current.style.bottom = "auto";
+          dragRef.current.style.width  = "172px";
+        }
+        onUndock(initPos);
+        startPosRef.current   = initPos;
+        startMouseRef.current = {x: startX, y: startY};
+        attachDragListeners(initPos);
       };
-      // Pre-position the DOM node so the card appears under the cursor
-      // before the React re-render from onUndock fires.
-      if (dragRef.current) {
-        dragRef.current.style.left   = initPos.x + "px";
-        dragRef.current.style.top    = initPos.y + "px";
-        dragRef.current.style.right  = "auto";
-        dragRef.current.style.bottom = "auto";
-        dragRef.current.style.width  = "172px";
-      }
-      onUndock(initPos);
-      startPosRef.current = initPos;
-      attachDragListeners(initPos);
+      const dockedUp = () => {
+        draggingRef.current = false;
+        document.removeEventListener("mousemove", dockedMove);
+        document.removeEventListener("mouseup",   dockedUp);
+      };
+      document.addEventListener("mousemove", dockedMove);
+      document.addEventListener("mouseup",   dockedUp);
       return;
     }
 
@@ -1725,17 +1763,10 @@ function FloatingVoiceWidget({ voice, open, onToggle, onFullView, docked, floatP
     attachDragListeners({...floatPos});
   };
 
-  // Click on the docked bar (no drag) → undock as expanded floating card.
-  // Click on the floating card header → toggle expanded/compact.
+  // Click on docked bar or floating card header (no drag) → toggle expanded/compact.
   const handleBarClick = (e) => {
     if (didMoveRef.current || e.target.closest("[data-nodrag]")) return;
-    if (docked) {
-      const pos = { x: Math.max(0, window.innerWidth - 344), y: 80 };
-      onUndock(pos);
-      if (!open) onToggle();
-    } else {
-      onToggle();
-    }
+    onToggle();
   };
 
   // ─── Docked: top bar ──────────────────────────────────────────────────────
@@ -1747,7 +1778,7 @@ function FloatingVoiceWidget({ voice, open, onToggle, onFullView, docked, floatP
         onClick={handleBarClick}
         title="Drag to detach as floating widget"
         style={{
-          position:"fixed", top:VOICE_BAR_TOP, left:VOICE_BAR_LEFT, right:0, height:34,
+          position:"fixed", top:0, left:0, right:0, height:VOICE_BAR_H,
           background:"linear-gradient(90deg,#0B2642 0%,#071E33 100%)",
           borderBottom:"1px solid rgba(26,111,163,0.22)",
           display:"flex", alignItems:"center", padding:"0 14px",
@@ -1794,6 +1825,15 @@ function FloatingVoiceWidget({ voice, open, onToggle, onFullView, docked, floatP
 
   // ─── Floating card ────────────────────────────────────────────────────────
   return (
+    <>
+    {/* Snap zone hint — fades in when the card's top enters the top 80px of the viewport */}
+    <div id="athena-snap-indicator" style={{
+      position:"fixed", top:0, left:0, right:0, height:SNAP_PX,
+      background:"rgba(26,111,163,0.08)",
+      borderBottom:"2px dashed rgba(26,111,163,0.5)",
+      pointerEvents:"none", opacity:0,
+      transition:"opacity 0.12s", zIndex:1001,
+    }}/>
     <div
       ref={dragRef}
       onMouseDown={handleMouseDown}
@@ -1813,9 +1853,9 @@ function FloatingVoiceWidget({ voice, open, onToggle, onFullView, docked, floatP
       {/* HUD grid */}
       <div style={{position:"absolute", inset:0, opacity:0.03, pointerEvents:"none", borderRadius:10, backgroundImage:`linear-gradient(#1A6FA3 1px,transparent 1px),linear-gradient(90deg,#1A6FA3 1px,transparent 1px)`, backgroundSize:"20px 20px"}}/>
 
-      {/* Header — click toggles expanded / compact */}
-      <div data-nodrag="1" onClick={onToggle}
-        style={{display:"flex", alignItems:"center", gap:7, padding:"9px 10px 7px", borderBottom:"1px solid rgba(26,111,163,0.15)", cursor:"pointer", borderRadius:"10px 10px 0 0"}}
+      {/* Header — drag to move; click (no drag) to toggle expanded / compact */}
+      <div onClick={handleBarClick}
+        style={{display:"flex", alignItems:"center", gap:7, padding:"9px 10px 7px", borderBottom:"1px solid rgba(26,111,163,0.15)", cursor:"grab", borderRadius:"10px 10px 0 0"}}
       >
         <div style={{width:8, height:8, borderRadius:"50%", flexShrink:0, background:cfg.color, boxShadow:cfg.pulse?`0 0 8px ${cfg.color}`:"none", animation:cfg.pulse?"athenaPing 1.4s ease-in-out infinite":"none"}}/>
         <span style={{fontFamily:F.serif, fontSize:11, fontWeight:400, color:"rgba(255,255,255,0.75)", flex:1, letterSpacing:"0.06em", overflow:"hidden", whiteSpace:"nowrap"}}>Athena</span>
@@ -1873,6 +1913,7 @@ function FloatingVoiceWidget({ voice, open, onToggle, onFullView, docked, floatP
         </div>
       </div>
     </div>
+    </>
   );
 }
 
@@ -2357,9 +2398,8 @@ export default function App(){
     clients:  <ClientsView runningAgents={runningAgents}/>,
     marketing:<MarketingView runningAgents={runningAgents}/>,
     decks:    <DeckView runningAgents={runningAgents}/>,
-    documents:<DocumentsView refreshToken={docRefreshToken}/>,
     iso:      <ISOView runningAgents={runningAgents}/>,
-    review:   <ReviewView reviewRefreshToken={reviewRefreshToken}/>,
+    queue:    <ReviewView reviewRefreshToken={reviewRefreshToken}/>,
     agents:   <AgentsView logs={logs} onRun={runAgent} runningAgents={runningAgents}/>,
     hr:       <HRView runningAgents={runningAgents}/>,
     tokens:   <TokenView data={data}/>,
