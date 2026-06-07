@@ -1,5 +1,5 @@
 ﻿# DC-004 — Requirements Traceability Matrix (RTM)
-**Document:** DC-004 · Version 3.2 · 2026-06-07
+**Document:** DC-004 · Version 3.3 · 2026-06-07
 **Approved by:** Steven Tran
 
 This is the single source of truth for end-to-end coverage. Every user need
@@ -145,22 +145,24 @@ column are open findings requiring immediate remediation.
 | UN-034 | | DI-034-D | CLAUDE.md contains Progress Bar Specification | `CLAUDE.md` Engineering Integrity Standards | `test_DI_034_D` | VERIFIED |
 | UN-034 | | DI-034-E | CLAUDE.md contains App.jsx Responsibility Scope | `CLAUDE.md` Engineering Integrity Standards | `test_DI_034_E` | VERIFIED |
 | UN-034 | | DI-034-F | CLAUDE.md contains CLAUDE.md Update Policy | `CLAUDE.md` Engineering Integrity Standards | `test_DI_034_F` | VERIFIED |
-| UN-035 | Voice widget docking persistence | DI-035-A | Docked bar JSX style includes `width: "auto"` | `App.jsx` `FloatingVoiceWidget` docked bar style | `test_DI_035_A` | OPEN |
-| UN-036 | Agent tab approval gate | DI-036-A | AGENT_TAB maps 6 agent IDs to "queue" | `App.jsx` `AGENT_TAB` constant | `test_DI_036_A` | OPEN |
-| UN-036 | | DI-036-B | list_briefings() and list_drafts() gate on approved status | `server.py` `list_briefings` + `list_drafts` | `test_DI_036_B` | OPEN |
-| UN-036 | | DI-036-C | list_briefs() and list_marketing_outputs() gate on approved status | `server.py` `list_briefs` + `list_marketing_outputs` | `test_DI_036_C` | OPEN |
+| UN-035 | Voice widget docking persistence | DI-035-A | Docked bar JSX style includes `width: "auto"` and `right: 0` | `App.jsx` `FloatingVoiceWidget` docked bar style | `test_DI_035_A` | VERIFIED |
+| UN-036 | Agent tab approval gate | DI-036-A | AGENT_TAB maps 6 agent IDs to "queue" | `App.jsx` `AGENT_TAB` constant | `test_DI_036_A` | VERIFIED |
+| UN-036 | | DI-036-B | list_briefings() and list_drafts() gate on approved status | `server.py` `list_briefings` + `list_drafts` | `test_DI_036_B` | VERIFIED |
+| UN-036 | | DI-036-C | list_briefs() and list_marketing_outputs() gate on approved status | `server.py` `list_briefs` + `list_marketing_outputs` | `test_DI_036_C` | VERIFIED |
+| UN-036 | | DI-036-D | list_decks() gates on approved status | `server.py` `list_decks` | `test_DI_036_D` | VERIFIED |
+| UN-036 | | DI-036-E | list_iso_lessons() gates on approved status | `server.py` `list_iso_lessons` | `test_DI_036_E` | VERIFIED |
 
 ---
 
-## Coverage Summary (v3.2)
+## Coverage Summary (v3.3 — CO-017)
 
 | Metric | Count |
 |---|---|
 | Total user needs | 36 |
-| Total design inputs | 127 |
-| Design inputs with VERIFIED tests | 100 |
+| Total design inputs | 129 |
+| Design inputs with VERIFIED tests | 112 |
 | Design inputs with PARTIAL coverage | 8 |
-| Design inputs with OPEN gap | 19 |
+| Design inputs with OPEN gap | 9 |
 | Design inputs with WAIVED status | 0 |
 
 **PARTIAL items** require manual verification currently; automated tests are
@@ -182,12 +184,12 @@ Items with OPEN or PARTIAL status that are tracked as formal findings:
 | TG-007 | DI-010-C | No automated check that ISO standard files are excluded from RAG ingestion | Steven | Phase 3 |
 | TG-008 | DI-015-F | Session auth guard is present but coverage of all non-health routes not automated | Steven | Phase 3 |
 | TG-009 | DI-030-A/B/C | CLOSED — DI-030-A/B/C promoted to VERIFIED by CO-010/CO-011 (DI-030-D/E publication format + DI-034 engineering integrity) | — | CLOSED |
-| TG-010 | DI-007-G | DEVICE_SUBSECTORS all-6-sector coverage — automated; OPEN pending CO-016 implementation | Steven | CO-016 |
-| TG-011 | DI-007-H | Content agent tm_yday fallback — OPEN pending CO-016 implementation | Steven | CO-016 |
-| TG-012 | DI-008-C | MarketingView bulk delete BulkBar pattern — OPEN pending CO-016 implementation | Steven | CO-016 |
-| TG-013 | DI-011-C | M&A agent historical scope statement — OPEN pending CO-016 implementation | Steven | CO-016 |
+| TG-010 | DI-007-G | CLOSED — DEVICE_SUBSECTORS all-6-sector coverage verified by CO-017 (dc_verify 122/122) | — | CLOSED |
+| TG-011 | DI-007-H | CLOSED — Content agent tm_yday fallback verified by CO-017 | — | CLOSED |
+| TG-012 | DI-008-C | CLOSED — MarketingView bulk delete BulkBar pattern verified by CO-017 | — | CLOSED |
+| TG-013 | DI-011-C | CLOSED — M&A agent historical scope statement verified by CO-017 | — | CLOSED |
 | TG-014 | DI-022-A | Latency ≤ 1.75 s — static check on DC-002 text; live timing requires running voice stack (manual, Phase 3) | Steven | Phase 3 |
-| TG-015 | DI-035-A | Voice docked bar width:auto — automated static check; OPEN pending CO-016 implementation | Steven | CO-016 |
-| TG-016 | DI-036-A | AGENT_TAB queue routing — automated; OPEN pending CO-016 implementation | Steven | CO-016 |
-| TG-017 | DI-036-B | list_briefings/list_drafts approval gate — automated; OPEN pending CO-016 implementation | Steven | CO-016 |
-| TG-018 | DI-036-C | list_briefs/list_marketing_outputs approval gate — automated; OPEN pending CO-016 implementation | Steven | CO-016 |
+| TG-015 | DI-035-A | CLOSED — Voice docked bar width:auto and right:0 verified by CO-017 (test strengthened to check both properties) | — | CLOSED |
+| TG-016 | DI-036-A | CLOSED — AGENT_TAB queue routing verified by CO-017 | — | CLOSED |
+| TG-017 | DI-036-B | CLOSED — list_briefings/list_drafts approval gate verified by CO-017 | — | CLOSED |
+| TG-018 | DI-036-C | CLOSED — list_briefs/list_marketing_outputs approval gate verified by CO-017 | — | CLOSED |

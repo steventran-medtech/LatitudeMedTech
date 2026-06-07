@@ -29,10 +29,11 @@ Every CO gets a unique ID at kickoff. Assign the next available CO-NNN here befo
 | CO-014 | 2026-06-07 | C1 | 2 | fix/co-014-di-002-j-reviewview-duplicate-import | DI-002-J (new, VERIFIED) | MERGED (dcff017, PR #102) |
 | CO-015 | 2026-06-07 | C1 | 2 | fix/co-015-di-002-k-reviewview-approved-close-paren | DI-002-K (new, VERIFIED) | MERGED (68b5ae8, PR #103) |
 
-| CO-016 | 2026-06-07 | C2/C3 | 3 | feat/co-016-multi-requirement-batch | DI-003-C (mod), DI-007-G, DI-007-H, DI-008-C, DI-011-C, DI-022-A (mod), DI-035-A, DI-036-A, DI-036-B, DI-036-C | OPEN |
+| CO-016 | 2026-06-07 | C2/C3 | 3 | feat/co-016-multi-requirement-batch | DI-003-C (mod), DI-007-G, DI-007-H, DI-008-C, DI-011-C, DI-022-A (mod), DI-035-A, DI-036-A, DI-036-B, DI-036-C | MERGED |
+| CO-017 | 2026-06-07 | C2/C3 | 3 | feat/co-017-approval-gate-audit | DI-035-A (mod), DI-036-A (verified), DI-036-B (verified), DI-036-C (verified), DI-036-D (new), DI-036-E (new); DC-002 bulk status sync; test_DI_036_D, test_DI_036_E added | OPEN |
 
 **Status values:** OPEN · MERGED · ABANDONED  
-**Next available ID:** CO-017
+**Next available ID:** CO-018
 
 ---
 

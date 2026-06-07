@@ -254,6 +254,7 @@ Update this file's version line (date + vN) in the same final commit.
 
 | Date | Change | DC Reference |
 |---|---|---|
+| 2026-06-07 | CO-017 (C2/C3 audit): list_decks() and list_iso_lessons() in server.py now gate on get_approved_reviews() (P0 gaps missed by CO-016); DI-035-A test strengthened to verify both width:"auto" and right:0; test_DI_036_D/E added; dc_verify 122/122; DC-002 bulk status sync (10 DIs → VERIFIED); DC-004 TG-010–013/015–018 closed | DI-035-A (mod), DI-036-A/B/C (verified), DI-036-D/E (new) |
 | 2026-06-07 | CO-016 (C2/C3 batch): RAG ingestion adds date_published + scope_summary; DEVICE_SUBSECTORS covers all 6 sectors; tm_yday fallback replaces random.choice in content rotation; MarketingView bulk delete; M&A accepts historical requests; voice latency threshold ≤1.75 s; voice docking width:"auto" fix; all 10 agents route to "queue"; list_briefings/list_drafts/list_briefs/list_marketing_outputs gated by get_approved_reviews() | DI-003-C (mod), DI-007-G/H (new), DI-008-C (new), DI-011-C (new), DI-022-A (mod), DI-035-A (new), DI-036-A/B/C (new) |
 | 2026-06-07 | CO-015 (C1 corrective): Fixed missing closing paren `))}` → `)))}` in Approved-tab JSX of `ReviewView.jsx`; was masked by CO-014's import error; added DI-002-K regression test (P0) | DI-002-K (new, VERIFIED) |
 | 2026-06-07 | CO-014 (C1 corrective): Removed duplicate `import FileViewer` in `ReviewView.jsx` — caused Vite build failure and Chrome opening to error overlay; added DI-002-J regression test (P0) | DI-002-J (new, VERIFIED) |

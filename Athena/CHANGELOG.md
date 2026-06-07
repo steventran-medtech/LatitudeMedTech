@@ -25,6 +25,15 @@ record of what changed between each version. Keep them in lock-step — see
 
 ## [Unreleased]
 
+### CO-017 (feat) — C2/C3 Approval gate audit & DC-002 status sync (DI-035-A mod, DI-036-A/B/C verified, DI-036-D/E new)
+
+- **Deck approval gate (DI-036-D):** `list_decks()` in `server.py` now filters `.pptx` files through `mem.get_approved_reviews()` — unapproved decks no longer appear in DeckView.
+- **ISO lessons approval gate (DI-036-E):** `list_iso_lessons()` in `server.py` now filters `.md` lesson files through `mem.get_approved_reviews()` — unapproved ISO case studies no longer appear in the ISO tab.
+- **DI-035-A test strengthened:** `test_DI_035_A` in `dc_verify.py` now verifies both `width:"auto"` AND `right:0` in the FloatingVoiceWidget docked bar JSX style, ensuring full-width layout is fully asserted.
+- **DI-036-D/E tests added:** `test_DI_036_D` and `test_DI_036_E` added to `dc_verify.py`; total test count raised from 120 to 122 (all PASS).
+- **DC-002 status sync:** DI-003-C, DI-003-D, DI-007-G, DI-007-H, DI-008-C, DI-011-C, DI-035-A, DI-036-A, DI-036-B, DI-036-C promoted from OPEN to VERIFIED; DI-022-A remains OPEN (Phase 3 live timing).
+- **DC-004 gap table:** TG-010 through TG-013, TG-015 through TG-018 closed; DI-036-D/E rows added as VERIFIED; coverage updated to 112/129 VERIFIED.
+
 ### CO-016 (feat) — C2/C3 Multi-requirement batch (DI-003-C mod, DI-007-G/H, DI-008-C, DI-011-C, DI-022-A mod, DI-035-A, DI-036-A/B/C)
 
 - **RAG ingestion metadata (DI-003-C):** `ingest_tavily_results()`, `ingest_static_docs()`, `ingest_rss()` now populate `date_published` and `scope_summary`; ingestion report table expanded from 3 to 5 columns.
