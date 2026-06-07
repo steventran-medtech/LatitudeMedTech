@@ -5,7 +5,6 @@
 import { useEffect, useRef, useState } from "react";
 import { authHdr } from "./api.js";
 import FileViewer from "./FileViewer.jsx";
-import FileViewer from "./FileViewer.jsx";
 
 const API = "http://localhost:8000";
 

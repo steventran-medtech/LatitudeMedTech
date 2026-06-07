@@ -342,6 +342,37 @@ def test_DI_002_I():
         _log(PASS, di, 'WorkQueuePanel routes awaiting_review to "queue"')
     return True
 
+
+def test_DI_002_J():
+    """DI-002-J: ReviewView.jsx shall contain no duplicate import declarations"""
+    di = "DI-002-J"
+    if _skip_if_filtered(di): return
+    # ARRANGE
+    f = UI_FRONT / "ReviewView.jsx"
+    assert f.exists(), (
+        f"FAIL {di}: ReviewView.jsx not found at expected path\n"
+        "Fix: Confirm Athena/ui/frontend/src/ReviewView.jsx exists"
+    )
+    # ACT
+    content = _read(f)
+    import_lines = [ln.strip() for ln in content.split("\n") if ln.strip().startswith("import ")]
+    seen = {}
+    duplicates = []
+    for imp in import_lines:
+        key = " ".join(imp.split())
+        if key in seen:
+            duplicates.append(key)
+        else:
+            seen[key] = True
+    # ASSERT
+    assert not duplicates, (
+        f"FAIL {di}: ReviewView.jsx contains duplicate import declaration(s):\n"
+        + "\n".join(f"  {d}" for d in duplicates) + "\n"
+        "Fix: Remove the duplicate import line(s) from ReviewView.jsx"
+    )
+    _log(PASS, di, "ReviewView.jsx has no duplicate import declarations")
+    return True
+
 # ── UN-003 / Knowledge Base ────────────────────────────────────────────────────
 
 def test_DI_003_A():
@@ -2958,7 +2989,7 @@ def main():
     test_DI_001_C(); test_DI_001_D()
     test_DI_002_A(); test_DI_002_B(); test_DI_002_C(); test_DI_002_D()
     test_DI_002_E(); test_DI_002_F(); test_DI_002_G()
-    test_DI_002_H(); test_DI_002_I()
+    test_DI_002_H(); test_DI_002_I(); test_DI_002_J()
 
     _section("UN-003 Knowledge Base")
     test_DI_003_A(); test_DI_003_B(); test_DI_003_C(); test_DI_003_D()

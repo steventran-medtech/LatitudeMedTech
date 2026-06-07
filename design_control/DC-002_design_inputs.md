@@ -1,5 +1,5 @@
 # DC-002 — Design Inputs
-**Document:** DC-002 · Version 3.1 · 2026-06-07  
+**Document:** DC-002 · Version 3.2 · 2026-06-07  
 **Approved by:** Steven Tran
 
 Design inputs are specific, verifiable requirements derived from the user
@@ -40,6 +40,7 @@ Each entry:
 | DI-002-G | UN-002 | `App.jsx` NAV_ITEMS shall contain `id:"queue"` (the Document Queue entry) and shall not contain `id:"documents"` or `id:"review"` (both retired nav entries) | `App.jsx` NAV_ITEMS string search | P0 | VERIFIED |
 | DI-002-H | UN-002 | `AGENT_TAB` in `App.jsx` shall map every agent ID to a valid NAV_ITEMS tab ID — no retired values ("review" or "documents") shall appear as target values; `coaching_brief` → "coaching"; `consulting_agent`, `ma_intelligence_agent`, `sow_agent`, `regulatory_strategy_agent` → "queue" | `App.jsx` AGENT_TAB string search | P1 | VERIFIED |
 | DI-002-I | UN-002 | `WorkQueuePanel` in `App.jsx` shall use `"queue"` (not `"review"`) as the routing target for tasks with `status === "awaiting_review"` | `App.jsx` WorkQueuePanel routing logic string search | P1 | VERIFIED |
+| DI-002-J | UN-002 | `ReviewView.jsx` shall contain no duplicate import declarations — each imported identifier shall appear at most once; duplicate imports cause a Vite build failure that prevents the Document Queue from loading | `dc_verify.py` `test_DI_002_J` scans all import lines in `ReviewView.jsx` for repeated identical statements | P0 | VERIFIED |
 
 ### UN-003 — Knowledge Base
 
