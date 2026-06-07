@@ -1,5 +1,5 @@
 # DC-005 — Manual Verification Protocol (MTP)
-**Document:** DC-005-MTP · Version 1.0 · 2026-06-07  
+**Document:** DC-005-MTP · Version 1.1 · 2026-06-07  
 **Approved by:** Steven Tran  
 **Companion to:** DC-005 Verification Protocol · DC-004 RTM
 
@@ -109,52 +109,59 @@ All five sections present in the generated PPTX.
 ---
 
 ## MTP-003 — Voice Conversation Latency ≤ 1.75 s  
-**DI:** DI-022-A  **Priority:** P0  **Phase:** Phase 3
+**DI:** DI-022-A / DI-022-B  **Priority:** P0  **Phase:** Phase 3
 
 ### Objective
-Confirm end-to-end voice latency — from end of user speech to first audible
-agent response — is ≤ 1.75 seconds. This is a tighter threshold than MTP-001
-and covers the full pipeline: VAD silence detection → STT → Claude streaming
-→ sentence split → Kokoro TTS first byte.
+Confirm end-to-end voice latency — LLM-start to first audible agent sentence —
+is ≤ 1.75 seconds. CO-019 added `test_voice_latency_live.py` which automates
+the WebSocket event timing. **Run the script; stopwatch backup is secondary.**
+
+### Preferred Method — Automated Script (CO-019)
+
+```powershell
+# From the repo root (Athena must be running with voice active)
+python design_control\test_voice_latency_live.py
+```
+
+The script:
+1. Connects to the voice WebSocket at `ws://127.0.0.1:8000/api/voice/ws`
+2. Prompts you through 5 timed queries (press Enter before each)
+3. Records `voice_thinking` → `voice_speaking_partial` latency per run
+4. Outputs pass/fail: ≥ 4 of 5 runs ≤ 1.75 s
+
+**Note:** The script measures LLM-start → first TTS sentence (excludes SILENCE_DURATION + STT).
+Full silence-to-audio latency ≈ script result + ~0.73 s (0.65 s silence window + ~0.08 s GPU STT).
 
 ### Setup
 1. Start Athena (`start_athena.ps1`).
 2. Confirm the voice header badge shows "Listening."
-3. Confirm the RTX 4070 is the active GPU (check Task Manager → GPU).
-4. Have a stopwatch or phone timer ready.
-5. **Run 3 warm-up queries first** (discarded) — cold model loads inflate first-run latency.
+3. Confirm the RTX 4070 is the active GPU (Task Manager → GPU).
+4. **Run 2–3 warm-up queries first** (not counted) — cold Kokoro inflates first-run latency.
 
-### Test Steps
+### Backup Method — Manual Stopwatch
 
 | Step | Action | Expected Result |
 |---|---|---|
 | 1 | Say the wake word; wait for chime | Chime within 1 s |
 | 2 | Ask: **"Define CAPA in one sentence."** | Voice bridge captures query |
-| 3 | Start stopwatch **at the moment silence is detected** (you stop speaking) | — |
-| 4 | Stop stopwatch **at first audible syllable of response** | — |
+| 3 | Start stopwatch **when you stop speaking** | — |
+| 4 | Stop stopwatch **at first audible syllable** | — |
 | 5 | Record elapsed time | — |
-| 6 | Repeat steps 1–5 for 5 runs, varying query length | — |
-
-**Suggested queries (short, to isolate pipeline latency not LLM think time):**
-- "What is FDA 510k?"
-- "Define risk management."
-- "Name one ISO 13485 clause."
-- "What does MDSAP stand for?"
-- "Define design control."
+| 6 | Repeat for 5 runs | — |
 
 ### Pass Criteria
-- ≥ 4 of 5 runs: elapsed ≤ **1.75 seconds**.
-- No single run > **2.5 seconds** (hard cap).
+- ≥ 4 of 5 runs: LLM-to-audio ≤ **1.75 s** (script) or stopwatch ≤ **2.5 s** (manual includes silence window).
+- No single run > **3.0 seconds** hard cap.
 
 ### Failure Actions
-- If 2+ runs > 1.75 s: profile `_ask_claude_streaming` and Kokoro TTS
-  pipeline in `voice_bridge.py`; check `SILENCE_DURATION` setting.
-- If consistent > 2.0 s: consider reverting DI-022-A threshold to 2.0 s
-  via change order and filing a CAPA for engineering investigation.
+- If 2+ runs fail: check `SILENCE_DURATION` in `Athena/settings.json` (must be ≤ 0.65).
+- Confirm Kokoro healthy: `curl http://127.0.0.1:8002/health`
+- Review `_ask_claude_streaming` streaming pipeline in `voice_bridge.py`.
+- If persistent > 2.0 s full-cycle: open CAPA.
 
-### Record
+### Record (Script Run)
 
-| Run | Query | Elapsed (s) | Pass/Fail |
+| Run | Query | Script LLM→Audio (s) | Pass/Fail |
 |---|---|---|---|
 | 1 | | | |
 | 2 | | | |

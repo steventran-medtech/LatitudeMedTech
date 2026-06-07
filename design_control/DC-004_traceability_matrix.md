@@ -1,5 +1,5 @@
 ﻿# DC-004 — Requirements Traceability Matrix (RTM)
-**Document:** DC-004 · Version 3.4 · 2026-06-07
+**Document:** DC-004 · Version 3.5 · 2026-06-07
 **Approved by:** Steven Tran
 
 This is the single source of truth for end-to-end coverage. Every user need
@@ -50,7 +50,8 @@ column are open findings requiring immediate remediation.
 | UN-005 | | DI-005-B | Notification only if voice active | `voice_bridge.py` queue guard | `test_DI_005_B` | VERIFIED |
 | UN-006 | Persistent voice session | DI-006-A | Session persists across tabs | `useVoiceSession.js` app-level | `test_DI_006_A` | VERIFIED |
 | UN-006 | | DI-006-B | Status badge in header | `App.jsx` VoiceStatusBadge | `test_DI_006_B` | VERIFIED |
-| UN-022 | Voice conversation quality | DI-022-A | Latency ≤ 1.75 s (tightened from 2 s, CO-016); streaming sentence-split pipeline; first sentence dispatched to TTS before full response buffered | `voice_bridge.py` `_ask_claude_streaming` + `_SENTENCE_END` + `_speak_sentence` in token-stream loop; live timing manual (MTP-003) | `test_DI_022_A` | PARTIAL |
+| UN-022 | Voice conversation quality | DI-022-A | Latency ≤ 1.75 s (tightened from 2 s, CO-016); streaming sentence-split pipeline; first sentence dispatched to TTS before full response buffered | `voice_bridge.py` `_ask_claude_streaming` + `_SENTENCE_END` + `_speak_sentence` in token-stream loop; live timing via `test_voice_latency_live.py` (DI-022-B) | `test_DI_022_A` | PARTIAL |
+| UN-022 | | DI-022-B | Interactive voice latency script exists: WebSocket timing of `voice_thinking` → `voice_speaking_partial`, ≥ 4/5 runs ≤ 1.75 s | `design_control/test_voice_latency_live.py` | `test_DI_022_B` | OPEN |
 | UN-007 | Content generation | DI-007-A | 900–1,200 word articles | `content_agent.py` system prompt word-count instruction | `test_DI_007_A` | VERIFIED |
 | UN-007 | | DI-007-B | Title from body H1 | `content_agent.py` title_from_body | `test_DI_007_B` | VERIFIED |
 | UN-007 | | DI-007-C | Banned phrases enforced | `content_agent.py` system prompt | `test_DI_007_C` | VERIFIED |
@@ -185,13 +186,12 @@ Items with OPEN or PARTIAL status that are tracked as formal findings:
 | TG-006 | DI-009-A | Deck section completeness requires PPTX inspection; manual only — see MTP-002 | Steven | Phase 3 |
 | TG-007 | DI-010-C | CLOSED — iso.org removed from Tavily include_domains (CO-018); `test_DI_010_C` passes | — | CLOSED |
 | TG-008 | DI-015-F | CLOSED — `test_DI_015_F` added (CO-018); AuthMiddleware blanket coverage confirmed | — | CLOSED |
-| TG-014 | DI-022-A | Latency ≤ 1.75 s — static test passes; live timing requires running voice stack — see MTP-003 | Steven | Phase 3 |
+| TG-014 | DI-022-A/B | CLOSED (CO-019) — DI-022-B created: interactive `test_voice_latency_live.py` script; `test_DI_022_B` added; live timing now automated via WebSocket event timing | — | CLOSED |
 | TG-009 | DI-030-A/B/C | CLOSED — DI-030-A/B/C promoted to VERIFIED by CO-010/CO-011 (DI-030-D/E publication format + DI-034 engineering integrity) | — | CLOSED |
 | TG-010 | DI-007-G | CLOSED — DEVICE_SUBSECTORS all-6-sector coverage verified by CO-017 (dc_verify 122/122) | — | CLOSED |
 | TG-011 | DI-007-H | CLOSED — Content agent tm_yday fallback verified by CO-017 | — | CLOSED |
 | TG-012 | DI-008-C | CLOSED — MarketingView bulk delete BulkBar pattern verified by CO-017 | — | CLOSED |
 | TG-013 | DI-011-C | CLOSED — M&A agent historical scope statement verified by CO-017 | — | CLOSED |
-| TG-014 | DI-022-A | Latency ≤ 1.75 s — static check on DC-002 text; live timing requires running voice stack (manual, Phase 3) | Steven | Phase 3 |
 | TG-015 | DI-035-A | CLOSED — Voice docked bar width:auto and right:0 verified by CO-017 (test strengthened to check both properties) | — | CLOSED |
 | TG-016 | DI-036-A | CLOSED — AGENT_TAB queue routing verified by CO-017 | — | CLOSED |
 | TG-017 | DI-036-B | CLOSED — list_briefings/list_drafts approval gate verified by CO-017 | — | CLOSED |

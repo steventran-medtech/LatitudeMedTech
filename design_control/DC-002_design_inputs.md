@@ -1,5 +1,5 @@
 # DC-002 — Design Inputs
-**Document:** DC-002 · Version 3.6 · 2026-06-07  
+**Document:** DC-002 · Version 3.7 · 2026-06-07  
 **Approved by:** Steven Tran
 
 Design inputs are specific, verifiable requirements derived from the user
@@ -84,7 +84,8 @@ Each entry:
 
 | ID | Source | Requirement Statement | Verification | Priority | Status |
 |---|---|---|---|---|---|
-| DI-022-A | UN-022 | Latency between completion of user's voice input and commencement of audible agent response shall be ≤ 1.75 seconds (tightened from 2 s in CO-016; see also DI-004-C for TTS pipeline timing) | Static: `DC-002_design_inputs.md` DI-022-A text states "1.75" seconds; `voice_bridge.py` contains `_ask_claude_streaming` using a streaming LLM call, `_split_sentences` / `_SENTENCE_END` for sentence-boundary detection, and `_speak_sentence` called inside the token-stream loop — not after full response is buffered; live timing test manual (MTP-003) | P0 | PARTIAL |
+| DI-022-A | UN-022 | Latency between completion of user's voice input and commencement of audible agent response shall be ≤ 1.75 seconds (tightened from 2 s in CO-016; see also DI-004-C for TTS pipeline timing) | Static: `DC-002_design_inputs.md` DI-022-A text states "1.75" seconds; `voice_bridge.py` contains `_ask_claude_streaming` using a streaming LLM call, `_split_sentences` / `_SENTENCE_END` for sentence-boundary detection, and `_speak_sentence` called inside the token-stream loop — not after full response is buffered; live timing: run `design_control/test_voice_latency_live.py` against live Athena instance (DI-022-B) | P0 | PARTIAL |
+| DI-022-B | UN-022 | An interactive voice latency test script shall exist at `design_control/test_voice_latency_live.py` that: (1) connects to the Athena voice WebSocket at `ws://127.0.0.1:8000/api/voice/ws`, (2) prompts Steven through 5 consecutive timed queries, (3) records `voice_thinking` and `voice_speaking_partial` WebSocket event timestamps per query to compute LLM-to-first-audio latency, and (4) reports pass/fail: ≥ 4 of 5 runs ≤ 1.75 s | `design_control/test_voice_latency_live.py` exists; file contains `websockets`, `voice_thinking`, `voice_speaking_partial`, and `1.75` | P0 | OPEN |
 
 ---
 
