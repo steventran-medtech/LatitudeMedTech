@@ -23,6 +23,13 @@ record of what changed between each version. Keep them in lock-step — see
 
 ---
 
+## [Unreleased]
+
+### Added
+- **UN-031 / CO-004** Browser tab singleton guard (`tabGuard.js`): prevents two Athena tabs from running simultaneously in the same Chrome session — second tab shows a blocking overlay and never mounts React (DI-031-A, DI-031-B)
+
+---
+
 ## [0.5.2] — 2026-06-06 (E2E Architecture Alignment)
 
 ### Fixed
@@ -43,6 +50,9 @@ record of what changed between each version. Keep them in lock-step — see
 ## [Unreleased]
 
 _Changes landed on `main` but not yet stamped into a numbered release go here._
+
+### Fixed
+- **CO-004 / DI-019-H:** Splash progress bar could freeze indefinitely at any whole-number percentage (97% and 99% both observed). Root cause: `PollChromeReady` asymptotically converges `targetVal` to a hard cap of 97; once `stepVal` catches up, `Tick`'s `If stepVal < targetVal` branch is permanently false. A ceiling-based keep-alive merely moves the freeze (e.g., to 99%). Fix: `ElseIf Not readyToClose Then stepVal = stepVal + 0.05` with `If stepVal >= 99.5 Then stepVal = targetVal` wrap -- bar cycles 97->98->99->wrap->97->... at 320 ms/pt; no ceiling means no freeze at any whole number. `test_DI_019_H` expanded from 5 to 9 checks, adding keep-alive presence, no-blocking-ceiling, floor rate, and wrap@99.5.
 
 ### Added
 - **DI-019-J (C2):** Splash screen `#dots` element now cycles sequentially (`.` → `..` → `...`) via VBScript `TickDots` timer at 400 ms/state — matching Claude Code's in-progress indicator pattern. Replaces CSS `dotFlash` wave animation. `test_DI_019_J` added to `dc_verify.py`.

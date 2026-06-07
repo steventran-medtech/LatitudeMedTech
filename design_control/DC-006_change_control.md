@@ -12,9 +12,13 @@ Every CO gets a unique ID at kickoff. Assign the next available CO-NNN here befo
 |---|---|---|---|---|---|---|
 | CO-001 | 2026-06-05 | C2 | — | chore/add-change-order-skill | — | MERGED |
 | CO-002 | 2026-06-07 | C3 | 2 | feat/co-002-change-order-overlap-models-co-ids | — | MERGED |
+| CO-003 | 2026-06-07 | C2 | 3 | feat/co-003-un-003-023-rag-reports-historical | DI-003-C, DI-003-D, DI-023-B, DI-023-C | OPEN |
+
+| CO-004 | 2026-06-07 | C2 | 2 | feat/co-004-un-031-tab-singleton | DI-031-A, DI-031-B | OPEN |
+| CO-005 | 2026-06-07 | C3 | 3 | chore/co-005-un-002-document-queue | DI-002-E (mod), DI-002-F, DI-002-G | OPEN |
 
 **Status values:** OPEN · MERGED · ABANDONED  
-**Next available ID:** CO-003
+**Next available ID:** CO-006
 
 ---
 

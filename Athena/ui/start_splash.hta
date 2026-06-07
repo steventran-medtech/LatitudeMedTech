@@ -315,10 +315,18 @@ Sub Tick
     End If
     stepVal = stepVal + inc
     If stepVal > targetVal Then stepVal = targetVal
-    bar.style.width = stepVal & "%"
-    On Error Resume Next
-    pctEl.innerText = Int(stepVal) & "%"
+  ElseIf Not readyToClose Then
+    ' Keep-alive: stepVal has converged to the animation ceiling while loading is
+    ' still in progress. Advance at 0.05/frame (320 ms per percentage point) so
+    ' the bar cycles through every whole-number percentage without freezing.
+    ' Wrap at 99.5 (the readyToClose trigger) so the bar resets to targetVal and
+    ' starts the cycle again -- no ceiling can ever cause a permanent stall.
+    stepVal = stepVal + 0.05
+    If stepVal >= 99.5 Then stepVal = targetVal
   End If
+  bar.style.width = stepVal & "%"
+  On Error Resume Next
+  pctEl.innerText = Int(stepVal) & "%"
   ' Close once the bar is visually at 100%. Use >= 99.5 rather than 100 to
   ' avoid CInt rounding (99.9 displays as "100%" but fails an exact >= 100 check).
   If readyToClose And stepVal >= 99.5 Then
