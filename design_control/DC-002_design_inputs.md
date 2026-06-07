@@ -1,5 +1,5 @@
 # DC-002 — Design Inputs
-**Document:** DC-002 · Version 2.9 · 2026-06-07  
+**Document:** DC-002 · Version 3.1 · 2026-06-07  
 **Approved by:** Steven Tran
 
 Design inputs are specific, verifiable requirements derived from the user
@@ -38,6 +38,8 @@ Each entry:
 | DI-002-E | UN-002 | Approved items shall be surfaced exclusively under the Approved filter of the Document Queue tab; the Approved filter fetches from `GET /api/documents` which gates on `status='approved'` via `get_approved_reviews()` | `ReviewView.jsx` Approved tab calls `fetch(${API}/api/documents)` | P0 | VERIFIED |
 | DI-002-F | UN-002 | The Document Queue tab shall provide three mutually-exclusive filter states: Pending (awaiting review), Approved (finalized), Rejected (declined) | `ReviewView.jsx` uses `useState("pending")` as initial tab state; tabs array contains keys "pending", "approved", "rejected" | P0 | VERIFIED |
 | DI-002-G | UN-002 | `App.jsx` NAV_ITEMS shall contain `id:"queue"` (the Document Queue entry) and shall not contain `id:"documents"` or `id:"review"` (both retired nav entries) | `App.jsx` NAV_ITEMS string search | P0 | VERIFIED |
+| DI-002-H | UN-002 | `AGENT_TAB` in `App.jsx` shall map every agent ID to a valid NAV_ITEMS tab ID — no retired values ("review" or "documents") shall appear as target values; `coaching_brief` → "coaching"; `consulting_agent`, `ma_intelligence_agent`, `sow_agent`, `regulatory_strategy_agent` → "queue" | `App.jsx` AGENT_TAB string search | P1 | VERIFIED |
+| DI-002-I | UN-002 | `WorkQueuePanel` in `App.jsx` shall use `"queue"` (not `"review"`) as the routing target for tasks with `status === "awaiting_review"` | `App.jsx` WorkQueuePanel routing logic string search | P1 | VERIFIED |
 
 ### UN-003 — Knowledge Base
 
@@ -95,6 +97,7 @@ Each entry:
 | DI-007-C | UN-007 | Banned phrases shall be enforced at prompt level | Banned phrase list present in content agent system prompt | P0 | VERIFIED |
 | DI-007-D | UN-007 | Non-Latin characters shall be removed from titles before storage | `clean_title()` strips non-ASCII characters | P0 | VERIFIED |
 | DI-007-E | UN-007 | YAML frontmatter shall be stripped before content is rendered in the UI | `renderInline` / MarkdownView strips YAML frontmatter | P0 | VERIFIED |
+| DI-007-F | UN-007 | Navigation tab for MedTech Meridian content shall use `label:"MedTech Meridian Drafts"` in `NAV_ITEMS` and `ContentView` h2 shall read "MedTech Meridian Drafts" — the retired label "Content Drafts" shall not appear in either location | `App.jsx` NAV_ITEMS and ContentView h2 string search | P1 | VERIFIED |
 
 ### UN-008 — Marketing Pipeline
 

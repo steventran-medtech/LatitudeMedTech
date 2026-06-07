@@ -25,6 +25,11 @@ record of what changed between each version. Keep them in lock-step — see
 
 ## [Unreleased]
 
+### CO-012 — UN-007 + UN-002: Tab rename + AGENT_TAB routing fix
+
+### Changed
+- **UN-007, UN-002 / CO-012** Renamed "Content Drafts" tab to "MedTech Meridian Drafts" (NAV_ITEMS + ContentView h2); fixed AGENT_TAB — coaching_brief→"coaching", consulting_agent/ma_intelligence_agent/sow_agent/regulatory_strategy_agent→"queue"; fixed WorkQueuePanel awaiting_review routing target from "review"→"queue" (DI-007-F, DI-002-H, DI-002-I)
+
 ### CO-011 — UN-034 Engineering Process Integrity (Formal Registration + Test Correction)
 
 - **DI-034-A (corrected)**: `test_DI_034_A` rewritten to verify `CLAUDE.md` contains the co-commit rule phrase "must also update at least one design control document" — prior test incorrectly checked `qms_simulator_agent.py` for `submit_for_review(` (CO-010 artifact)

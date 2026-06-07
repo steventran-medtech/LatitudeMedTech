@@ -24,8 +24,10 @@ Every CO gets a unique ID at kickoff. Assign the next available CO-NNN here befo
 | CO-010 | 2026-06-07 | C2/C3 | 3 | feat/co-008-un-033-voice-ready-latency | UN-033 (new), UN-034 (new), DI-033-A/B/C (VERIFIED), DI-030-D/E (new), DI-034-A-F (new) | OPEN |
 | CO-011 | 2026-06-07 | C2 | 3 | feat/co-011-un-033-process-integrity | UN-034 (formal registration), DI-034-A (corrected test), DI-034-B, DI-034-C, DI-034-D, DI-034-E, DI-034-F | OPEN |
 
+| CO-012 | 2026-06-07 | C3 | 2 | co-011-fresh | DI-007-F (new, VERIFIED), DI-002-H (new, VERIFIED), DI-002-I (new, VERIFIED) | OPEN |
+
 **Status values:** OPEN · MERGED · ABANDONED  
-**Next available ID:** CO-012
+**Next available ID:** CO-013
 
 ---
 

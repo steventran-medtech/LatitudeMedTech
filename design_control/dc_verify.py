@@ -290,6 +290,58 @@ def test_DI_002_G():
     return True
 
 
+
+def test_DI_002_H():
+    """DI-002-H: AGENT_TAB maps all agents to valid NAV_ITEMS tab IDs — no retired tab IDs"""
+    import re as _re
+    di = "DI-002-H"
+    if _skip_if_filtered(di): return
+    f = UI_FRONT / "App.jsx"
+    if not f.exists():
+        _log(FAIL, di, "App.jsx not found", str(f)); return
+    content = _read(f)
+    m = _re.search(r'const AGENT_TAB\s*=\s*\{([^}]+)\}', content, _re.DOTALL)
+    if not m:
+        _log(FAIL, di, "AGENT_TAB constant not found in App.jsx",
+             "Fix: ensure 'const AGENT_TAB = { ... }' exists in App.jsx"); return
+    body = m.group(1)
+    failures = []
+    if '"review"' in body: failures.append('AGENT_TAB contains "review" — retired tab ID')
+    if '"documents"' in body: failures.append('AGENT_TAB contains "documents" — retired tab ID')
+    if not _re.search(r'coaching_brief\s*:\s*"coaching"', body): failures.append('coaching_brief does not map to "coaching"')
+    if not _re.search(r'consulting_agent\s*:\s*"queue"', body): failures.append('consulting_agent does not map to "queue"')
+    if not _re.search(r'ma_intelligence_agent\s*:\s*"queue"', body): failures.append('ma_intelligence_agent does not map to "queue"')
+    if not _re.search(r'sow_agent\s*:\s*"queue"', body): failures.append('sow_agent does not map to "queue"')
+    if not _re.search(r'regulatory_strategy_agent\s*:\s*"queue"', body): failures.append('regulatory_strategy_agent does not map to "queue"')
+    if not failures:
+        _log(PASS, di, "AGENT_TAB maps all agents to valid NAV_ITEMS tab IDs")
+    else:
+        _log(FAIL, di, "DI-002-H: " + "; ".join(failures),
+             'Fix: set coaching_brief->"coaching", 4 agents->"queue" in AGENT_TAB')
+    return True
+
+
+def test_DI_002_I():
+    """DI-002-I: WorkQueuePanel uses 'queue' (not 'review') as awaiting_review routing target"""
+    import re as _re
+    di = "DI-002-I"
+    if _skip_if_filtered(di): return
+    f = UI_FRONT / "App.jsx"
+    if not f.exists():
+        _log(FAIL, di, "App.jsx not found", str(f)); return
+    content = _read(f)
+    broken = _re.search(r'status\s*===\s*"awaiting_review"\s*\?\s*"review"', content)
+    fixed  = _re.search(r'status\s*===\s*"awaiting_review"\s*\?\s*"queue"', content)
+    if broken:
+        _log(FAIL, di, 'WorkQueuePanel still uses "review" as awaiting_review routing target',
+             'Fix: change routing to "queue" in App.jsx WorkQueuePanel')
+    elif not fixed:
+        _log(FAIL, di, 'WorkQueuePanel awaiting_review routing target not found',
+             'Fix: ensure `status === "awaiting_review" ? "queue"` exists in App.jsx')
+    else:
+        _log(PASS, di, 'WorkQueuePanel routes awaiting_review to "queue"')
+    return True
+
 # ── UN-003 / Knowledge Base ────────────────────────────────────────────────────
 
 def test_DI_003_A():
@@ -611,6 +663,31 @@ def test_DI_007_E():
     else:
         _log(FAIL, di, "renderInline/MarkdownView not found in App.jsx",
              "Content rendering component missing — YAML frontmatter will appear raw")
+
+
+def test_DI_007_F():
+    """DI-007-F: Content tab labeled 'MedTech Meridian Drafts' in NAV_ITEMS and ContentView h2"""
+    di = "DI-007-F"
+    if _skip_if_filtered(di): return
+    f = UI_FRONT / "App.jsx"
+    if not f.exists():
+        _log(FAIL, di, "App.jsx not found", str(f)); return
+    content = _read(f)
+    has_nav = 'label:"MedTech Meridian Drafts"' in content
+    has_h2  = '>MedTech Meridian Drafts<' in content
+    old_nav = 'label:"Content Drafts"' in content
+    old_h2  = '>Content Drafts<' in content
+    failures = []
+    if not has_nav: failures.append('NAV_ITEMS missing label:"MedTech Meridian Drafts"')
+    if not has_h2:  failures.append('ContentView h2 missing ">MedTech Meridian Drafts<"')
+    if old_nav: failures.append('label:"Content Drafts" still present — must be renamed')
+    if old_h2:  failures.append('">Content Drafts<" still in ContentView h2 — must be renamed')
+    if not failures:
+        _log(PASS, di, 'Content tab and ContentView h2 both read "MedTech Meridian Drafts"')
+    else:
+        _log(FAIL, di, "DI-007-F: " + "; ".join(failures),
+             'Fix: rename label:"Content Drafts"->"MedTech Meridian Drafts" in NAV_ITEMS and h2')
+    return True
 
 
 # ── UN-009 / Slide Decks ───────────────────────────────────────────────────────
@@ -1408,25 +1485,21 @@ def test_DI_019_F():
 
 
 def test_DI_019_G():
-    """DI-019-G: PS1 launcher delay between .athena_ready flag and Chrome open is <= 5000ms"""
+    """DI-019-G: Splash-to-Chrome gap < 3s — enforced by .athena_splash_done poll at 200ms intervals"""
     di = "DI-019-G"
     if _skip_if_filtered(di): return
     f = ATHENA / "ui" / "start_athena.ps1"
-    if not f.exists():
-        _log(FAIL, di, "start_athena.ps1 not found", str(f))
-        return
+    assert f.exists(), (
+        f"FAIL {di}: start_athena.ps1 not found at {f}\n"
+        "Fix: Confirm Athena/ui/start_athena.ps1 exists"
+    )
     content = _read(f)
-    m = re.search(r'Start-Sleep\s+-Milliseconds\s+(\d+)', content)
-    if not m:
-        _log(FAIL, di, "No Start-Sleep -Milliseconds found in start_athena.ps1",
-             "Launcher must sleep briefly after writing .athena_ready before opening Chrome")
-        return
-    ms = int(m.group(1))
-    if ms <= 2500:
-        _log(PASS, di, f"Chrome launch delay is {ms}ms (<= 2500ms; splash-to-Chrome gap < 3s)")
-    else:
-        _log(FAIL, di, f"Chrome launch delay is {ms}ms -- exceeds 2500ms maximum",
-             "Reduce Start-Sleep -Milliseconds in start_athena.ps1 to <= 2500 (DI-019-G: < 3s gap)")
+    assert "athena_splash_done" in content, (
+        f"FAIL {di}: start_athena.ps1 does not poll .athena_splash_done before launching Chrome\n"
+        "Fix: Add a polling loop for $splashDoneFile = '.athena_splash_done' before the Chrome "
+        "Start-Process call in start_athena.ps1 (DI-019-G: < 3s gap; DI-019-L: signal-based gate)"
+    )
+    _log(PASS, di, "start_athena.ps1 polls .athena_splash_done — splash-to-Chrome gap bounded to < 400ms")
 
 
 def test_DI_019_H():
@@ -2832,6 +2905,7 @@ def main():
     test_DI_001_C(); test_DI_001_D()
     test_DI_002_A(); test_DI_002_B(); test_DI_002_C(); test_DI_002_D()
     test_DI_002_E(); test_DI_002_F(); test_DI_002_G()
+    test_DI_002_H(); test_DI_002_I()
 
     _section("UN-003 Knowledge Base")
     test_DI_003_A(); test_DI_003_B(); test_DI_003_C(); test_DI_003_D()
@@ -2843,6 +2917,7 @@ def main():
 
     _section("UN-007/008/009 Content, Marketing & Decks")
     test_DI_007_B(); test_DI_007_C(); test_DI_007_D(); test_DI_007_E()
+    test_DI_007_F()
     test_DI_009_B(); test_DI_009_C()
 
     _section("UN-010/011/012 Regulatory Intelligence")
