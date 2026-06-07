@@ -217,8 +217,17 @@ class VS:
     AWAKE = "awake"; THINKING = "thinking"; SPEAKING = "speaking"
     STOPPED = "stopped"
 
-_state  = VS.IDLE
-_active = False
+_state     = VS.IDLE
+_active    = False
+_ptt_event = threading.Event()   # set by POST /api/voice/listen to bypass wake-word
+
+def _consume_ptt() -> bool:
+    """Check and consume the PTT event in one place.  Returns True if PTT was pending.
+    Using a dedicated helper avoids duplicating the is_set()/clear() two-step and
+    ensures any future behaviour change (logging, scoring) only needs one edit."""
+    had = _ptt_event.is_set()
+    _ptt_event.clear()
+    return had
 
 # ── WebSocket manager ─────────────────────────────────────────────────────────
 
@@ -910,6 +919,8 @@ def _listen_for_wake(oww_model):
                     n += 1
                     if n % level_every == 0:
                         _emit("level", level=round(min(1.0, _rms(mono) * 8), 3))
+                    if _consume_ptt():
+                        return True, 1.0   # PTT bypasses wake-word scoring
                     if _chunk_is_speech(rs):
                         i16 = (rs * 32768).clip(-32768, 32767).astype(np.int16)
                         pred = oww_model.predict(i16)
@@ -919,6 +930,7 @@ def _listen_for_wake(oww_model):
                                 return True, round(float(max_score), 4)
         except Exception as e:
             # Audio device hiccup — wait briefly and retry instead of crashing
+            _consume_ptt()   # discard any PTT that fired before the exception; don't carry it into the retry
             _emit("level", level=0.0)
             time.sleep(retry_delay)
             retry_delay = min(retry_delay * 1.5, 3.0)  # back off up to 3s
@@ -1477,7 +1489,11 @@ def _voice_loop():
         else:
             _state = VS.LISTENING
             _emit("listening", message=f"Say '{WAKE_PHRASE.title()}' to activate")
-            wake_detected, wake_score = _listen_for_wake(oww)
+            # PTT fired before blocking listen started — honour it immediately.
+            if _consume_ptt():
+                wake_detected, wake_score = True, 1.0
+            else:
+                wake_detected, wake_score = _listen_for_wake(oww)
             if not wake_detected or not _active:
                 break
 
@@ -1659,6 +1675,7 @@ async def start_voice():
         return {"status": "already_running", "state": _state}
     _loop   = asyncio.get_event_loop()
     _active = True
+    _ptt_event.clear()   # discard any stale PTT event from a prior session
     _voice_thread = threading.Thread(target=_voice_loop, daemon=True, name="athena-voice")
     _voice_thread.start()
     return {"status": "started", "tts_backend": TTS_BACKEND,
@@ -1670,6 +1687,7 @@ async def start_voice():
 async def stop_voice():
     global _active
     _active = False
+    _ptt_event.clear()   # prevent a stale PTT from firing on the next start
     return {"status": "stopping"}
 
 
@@ -1693,6 +1711,18 @@ async def voice_notify(request: Request):
         _notification_queue.append(text)
         return {"ok": True}
     return {"ok": False, "reason": "voice not active" if not _active else "empty text"}
+
+
+@router.post("/listen")
+async def manual_listen():
+    """PTT — bypass wake-word and start recording immediately.
+    No-op if voice is not in the listening state."""
+    if not _active:
+        return {"ok": False, "reason": "voice not active"}
+    if _state != VS.LISTENING:
+        return {"ok": False, "reason": f"not listening (state: {_state})"}
+    _ptt_event.set()
+    return {"ok": True}
 
 
 @router.get("/devices")

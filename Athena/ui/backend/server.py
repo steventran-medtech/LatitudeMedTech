@@ -15,6 +15,7 @@ import secrets
 import subprocess
 import asyncio
 import logging
+import threading
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -1957,6 +1958,10 @@ _GDRIVE_TOKEN       = str(ATHENA / "drive_token.json")
 _GDRIVE_SCOPES      = ["https://www.googleapis.com/auth/drive"]
 _GDRIVE_FOLDER_ID   = os.getenv("GOOGLE_DRIVE_FOLDER_ID", "")  # optional; uploads go to Drive root if blank
 
+# Thread state for the non-blocking OAuth flow
+_drive_auth_state: dict = {"running": False, "error": ""}
+_drive_auth_lock  = threading.Lock()   # guards the check-then-set in google_auth_connect
+
 # Local MIME → (upload MIME, target Google MIME)
 _TO_GOOGLE_MIME = {
     ".docx": ("application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -2016,28 +2021,51 @@ def _build_drive_service():
 @app.post("/api/google/auth")
 def google_auth_connect():
     """
-    Open the browser OAuth 2.0 consent flow and save the resulting token to
-    drive_token.json.  Call this once from the frontend 'Connect Google Drive'
-    button.  Subsequent calls refresh the token automatically via _build_drive_service().
+    Spawn a background thread to run the OAuth 2.0 browser flow and save
+    drive_token.json.  Returns {"started": true} immediately so the HTTP
+    request doesn't hang while the user completes consent in the browser.
+    Poll GET /api/google/auth-status every 2 s until configured=true or reason=error.
     """
+    global _drive_auth_state
     secrets_path = Path(_GDRIVE_SECRETS)
     if not secrets_path.exists():
         raise HTTPException(503, "client_secrets.json not found in Athena root folder")
-    try:
-        from google_auth_oauthlib.flow import InstalledAppFlow
-        flow  = InstalledAppFlow.from_client_secrets_file(str(secrets_path), _GDRIVE_SCOPES)
-        creds = flow.run_local_server(port=0, open_browser=True)
-        Path(_GDRIVE_TOKEN).write_text(creds.to_json())
-        return {"ok": True, "message": "Google Drive connected successfully."}
-    except Exception as exc:
-        raise HTTPException(500, f"OAuth flow failed: {exc}")
+    with _drive_auth_lock:
+        if _drive_auth_state.get("running"):
+            return {"started": True, "message": "Authorization already in progress…"}
+        _drive_auth_state = {"running": True, "error": ""}
+
+    def _run():
+        global _drive_auth_state
+        try:
+            from google_auth_oauthlib.flow import InstalledAppFlow
+            flow  = InstalledAppFlow.from_client_secrets_file(str(secrets_path), _GDRIVE_SCOPES)
+            creds = flow.run_local_server(port=0, open_browser=True)
+            Path(_GDRIVE_TOKEN).write_text(creds.to_json())
+            _drive_auth_state = {"running": False, "error": ""}
+        except Exception as exc:
+            _drive_auth_state = {"running": False, "error": str(exc)}
+            print(f"[drive-auth] OAuth flow failed: {exc}")
+
+    threading.Thread(target=_run, daemon=True).start()
+    return {"started": True, "message": "Browser opening for Google authorization…"}
 
 
 @app.get("/api/google/auth-status")
 def google_auth_status():
     """Check whether Drive credentials exist and are valid (or auto-refreshable)."""
+    global _drive_auth_state
     secrets_path = Path(_GDRIVE_SECRETS)
     token_path   = Path(_GDRIVE_TOKEN)
+
+    # Expose thread state first
+    if _drive_auth_state.get("running"):
+        return {"configured": False, "reason": "in_progress",
+                "message": "Authorization in progress — complete consent in your browser."}
+    err = _drive_auth_state.pop("error", "")   # read + clear atomically; "" → not an error
+    if err:
+        return {"configured": False, "reason": "error", "message": err}
+
     if not secrets_path.exists():
         return {"configured": False, "reason": "client_secrets.json missing"}
     if not token_path.exists():
