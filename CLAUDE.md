@@ -210,6 +210,15 @@ Update the CLAUDE.md version line (date + vN) in the same final commit.
 - Check `## Current Phase` and any open ⏳ items before starting new work.
 - If a session ends mid-task, note the stopping point in CLAUDE.md before committing.
 
+**OneDrive sync defense:**  
+OneDrive can silently revert working-tree files to HEAD mid-session. Tell: `git hash-object <file>` matches HEAD while edits are gone. **Default mitigation: commit immediately after every edit.** For multi-file or parallel-session work, use an isolated worktree outside the sync tree:
+```powershell
+git worktree add -b <branch> C:\Dev\lmt-wt origin/main
+# do all work in C:\Dev\lmt-wt; build/verify in main tree (worktrees lack node_modules)
+git worktree remove C:\Dev\lmt-wt   # cleanup after merge
+```
+After any edit: re-read the file to confirm it persisted. If reverted, re-apply and commit immediately.
+
 **Safety rules:**
 - `git status` before every `git add` — verify `*.pfx`, `.env`, `.athena.key` are not staged.
 - **Never** `git push --force` or `git reset --hard` without Steven's explicit instruction.

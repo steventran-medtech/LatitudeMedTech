@@ -27,7 +27,26 @@ record of what changed between each version. Keep them in lock-step — see
 
 _Changes landed on `main` but not yet stamped into a numbered release go here._
 
+### Added
+- **Voice PTT — Press to Listen (UN-020-V / DI-020-V):** Manual push-to-talk button added to
+  the Voice HUD. When Athena is in Listening state a "Press to Listen" button appears below the
+  orb; clicking it calls `POST /api/voice/listen`, which sets `_ptt_event` to bypass wake-word
+  detection and jump straight to recording. Handles both the pre-listen race (event checked before
+  `_listen_for_wake` blocks) and mid-listen race (event checked per audio chunk inside the function).
+  `triggerListen` added to `useVoiceSession` hook; PTT endpoint added to `qa_test.py` route list.
+
 ### Fixed
+- **Google Drive connect response key (C4):** `FileViewer.jsx` `connectDrive` was checking
+  `data.ok` but `server.py` now returns `{started: true}` (async OAuth refactor). Fixed to
+  `data.started`. Separately, `loadView()` was called immediately before the background OAuth
+  thread completed; replaced with a 2-second polling loop against `GET /api/google/auth-status`
+  (up to 120 s) that calls `loadView()` only once `configured=true`. Button label updated to
+  "Complete authorization in browser…" while polling.
+- **PTT rejection feedback (C5):** `triggerListen` now reads the `POST /api/voice/listen`
+  response; if `ok=false` (server busy/not-listening), a `pttRejected` flag is set for 1.5 s
+  and a "Busy — try again" label appears below the PTT button. Previously the rejection was
+  silently discarded with no user feedback.
+
 - **Client creation (C1 — DI-018-A):** `POST /api/clients` now wraps `mem.add_client()` in
   try/except and returns `{"error": "<message>"}` with HTTP 500 on database failure. Frontend
   now checks `res.ok` and surfaces the actual server error instead of the generic

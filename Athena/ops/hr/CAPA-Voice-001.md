@@ -49,6 +49,7 @@ Voice responses take 4–10+ seconds from wake word to first audio. No clear ind
 | PA-1 | Voice session latency tracked per query; HR flags if avg > 4s | `voice_bridge.py` memory | ✓ Done |
 | PA-2 | Voice self-optimization — adjusts silence threshold based on false-start rate | `voice_bridge.py` | ✓ Done |
 | PA-3 | QA protocol requires voice latency test after any TTS/LLM change | CLAUDE.md | ✓ Done |
+| PA-4 | Manual "Press to Listen" PTT button — eliminates wake-word dependency for manual use; `POST /api/voice/listen` sets `_ptt_event`, skipping OWW entirely | `voice_bridge.py`, `VoiceView.jsx`, `useVoiceSession.js` | ✓ Done |
 
 ---
 
