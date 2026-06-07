@@ -1,5 +1,5 @@
 # DC-005 — Verification Protocol
-**Document:** DC-005 · Version 1.7 · 2026-06-07  
+**Document:** DC-005 · Version 1.9 · 2026-06-07  
 **Approved by:** Steven Tran
 
 ---
@@ -380,6 +380,23 @@ Check: `tabGuard.js` contains a `window.addEventListener("beforeunload", ...)` h
 Fail action: Add the `beforeunload` listener to `initTabGuard()` in `tabGuard.js`; the handler must call `releaseLock()` (removes the `localStorage` key) and `ch.postMessage({ type: "release", ... })`.
 
 ---
+
+
+---
+
+### DI-033 — Voice Query Readiness Latency
+
+**test_DI_033_A** — `_listen_for_wake` accepts stream parameter; no internal `sd.InputStream`  
+Check: `voice_bridge.py` `def _listen_for_wake` signature contains `stream` positional parameter after `oww_model`; no `sd.InputStream(` in the function body.  
+Fail action: Add `stream` parameter to `_listen_for_wake`; remove the internal `with sd.InputStream(...)` context manager; read from the caller-supplied stream instead.
+
+**test_DI_033_B** — `_record_query` accepts stream parameter; no internal `sd.InputStream`  
+Check: `voice_bridge.py` `def _record_query` signature contains `stream` positional parameter; no `sd.InputStream(` in the function body.  
+Fail action: Add `stream` parameter to `_record_query`; remove the internal `with sd.InputStream(...)` context manager; read from the caller-supplied stream instead.
+
+**test_DI_033_C** — `_voice_loop` opens one `sd.InputStream` and passes it to both functions  
+Check: `voice_bridge.py` `_voice_loop` body contains `with sd.InputStream(` context manager; calls `_listen_for_wake(oww, stream)` and `_record_query(stream)` using the shared stream.  
+Fail action: Add `with sd.InputStream(device=INPUT_DEVICE, ...) as stream:` inside `_voice_loop` main while loop; update call sites to `_listen_for_wake(oww, stream)` and `_record_query(stream)`.
 
 ## CAPA Trigger
 

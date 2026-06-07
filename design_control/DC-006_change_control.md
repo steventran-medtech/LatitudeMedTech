@@ -21,9 +21,11 @@ Every CO gets a unique ID at kickoff. Assign the next available CO-NNN here befo
 | CO-007 | 2026-06-07 | C3 | 1 | chore/co-007-intro-exit-variations | — | MERGED |
 | CO-008 | 2026-06-07 | C3 | 3 | feat/co-008-un-019-startup-under-10s | DI-019-K (new) | MERGED (1a7525b, PR #91) |
 | CO-009 | 2026-06-07 | C2 | 1 | feat/co-009-un-034-progress-bar-no-backward | — | MERGED |
+| CO-010 | — | — | — | (reserved — local in-progress branches) | — | PENDING |
+| CO-011 | 2026-06-07 | C2 | 3 | feat/co-011-un-034-process-integrity | DI-034-A, DI-034-B, DI-034-C, DI-034-D, DI-034-E, DI-034-F | OPEN |
 
 **Status values:** OPEN · MERGED · ABANDONED  
-**Next available ID:** CO-010
+**Next available ID:** CO-012
 
 ---
 

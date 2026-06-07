@@ -290,6 +290,87 @@ def test_DI_002_G():
     return True
 
 
+def test_DI_002_H():
+    """DI-002-H: AGENT_TAB maps all agents to valid NAV_ITEMS tab IDs — no 'review' or 'documents' values"""
+    import re as _re
+    di = "DI-002-H"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = UI_FRONT / "App.jsx"
+    if not f.exists():
+        _log(FAIL, di, "App.jsx not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT — extract AGENT_TAB block
+    m = _re.search(r'const AGENT_TAB\s*=\s*\{([^}]+)\}', content, _re.DOTALL)
+    if not m:
+        _log(FAIL, di, "AGENT_TAB constant not found in App.jsx",
+             "Fix: Ensure 'const AGENT_TAB = { ... }' is defined in App.jsx")
+        return
+    body = m.group(1)
+
+    # ASSERT — no retired tab IDs as values
+    failures = []
+    if '"review"' in body:
+        failures.append('AGENT_TAB contains "review" — a retired/non-existent tab ID')
+    if '"documents"' in body:
+        failures.append('AGENT_TAB contains "documents" — a retired/non-existent tab ID')
+
+    # ASSERT — specific correct mappings
+    if not _re.search(r'coaching_brief\s*:\s*"coaching"', body):
+        failures.append('coaching_brief does not map to "coaching"')
+    if not _re.search(r'consulting_agent\s*:\s*"queue"', body):
+        failures.append('consulting_agent does not map to "queue"')
+    if not _re.search(r'ma_intelligence_agent\s*:\s*"queue"', body):
+        failures.append('ma_intelligence_agent does not map to "queue"')
+    if not _re.search(r'sow_agent\s*:\s*"queue"', body):
+        failures.append('sow_agent does not map to "queue"')
+    if not _re.search(r'regulatory_strategy_agent\s*:\s*"queue"', body):
+        failures.append('regulatory_strategy_agent does not map to "queue"')
+
+    if not failures:
+        _log(PASS, di, "AGENT_TAB maps all agents to valid tab IDs")
+    else:
+        _log(FAIL, di, "FAIL DI-002-H: " + "; ".join(failures),
+             "Fix: In AGENT_TAB, set coaching_brief->\"coaching\", "
+             "consulting_agent/ma_intelligence_agent/sow_agent/regulatory_strategy_agent->\"queue\"")
+    return True
+
+
+def test_DI_002_I():
+    """DI-002-I: WorkQueuePanel uses 'queue' (not 'review') as awaiting_review routing target"""
+    import re as _re
+    di = "DI-002-I"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = UI_FRONT / "App.jsx"
+    if not f.exists():
+        _log(FAIL, di, "App.jsx not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT
+    broken = _re.search(r'status\s*===\s*"awaiting_review"\s*\?\s*"review"', content)
+    fixed  = _re.search(r'status\s*===\s*"awaiting_review"\s*\?\s*"queue"', content)
+
+    # ASSERT
+    if broken:
+        _log(FAIL, di,
+             'FAIL DI-002-I: WorkQueuePanel routes awaiting_review to "review" — a non-existent tab ID',
+             'Fix: Change the ternary in WorkQueuePanel from ? "review" : to ? "queue" :')
+        return
+    if not fixed:
+        _log(FAIL, di,
+             'FAIL DI-002-I: WorkQueuePanel awaiting_review routing not found',
+             'Fix: Ensure `t.status === "awaiting_review" ? "queue"` exists in WorkQueuePanel')
+        return
+    _log(PASS, di, 'WorkQueuePanel routes awaiting_review to "queue"')
+    return True
+
+
 # ── UN-003 / Knowledge Base ────────────────────────────────────────────────────
 
 def test_DI_003_A():
@@ -611,6 +692,44 @@ def test_DI_007_E():
     else:
         _log(FAIL, di, "renderInline/MarkdownView not found in App.jsx",
              "Content rendering component missing — YAML frontmatter will appear raw")
+
+
+def test_DI_007_F():
+    """DI-007-F: Content tab labeled 'MedTech Meridian Drafts' in NAV_ITEMS and ContentView h2"""
+    di = "DI-007-F"
+    if _skip_if_filtered(di): return
+
+    # ARRANGE
+    f = UI_FRONT / "App.jsx"
+    if not f.exists():
+        _log(FAIL, di, "App.jsx not found", str(f))
+        return
+    content = _read(f)
+
+    # ACT
+    has_nav_label   = 'label:"MedTech Meridian Drafts"'  in content
+    has_h2_label    = '>MedTech Meridian Drafts<'        in content
+    has_old_nav     = 'label:"Content Drafts"'           in content
+    has_old_h2      = '>Content Drafts<'                 in content
+
+    # ASSERT
+    failures = []
+    if not has_nav_label:
+        failures.append('label:"MedTech Meridian Drafts" missing from NAV_ITEMS in App.jsx')
+    if not has_h2_label:
+        failures.append('>MedTech Meridian Drafts< missing from ContentView h2 in App.jsx')
+    if has_old_nav:
+        failures.append('label:"Content Drafts" still present in App.jsx — must be removed')
+    if has_old_h2:
+        failures.append('>Content Drafts< still present in App.jsx ContentView h2 — must be removed')
+
+    if not failures:
+        _log(PASS, di, 'Content tab labeled "MedTech Meridian Drafts" in NAV_ITEMS and ContentView h2')
+    else:
+        _log(FAIL, di, "FAIL DI-007-F: " + "; ".join(failures),
+             'Fix: In App.jsx, change label:"Content Drafts" to label:"MedTech Meridian Drafts" '
+             'in NAV_ITEMS and the h2 in ContentView')
+    return True
 
 
 # ── UN-009 / Slide Decks ───────────────────────────────────────────────────────
@@ -2545,6 +2664,110 @@ def test_DI_033_C():
              f"_voice_loop stream-sharing not implemented: {'; '.join(missing)}",
              "Fix: open sd.InputStream in _voice_loop and pass stream to _listen_for_wake and _record_query")
 
+# ── UN-034 / Engineering Process Integrity (CO-011) ──────────────────────────
+
+def test_DI_034_A():
+    """DI-034-A: CLAUDE.md shall contain the co-commit rule (code commits must update DC docs)"""
+    di = "DI-034-A"
+    if _skip_if_filtered(di): return
+    f = ROOT / "CLAUDE.md"
+    if not f.exists():
+        _log(FAIL, di, "CLAUDE.md not found", str(f))
+        return
+    if "must also update at least one design control document" not in _read(f):
+        _log(FAIL, di,
+             "CLAUDE.md missing co-commit rule phrase 'must also update at least one design control document'",
+             "Add co-commit rule to the Engineering Integrity Standards section of CLAUDE.md")
+        return
+    _log(PASS, di, "CLAUDE.md contains the co-commit rule")
+    return True
+
+
+def test_DI_034_B():
+    """DI-034-B: CLAUDE.md shall contain Auth Centralization Standard section"""
+    di = "DI-034-B"
+    if _skip_if_filtered(di): return
+    f = ROOT / "CLAUDE.md"
+    if not f.exists():
+        _log(FAIL, di, "CLAUDE.md not found", str(f))
+        return
+    if "Auth Centralization Standard" not in _read(f):
+        _log(FAIL, di,
+             "CLAUDE.md missing 'Auth Centralization Standard' section",
+             "Add Auth Centralization Standard to Engineering Integrity Standards in CLAUDE.md")
+        return
+    _log(PASS, di, "CLAUDE.md contains Auth Centralization Standard")
+    return True
+
+
+def test_DI_034_C():
+    """DI-034-C: CLAUDE.md shall contain voice_bridge.py Boundary section"""
+    di = "DI-034-C"
+    if _skip_if_filtered(di): return
+    f = ROOT / "CLAUDE.md"
+    if not f.exists():
+        _log(FAIL, di, "CLAUDE.md not found", str(f))
+        return
+    if "voice_bridge.py Boundary" not in _read(f):
+        _log(FAIL, di,
+             "CLAUDE.md missing 'voice_bridge.py Boundary' section",
+             "Add voice_bridge.py Boundary to Engineering Integrity Standards in CLAUDE.md")
+        return
+    _log(PASS, di, "CLAUDE.md contains voice_bridge.py Boundary")
+    return True
+
+
+def test_DI_034_D():
+    """DI-034-D: CLAUDE.md shall document the forward-only progress bar constraint"""
+    di = "DI-034-D"
+    if _skip_if_filtered(di): return
+    f = ROOT / "CLAUDE.md"
+    if not f.exists():
+        _log(FAIL, di, "CLAUDE.md not found", str(f))
+        return
+    if "Progress Bar Specification" not in _read(f):
+        _log(FAIL, di,
+             "CLAUDE.md missing 'Progress Bar Specification' section",
+             "Add Progress Bar Specification to Engineering Integrity Standards in CLAUDE.md")
+        return
+    _log(PASS, di, "CLAUDE.md contains Progress Bar Specification")
+    return True
+
+
+def test_DI_034_E():
+    """DI-034-E: CLAUDE.md shall contain App.jsx Responsibility Scope section"""
+    di = "DI-034-E"
+    if _skip_if_filtered(di): return
+    f = ROOT / "CLAUDE.md"
+    if not f.exists():
+        _log(FAIL, di, "CLAUDE.md not found", str(f))
+        return
+    if "App.jsx Responsibility Scope" not in _read(f):
+        _log(FAIL, di,
+             "CLAUDE.md missing 'App.jsx Responsibility Scope' section",
+             "Add App.jsx Responsibility Scope to Engineering Integrity Standards in CLAUDE.md")
+        return
+    _log(PASS, di, "CLAUDE.md contains App.jsx Responsibility Scope")
+    return True
+
+
+def test_DI_034_F():
+    """DI-034-F: CLAUDE.md shall contain CLAUDE.md Update Policy section"""
+    di = "DI-034-F"
+    if _skip_if_filtered(di): return
+    f = ROOT / "CLAUDE.md"
+    if not f.exists():
+        _log(FAIL, di, "CLAUDE.md not found", str(f))
+        return
+    if "CLAUDE.md Update Policy" not in _read(f):
+        _log(FAIL, di,
+             "CLAUDE.md missing 'CLAUDE.md Update Policy' section",
+             "Add CLAUDE.md Update Policy to Engineering Integrity Standards in CLAUDE.md")
+        return
+    _log(PASS, di, "CLAUDE.md contains CLAUDE.md Update Policy")
+    return True
+
+
 # ── Live API Tests ─────────────────────────────────────────────────────────────
 
 def test_live_api():
@@ -2668,6 +2891,7 @@ def main():
     test_DI_001_C(); test_DI_001_D()
     test_DI_002_A(); test_DI_002_B(); test_DI_002_C(); test_DI_002_D()
     test_DI_002_E(); test_DI_002_F(); test_DI_002_G()
+    test_DI_002_H(); test_DI_002_I()
 
     _section("UN-003 Knowledge Base")
     test_DI_003_A(); test_DI_003_B(); test_DI_003_C(); test_DI_003_D()
@@ -2679,6 +2903,7 @@ def main():
 
     _section("UN-007/008/009 Content, Marketing & Decks")
     test_DI_007_B(); test_DI_007_C(); test_DI_007_D(); test_DI_007_E()
+    test_DI_007_F()
     test_DI_009_B(); test_DI_009_C()
 
     _section("UN-010/011/012 Regulatory Intelligence")
@@ -2736,7 +2961,12 @@ def main():
     _section("UN-032 Consulting Learning Visibility")
     test_DI_consulting_032_A(); test_DI_consulting_032_B()
 
-    # UN-033 (DI-033-A/B/C) deregistered — CO-008 re-enables with implementation
+    _section("UN-033 Voice Query Readiness Latency (CO-010)")
+    test_DI_033_A(); test_DI_033_B(); test_DI_033_C()
+
+    _section("UN-034 Engineering Process Integrity")
+    test_DI_034_A(); test_DI_034_B(); test_DI_034_C()
+    test_DI_034_D(); test_DI_034_E(); test_DI_034_F()
 
     if args.live or args.full:
         test_live_api()

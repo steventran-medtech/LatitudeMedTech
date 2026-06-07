@@ -25,6 +25,9 @@ record of what changed between each version. Keep them in lock-step — see
 
 ## [Unreleased]
 
+### Added
+- **UN-033 / CO-010** Voice query readiness latency: `_voice_loop` now opens one `sd.InputStream` per query cycle and passes it to both `_listen_for_wake` and `_record_query` — eliminating the 200-500 ms Windows MME close/reopen gap between wake detection and recording start (DI-033-A, DI-033-B, DI-033-C)
+
 ### Changed
 - **UN-019 / CO-008** Async startup — removed `$modelTimeout` blocking poll from `start_athena.ps1`; Chrome now opens as soon as backend + frontend are HTTP-ready; voice models continue preloading in background thread; warm-start time drops from up to 180 s to under 10 s (DI-019-K)
 

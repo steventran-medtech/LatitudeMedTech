@@ -1,5 +1,5 @@
 # DC-002 — Design Inputs
-**Document:** DC-002 · Version 2.6 · 2026-06-07  
+**Document:** DC-002 · Version 2.7 · 2026-06-07  
 **Approved by:** Steven Tran
 
 Design inputs are specific, verifiable requirements derived from the user
@@ -36,6 +36,8 @@ Each entry:
 | DI-002-C | UN-002 | Review queue shall support reject action that halts delivery | `POST /api/review/{id}/reject` sets status to "rejected" | P0 | VERIFIED |
 | DI-002-D | UN-002 | Review queue shall support edit-and-rewrite via natural language instruction | `POST /api/review/{id}/edit` rewrites content at consulting quality | P1 | VERIFIED |
 | DI-002-E | UN-002 | Only approved items shall appear in the Documents hub — items with any other review status (pending, rejected, or not yet submitted) shall be excluded | `GET /api/documents` cross-references `review_queue` approved set via `get_approved_reviews()` | P0 | VERIFIED |
+| DI-002-H | UN-002 | `AGENT_TAB` in `App.jsx` shall map every agent ID to a tab ID that exists in `NAV_ITEMS` — specifically `coaching_brief` shall map to `"coaching"`, and `consulting_agent`, `ma_intelligence_agent`, `sow_agent`, `regulatory_strategy_agent` shall each map to `"queue"`; no value in `AGENT_TAB` shall be `"review"` or `"documents"` | `App.jsx` AGENT_TAB block contains no `"review"` or `"documents"` values; regex confirms `coaching_brief`→`"coaching"` and the four agents→`"queue"` | P1 | OPEN |
+| DI-002-I | UN-002 | The `WorkQueuePanel` routing expression in `App.jsx` shall use `"queue"` as the navigation target for tasks with `status === "awaiting_review"` — not `"review"` or any other retired tab ID | `App.jsx` contains `status === "awaiting_review" ? "queue"` and does not contain `status === "awaiting_review" ? "review"` | P1 | OPEN |
 
 ### UN-003 — Knowledge Base
 
@@ -93,6 +95,7 @@ Each entry:
 | DI-007-C | UN-007 | Banned phrases shall be enforced at prompt level | Banned phrase list present in content agent system prompt | P0 | VERIFIED |
 | DI-007-D | UN-007 | Non-Latin characters shall be removed from titles before storage | `clean_title()` strips non-ASCII characters | P0 | VERIFIED |
 | DI-007-E | UN-007 | YAML frontmatter shall be stripped before content is rendered in the UI | `renderInline` / MarkdownView strips YAML frontmatter | P0 | VERIFIED |
+| DI-007-F | UN-007 | The navigation tab for MedTech Meridian content shall use `label:"MedTech Meridian Drafts"` in `NAV_ITEMS` and the `ContentView` page heading shall display "MedTech Meridian Drafts" — the label "Content Drafts" shall not appear in either location | `App.jsx` contains `label:"MedTech Meridian Drafts"` in NAV_ITEMS context and `>MedTech Meridian Drafts<` JSX in ContentView; `label:"Content Drafts"` and `>Content Drafts<` are absent | P1 | OPEN |
 
 ### UN-008 — Marketing Pipeline
 
@@ -314,6 +317,16 @@ Each entry:
 | DI-032-B | UN-032 | The consulting learning report shall be written to a file matching the `consulting_learning_` path pattern under the logs directory and shall include a fallback "No new items ingested this run." message when zero items were ingested in the run | `consulting_agent.py` source contains both `consulting_learning_` path pattern and `"No new items ingested this run."` string | P1 | OPEN |
 
 ---
+
+---
+
+### UN-033 — Voice Query Readiness Latency
+
+| ID | Source | Requirement Statement | Verification | Priority | Status |
+|---|---|---|---|---|---|
+| DI-033-A | UN-033 | `_listen_for_wake` shall accept a `stream` parameter and shall not open an `sd.InputStream` internally | `voice_bridge.py` `def _listen_for_wake` signature contains `stream` parameter; no `sd.InputStream(` in body | P1 | OPEN |
+| DI-033-B | UN-033 | `_record_query` shall accept a `stream` parameter and shall not open an `sd.InputStream` internally | `voice_bridge.py` `def _record_query` signature contains `stream` parameter; no `sd.InputStream(` in body | P1 | OPEN |
+| DI-033-C | UN-033 | `_voice_loop` shall open exactly one `sd.InputStream` per listen/record cycle and pass it to both `_listen_for_wake` and `_record_query` | `voice_bridge.py` `_voice_loop` body contains `with sd.InputStream(`; calls `_listen_for_wake(oww, stream)` and `_record_query(stream)` | P1 | OPEN |
 
 ## Design Input Change Protocol
 

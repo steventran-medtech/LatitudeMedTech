@@ -1,5 +1,5 @@
 # DC-003 — Design Outputs
-**Document:** DC-003 · Version 1.7 · 2026-06-07  
+**Document:** DC-003 · Version 1.8 · 2026-06-07  
 **Approved by:** Steven Tran
 
 Design outputs are the code artifacts, APIs, data structures, and
@@ -46,6 +46,9 @@ Athena/
 | Edit-and-rewrite endpoint | `ui/backend/server.py` | `POST /api/review/{item_id}/edit` | DI-002-D |
 | Review UI | `ui/frontend/src/ReviewView.jsx` | Full component | DI-002-A through DI-002-D |
 | Submit for review helper | `agents/briefing_agent.py`, `agents/marketing_agent.py` | `submit_for_review()` calls | DI-002-A, DI-012-B |
+| AGENT_TAB mapping (CO-011) | `ui/frontend/src/App.jsx` | `AGENT_TAB` const — all 10 entries map to valid NAV_ITEMS IDs | DI-002-H |
+| WorkQueuePanel routing (CO-011) | `ui/frontend/src/App.jsx` | `target` expression — `"awaiting_review" ? "queue"` | DI-002-I |
+| Content tab label (CO-011) | `ui/frontend/src/App.jsx` | `NAV_ITEMS` `id:"content"` entry + `ContentView` h2 | DI-007-F |
 
 ---
 
@@ -74,6 +77,7 @@ Athena/
 | Kokoro TTS server | `voice/kokoro_server.py`, port 8002 | Sentence-split streaming pipeline | DI-004-C |
 | Intent classification + dispatch | `voice/voice_bridge.py` | Claude Haiku `tool_use` in `_classify_and_dispatch()` | DI-004-D |
 | Voice API | `ui/backend/server.py` | `WebSocket /ws/voice`, `POST /api/voice/query` | DI-004-A through DI-004-D |
+| Shared mic stream per listen/record cycle | `voice/voice_bridge.py` | `_voice_loop` — opens one `sd.InputStream` per query cycle; passes `stream` to `_listen_for_wake(oww_model, stream)` and `_record_query(stream)` | DI-033-A, DI-033-B, DI-033-C |
 
 ---
 

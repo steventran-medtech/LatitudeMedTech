@@ -1,5 +1,5 @@
 # DC-001 — Intended Use & User Needs
-**Document:** DC-001 · Version 1.4 · 2026-06-07  
+**Document:** DC-001 · Version 1.5 · 2026-06-07  
 **Approved by:** Steven Tran
 
 ---
@@ -89,6 +89,7 @@ These are the enumerated, controlled user needs for Athena v0.5 (Alpha).
 | UN-005 | Be verbally notified when a long-running agent task completes, without checking the UI | P1 |
 | UN-006 | Keep my voice session alive as I navigate between UI tabs, without losing context or resetting | P1 |
 | UN-022 | Interact with a voice agent that responds with the quality and conversational fluency expected of a chief of staff or expert management consultant — audible response shall commence within 2 seconds of completing a spoken query | P1 |
+| UN-033 | I need Athena to begin capturing my voice query immediately after detecting the wake word — there shall be no perceptible gap between wake word detection and when the system starts recording | P1 |
 
 ### Content & Marketing
 

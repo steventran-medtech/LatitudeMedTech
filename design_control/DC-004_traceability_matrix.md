@@ -1,5 +1,5 @@
 # DC-004 — Requirements Traceability Matrix (RTM)
-**Document:** DC-004 · Version 2.6 · 2026-06-07  
+**Document:** DC-004 · Version 2.8 · 2026-06-07  
 **Approved by:** Steven Tran
 
 This is the single source of truth for end-to-end coverage. Every user need
@@ -31,6 +31,8 @@ column are open findings requiring immediate remediation.
 | UN-002 | | DI-002-C | Reject action | `server.py` POST /api/review/{id}/reject | `test_DI_002_C` | VERIFIED |
 | UN-002 | | DI-002-D | Edit-and-rewrite action | `server.py` POST /api/review/{id}/edit | `test_DI_002_D` | VERIFIED |
 | UN-002 | | DI-002-E | Only approved items in Docs hub | `server.py` `list_documents()` + `get_approved_reviews()` | `test_DI_027_A` | VERIFIED |
+| UN-002 | | DI-002-H | AGENT_TAB maps all agents to valid NAV_ITEMS tab IDs | `App.jsx` AGENT_TAB — no "review"/"documents" values; coaching_brief→"coaching"; 4 agents→"queue" | `test_DI_002_H` | OPEN |
+| UN-002 | | DI-002-I | WorkQueuePanel routes awaiting_review to "queue" not "review" | `App.jsx` WorkQueuePanel routing expression | `test_DI_002_I` | OPEN |
 | UN-003 | Knowledge base | DI-003-A | KBQuery searchable by agents | `kb_query.py` KBQuery | `test_DI_003_A` | VERIFIED |
 | UN-003 | | DI-003-B | RAG indexes FDA/EU/IMDRF | `knowledge_base/` subdirs | `test_DI_003_B` | VERIFIED |
 | UN-003 | | DI-003-C | RAG report with "Newly Ingested Documents" section submitted to review queue | `agents/rag_agent.py` `main()` + `submit_for_review()` | `test_DI_003_C` | OPEN |
@@ -50,6 +52,7 @@ column are open findings requiring immediate remediation.
 | UN-007 | | DI-007-C | Banned phrases enforced | `content_agent.py` system prompt | `test_DI_007_C` | VERIFIED |
 | UN-007 | | DI-007-D | Non-Latin chars stripped | `content_agent.py` clean_title | `test_DI_007_D` | VERIFIED |
 | UN-007 | | DI-007-E | YAML frontmatter stripped in UI | `App.jsx` renderInline | `test_DI_007_E` | VERIFIED |
+| UN-007 | | DI-007-F | Content tab labeled "MedTech Meridian Drafts" in NAV_ITEMS and ContentView h2 | `App.jsx` NAV_ITEMS label + ContentView h2 | `test_DI_007_F` | OPEN |
 | UN-008 | Marketing pipeline | DI-008-A | Pipeline DB ≥ 20 targets | `marketing_agent.py` pipeline.db | `test_DI_008_A` | PARTIAL |
 | UN-008 | | DI-008-B | Zero-cash channels only | `marketing_agent.py` seed data | `test_DI_008_B` | PARTIAL |
 | UN-009 | Slide deck generation | DI-009-A | Deck with required sections | `deck_agent.py` slide sequence | `test_DI_009_A` | PARTIAL |
@@ -122,18 +125,21 @@ column are open findings requiring immediate remediation.
 | UN-030 | | DI-030-C | Latitude MedTech LLC brand identity injected via agent_base.py | `agents/agent_base.py` system prompt construction | `test_DI_030_C` | OPEN |
 | UN-032 | Consulting learning visibility | DI-032-A | consulting_agent.py learn() generates "## Newly Ingested Items" report and calls submit_for_review() | `agents/consulting_agent.py` `learn()` + `submit_for_review(` | `test_DI_032_A` | OPEN |
 | UN-032 | | DI-032-B | Report written to `consulting_learning_<ts>.md`; "No new items ingested this run." fallback present | `agents/consulting_agent.py` path pattern + fallback string | `test_DI_032_B` | OPEN |
+| UN-033 | Voice query readiness latency | DI-033-A | `_listen_for_wake` accepts `stream` param; no internal `sd.InputStream` | `voice/voice_bridge.py` `_listen_for_wake(oww_model, stream)` | `test_DI_033_A` | OPEN |
+| UN-033 | | DI-033-B | `_record_query` accepts `stream` param; no internal `sd.InputStream` | `voice/voice_bridge.py` `_record_query(stream)` | `test_DI_033_B` | OPEN |
+| UN-033 | | DI-033-C | `_voice_loop` opens one stream; passes to both functions | `voice/voice_bridge.py` `_voice_loop` shared `sd.InputStream` | `test_DI_033_C` | OPEN |
 
 ---
 
-## Coverage Summary (v2.7)
+## Coverage Summary (v2.7 — CO-011)
 
 | Metric | Count |
 |---|---|
-| Total user needs | 32 |
-| Total design inputs | 99 |
+| Total user needs | 33 |
+| Total design inputs | 104 |
 | Design inputs with VERIFIED tests | 80 |
 | Design inputs with PARTIAL coverage | 7 |
-| Design inputs with OPEN gap | 12 |
+| Design inputs with OPEN gap | 15 |
 | Design inputs with WAIVED status | 0 |
 
 **PARTIAL items** require manual verification currently; automated tests are
