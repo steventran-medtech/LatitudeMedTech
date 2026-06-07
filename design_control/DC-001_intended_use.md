@@ -1,5 +1,5 @@
 # DC-001 — Intended Use & User Needs
-**Document:** DC-001 · Version 1.3 · 2026-06-06  
+**Document:** DC-001 · Version 1.4 · 2026-06-07  
 **Approved by:** Steven Tran
 
 ---
@@ -114,6 +114,7 @@ These are the enumerated, controlled user needs for Athena v0.5 (Alpha).
 |---|---|---|
 | UN-013 | See real-time system health, agent status, token spend, and knowledge base growth in a dashboard | P1 |
 | UN-014 | Track each agent's accumulated learning, skills profile, and last-learning timestamp | P1 |
+| UN-032 | After each Consulting Agent learning run, receive a human-readable summary of every item ingested — source, title, category, and chunk count — submitted to the review queue so I can approve, reject, or edit the summary before it influences agent outputs | P1 |
 
 ### Security & Compliance
 
@@ -129,6 +130,7 @@ These are the enumerated, controlled user needs for Athena v0.5 (Alpha).
 |---|---|---|
 | UN-019 | See startup progress displayed cleanly — a full-width progress bar at the window bottom, without a distracting numeric percentage counter | P2 |
 | UN-021 | It shall not be possible to operate two simultaneous instances of Athena in the same Windows session — a second launch attempt shall either bring the existing instance to the foreground or stop it completely before starting a fresh one; at no point shall two conflicting backend + frontend stacks be running at the same time | P0 |
+| UN-031 | I need there to never be more than one open browser tab showing Athena, so I never accidentally end up with two copies of the UI running at the same time. | P0 |
 
 ---
 
