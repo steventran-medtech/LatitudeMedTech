@@ -90,7 +90,7 @@ except Exception:
 TARGET_RATE       = 16000
 CHUNK_SAMPLES_16K = 1280
 SILENCE_THRESHOLD       = float(_voice_cfg.get("silence_threshold", 0.01))
-SILENCE_DURATION        = float(_voice_cfg.get("silence_duration",  0.8))
+SILENCE_DURATION        = float(_voice_cfg.get("silence_duration",  0.65))
 # Fixed threshold during query recording — not affected by the wake-word
 # auto-tuner, which can drift SILENCE_THRESHOLD up in noisy rooms.
 QUERY_SILENCE_THRESHOLD = 0.012
@@ -1420,9 +1420,9 @@ def _post_response_cooldown(oww_model):
       2. Open the mic and discard ~0.75 s of buffered audio.
       3. Reset the OWW model's accumulated prediction scores.
     """
-    time.sleep(1.0)
+    time.sleep(0.5)
     try:
-        flush_chunks = int(1.5 * DEVICE_RATE / CHUNK_NATIVE)
+        flush_chunks = int(0.75 * DEVICE_RATE / CHUNK_NATIVE)
         with sd.InputStream(device=INPUT_DEVICE, samplerate=DEVICE_RATE,
                             channels=DEVICE_CH, dtype="int16",
                             blocksize=CHUNK_NATIVE) as stream:
@@ -1581,18 +1581,16 @@ def _voice_loop():
                 continue   # → top of loop → LISTENING emit → wake-word
             # ── End review handling ────────────────────────────────────────────
 
-            # ── Parallel: correction + intent classification ───────────────────
-            # Both are ~200 ms Haiku calls. Running them concurrently cuts
-            # pre-streaming latency from ~400 ms (sequential) to ~200 ms.
-            # Classification runs on raw text — minor transcription errors don't
-            # affect intent recognition in practice.
+            # ── Parallel: correction (low-conf only) + intent classification ────
+            # Skip correction on confident transcripts to save ~200 ms per query.
+            # Classification runs on raw text — minor errors don't affect routing.
             _state = VS.THINKING
             _emit("thinking", query=text)
             with concurrent.futures.ThreadPoolExecutor(max_workers=2) as _pool:
-                _fut_correct = _pool.submit(_correct_transcript, text)
+                _fut_correct = _pool.submit(_correct_transcript, text) if not confident else None
                 _fut_intent  = _pool.submit(_classify_intent, text, history)
                 try:
-                    corrected = _fut_correct.result()
+                    corrected = _fut_correct.result() if _fut_correct else text
                 except Exception:
                     corrected = text
                 try:

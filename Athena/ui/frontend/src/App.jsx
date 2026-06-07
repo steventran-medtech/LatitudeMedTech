@@ -2140,6 +2140,7 @@ export default function App(){
   const [reviewRefreshToken,setReviewRefreshToken]=useState(0);
   const [docRefreshToken,setDocRefreshToken]=useState(0);
   const [wsReady,setWsReady]=useState(false);
+  const [startupDone,setStartupDone]=useState(false);
   const [runningAgents,setRunningAgents]=useState(new Set());
   const [toasts,setToasts]=useState([]);
   const [version,setVersion]=useState(null);
@@ -2165,7 +2166,7 @@ export default function App(){
     const connect=()=>{
       if(closed) return;
       const ws=new WebSocket(wsUrl(WS_PATH));
-      ws.onopen=()=>setWsReady(true);
+      ws.onopen=()=>{setWsReady(true);setStartupDone(true);};
       ws.onclose=()=>{setWsReady(false);if(!closed)reconnectTimer=setTimeout(connect,3000);};
       ws.onmessage=(e)=>{
         try{
@@ -2228,13 +2229,8 @@ export default function App(){
               setReviewRefreshToken(t=>t+1);
               setPendingReview(n=>n+(msg.review_added||0));
             }
-            // Spoken notification if Athena is live and there are deliverables
-            if(voiceRunningRef.current&&ok&&hasDeliverables){
-              fetch(`${API}/api/voice/notify`,{
-                method:"POST",headers:{"Content-Type":"application/json",...authHdr()},
-                body:JSON.stringify({text:`Your ${label} deliverables are ready for your review.`}),
-              }).catch(()=>{});
-            }
+            // Voice notification is sent server-side in run_agent() via _voice_queue.
+            // Do NOT duplicate it here — a double call causes TTS cutoff races.
           }
           if(msg.type==="doc_shipped"){
             // Approved document shipped — refresh Documents hub to show it
@@ -2372,6 +2368,22 @@ export default function App(){
 
   return(
     <div style={S.app}>
+      {!startupDone&&(
+        <div style={{position:"fixed",inset:0,zIndex:9999,background:C.cloud,
+          display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:20}}>
+          <div style={{fontFamily:F.serif,fontSize:26,color:C.ink,fontWeight:600,letterSpacing:"-0.02em"}}>
+            Latitude MedTech
+          </div>
+          <div style={{fontFamily:F.sans,fontSize:13,color:C.muted,letterSpacing:"0.01em"}}>
+            Starting Athena…
+          </div>
+          <div style={{width:260,height:3,background:"rgba(0,0,0,0.08)",borderRadius:99,overflow:"hidden"}}>
+            <div style={{height:"100%",borderRadius:99,background:C.ocean,
+              animation:"athenaLoadBar 1.6s ease-in-out infinite"}}/>
+          </div>
+          <style>{`@keyframes athenaLoadBar{0%{width:0%;margin-left:0}60%{width:60%;margin-left:10%}100%{width:0%;margin-left:100%}}`}</style>
+        </div>
+      )}
       <Toaster toasts={toasts}/>
       <Sidebar active={active} setActive={setActive} runningAgents={runningAgents} pendingReview={pendingReview} version={version} onAbout={()=>setAboutOpen(true)} taskQueue={taskQueue} navOrder={navOrder} onReorder={handleReorder} topOffset={active!=="voice"&&widgetDocked?VOICE_BAR_H:0}/>
       <div style={{...S.main, marginTop:active!=="voice"&&widgetDocked?VOICE_BAR_H:0}}>

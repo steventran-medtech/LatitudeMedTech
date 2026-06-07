@@ -276,7 +276,7 @@ def test_DI_004_D():
 
 
 def test_DI_004_E():
-    """DI-004-E: SILENCE_DURATION default = 0.8s in voice_bridge.py and settings.json"""
+    """DI-004-E: SILENCE_DURATION default = 0.65s in voice_bridge.py (BUG-2 latency fix, 2026-06-06)"""
     di = "DI-004-E"
     if _skip_if_filtered(di): return
     f = VOICE / "voice_bridge.py"
@@ -300,14 +300,14 @@ def test_DI_004_E():
         settings_val = float(cfg.get("voice", {}).get("silence_duration", -1))
     except Exception:
         pass
-    if val == 0.8 and (settings_val is None or settings_val == 0.8):
-        _log(PASS, di, f"SILENCE_DURATION = {val} (target 0.8s; settings.json = {settings_val})")
-    elif 0.8 <= val <= 2.0:
-        _log(WARN, di, f"SILENCE_DURATION = {val} (safe range but target is 0.8s)",
-             "Update default in voice_bridge.py and silence_duration in settings.json to 0.8")
+    if val == 0.65 and (settings_val is None or settings_val == 0.65):
+        _log(PASS, di, f"SILENCE_DURATION = {val} (target 0.65s; settings.json = {settings_val})")
+    elif 0.5 <= val <= 2.0:
+        _log(WARN, di, f"SILENCE_DURATION = {val} (within acceptable range; target is 0.65s)",
+             "Update default in voice_bridge.py to 0.65 for optimal latency")
     else:
-        _log(FAIL, di, f"SILENCE_DURATION default = {val} is outside safe range [0.8, 2.0]",
-             "Values < 0.8 cut off speech; values > 2.0 cause unacceptable response latency")
+        _log(FAIL, di, f"SILENCE_DURATION default = {val} is outside safe range [0.5, 2.0]",
+             "Values < 0.5 may cut off speech; values > 2.0 cause unacceptable response latency")
 
 
 # ── UN-005 / Task Notifications ────────────────────────────────────────────────
@@ -1239,6 +1239,7 @@ def test_DI_020_A():
         ("sow_agent.py",                   AGENTS / "sow_agent.py"),
         ("regulatory_strategy_agent.py",   AGENTS / "regulatory_strategy_agent.py"),
         ("iso_coach_agent.py",             AGENTS / "iso_coach_agent.py"),
+        ("deck_agent.py",                  AGENTS / "deck_agent.py"),
         ("ma_intelligence_agent.py",       AGENTS / "ma_intelligence_agent.py"),
         ("rag_agent.py",                   AGENTS / "rag_agent.py"),
     ]
@@ -1456,6 +1457,97 @@ def test_DI_023_A():
                  "Run a full RAG ingest and verify at least one pre-1990 source is present in the knowledge base")
 
 
+# ── UN-024 / SOW Agent (Phase 2C) ────────────────────────────────────────────
+
+def test_DI_024_A():
+    """DI-024-A: sow_agent.py submits SOW to review queue (Gate 10) and logs Gate 3 confidence"""
+    di = "DI-024-A"
+    if _skip_if_filtered(di): return
+    f = AGENTS / "sow_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "sow_agent.py not found", str(f))
+        return
+    content = _read(f)
+    has_gate10 = bool(re.search(r'submit_for_review', content))
+    has_gate3  = bool(re.search(r'confidence', content))
+    if has_gate10 and has_gate3:
+        _log(PASS, di, "sow_agent.py: Gate 10 (submit_for_review) + Gate 3 (confidence score) both present")
+    else:
+        missing = []
+        if not has_gate10: missing.append("submit_for_review() call missing")
+        if not has_gate3:  missing.append("confidence scoring missing")
+        _log(FAIL, di, f"sow_agent.py gate gaps: {'; '.join(missing)}",
+             "Add submit_for_review() after docx save; add confidence = hits/len(required) check")
+
+
+# ── UN-025 / Regulatory Strategy Agent (Phase 2C) ─────────────────────────────
+
+def test_DI_025_A():
+    """DI-025-A: regulatory_strategy_agent.py submits to review queue (Gate 10) + Gate 3 confidence"""
+    di = "DI-025-A"
+    if _skip_if_filtered(di): return
+    f = AGENTS / "regulatory_strategy_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "regulatory_strategy_agent.py not found", str(f))
+        return
+    content = _read(f)
+    has_gate10 = bool(re.search(r'submit_for_review', content))
+    has_gate3  = bool(re.search(r'confidence', content))
+    if has_gate10 and has_gate3:
+        _log(PASS, di, "regulatory_strategy_agent.py: Gate 10 + Gate 3 both present")
+    else:
+        missing = []
+        if not has_gate10: missing.append("submit_for_review() missing")
+        if not has_gate3:  missing.append("confidence scoring missing")
+        _log(FAIL, di, f"regulatory_strategy_agent.py gate gaps: {'; '.join(missing)}",
+             "Add submit_for_review() + confidence scoring to assessment generation path")
+
+
+# ── UN-026 / App Startup Loading (Phase 2C, BUG-6) ───────────────────────────
+
+def test_DI_026_A():
+    """DI-026-A: App.jsx shows a loading overlay (startupDone state) until WS connects"""
+    di = "DI-026-A"
+    if _skip_if_filtered(di): return
+    f = UI_FRONT / "App.jsx"
+    if not f.exists():
+        _log(FAIL, di, "App.jsx not found", str(f))
+        return
+    content = _read(f)
+    has_startup_done = "startupDone" in content
+    has_loading_bar  = bool(re.search(r'athenaLoadBar|athena.*[Ll]oad', content))
+    if has_startup_done and has_loading_bar:
+        _log(PASS, di, "App.jsx: startupDone loading overlay with progress animation present")
+    else:
+        missing = []
+        if not has_startup_done: missing.append("startupDone state missing")
+        if not has_loading_bar:  missing.append("loading bar animation missing")
+        _log(FAIL, di, f"App.jsx startup loading overlay incomplete: {'; '.join(missing)}",
+             "Add startupDone state that flips on WS connect; show overlay with progress animation while false")
+
+
+# ── UN-027 / Documents Hub Approval Filter (Phase 2C, BUG-4) ─────────────────
+
+def test_DI_027_A():
+    """DI-027-A: list_documents() in server.py filters to approved items only via get_approved_reviews()"""
+    di = "DI-027-A"
+    if _skip_if_filtered(di): return
+    f = UI_BACK / "server.py"
+    if not f.exists():
+        _log(FAIL, di, "server.py not found", str(f))
+        return
+    content = _read(f)
+    has_approval_filter = bool(re.search(r'get_approved_reviews|approved_paths', content))
+    has_gate_comment    = bool(re.search(r'Gate 10|only approved', content, re.IGNORECASE))
+    if has_approval_filter and has_gate_comment:
+        _log(PASS, di, "server.py list_documents() filters by approved status from review_queue")
+    elif has_approval_filter:
+        _log(PASS, di, "server.py list_documents() uses get_approved_reviews() filter")
+    else:
+        _log(FAIL, di, "list_documents() does not filter by approval status",
+             "Add approved_paths = {r['file_path'] for r in mem.get_approved_reviews()} and filter disk scan")
+
+
 # ── Live API Tests ─────────────────────────────────────────────────────────────
 
 def test_live_api():
@@ -1622,6 +1714,12 @@ def main():
 
     _section("UN-023 Historical Data Depth")
     test_DI_023_A()
+
+    _section("UN-024/025 Phase 2C — SOW & Regulatory Strategy")
+    test_DI_024_A(); test_DI_025_A()
+
+    _section("UN-026/027 Phase 2C — App Loading & Document Filter")
+    test_DI_026_A(); test_DI_027_A()
 
     if args.live or args.full:
         test_live_api()

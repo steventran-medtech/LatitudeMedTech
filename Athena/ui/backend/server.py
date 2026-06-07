@@ -1581,8 +1581,16 @@ def generate_docx(title: str, content: str, doc_type: str) -> Path:
 
 @app.get("/api/documents")
 def list_documents():
-    # All agent output folders surface here so every deliverable is visible
-    # in the Documents hub — not stranded on disk.
+    # Only surface deliverables that have passed Gate 10 (Steven's approval).
+    # Cross-reference file paths against the review_queue approved set.
+    try:
+        approved_paths = {
+            r["file_path"] for r in mem.get_approved_reviews()
+            if r.get("file_path")
+        }
+    except Exception:
+        approved_paths = set()
+
     sources = [
         ("documents",       ATHENA / "documents",                    "*.docx", False),
         ("sow",             ATHENA / "documents" / "sow",            "*.docx", False),
@@ -1601,6 +1609,8 @@ def list_documents():
         if not base.exists():
             continue
         for f in base.glob(pattern):
+            if str(f) not in approved_paths:
+                continue  # Gate 10 — only approved deliverables surface here
             _st = f.stat()
             item = {
                 "filename": f.name,
@@ -2766,46 +2776,21 @@ def _pick_greeting() -> str:
     return _random.choice(pool)
 
 def _speak_phrase(text: str):
-    """Speak a goodbye phrase via Kokoro TTS with Windows SAPI fallback.
+    """Speak via the voice bridge (Kokoro bf_emma) with Windows SAPI fallback.
 
-    Synchronous — blocks until TTS completes (needed for the shutdown flow).
-    For the startup greeting use _speak_phrase_greeting (non-blocking, longer wait).
-    Retries Kokoro once after 4 s then falls back to Windows SAPI.
+    Delegates to voice_bridge._speak_sentence so goodbye/shutdown phrases use
+    the same Kokoro voice as in-app responses — not the Windows system voice.
     """
-    import io, json, time, urllib.request as _urllib
-
-    def _try_kokoro() -> bool:
+    if VOICE_AVAILABLE:
         try:
-            import soundfile as sf, sounddevice as sd, numpy as np
-            payload = json.dumps(
-                {"text": text, "voice": os.getenv("VOICE_KOKORO_VOICE", "bf_emma")}
-            ).encode()
-            req = _urllib.Request(
-                "http://127.0.0.1:8002/speak", data=payload,
-                headers={"Content-Type": "application/json"}, method="POST")
-            with _urllib.urlopen(req, timeout=20) as resp:
-                wav = resp.read()
-            data, sr = sf.read(io.BytesIO(wav))
-            sd.play(data.astype(np.float32), sr)
-            sd.wait()
-            return True
+            from voice_bridge import _speak_sentence
+            _speak_sentence(text)
+            return
         except Exception as exc:
-            print(f"[voice] _speak_phrase kokoro failed: {exc!r}", flush=True)
-            return False
-
-    if _try_kokoro():
-        time.sleep(0.5)
-        return
-
-    print("[voice] _speak_phrase: retrying Kokoro in 4 s…", flush=True)
-    time.sleep(4)
-    if _try_kokoro():
-        time.sleep(0.5)
-        return
-
-    print("[voice] _speak_phrase: Kokoro unavailable, using Windows SAPI", flush=True)
+            print(f"[voice] _speak_phrase bridge failed: {exc!r}", flush=True)
+    # SAPI fallback when voice bridge unavailable
     try:
-        safe  = text.replace("'", "").replace('"', " ")
+        safe = text.replace("'", "").replace('"', " ")
         script = (
             "Add-Type -AssemblyName System.Speech;"
             "$s=New-Object System.Speech.Synthesis.SpeechSynthesizer;"
@@ -2818,44 +2803,27 @@ def _speak_phrase(text: str):
         )
     except Exception as exc:
         print(f"[voice] _speak_phrase SAPI failed: {exc!r}", flush=True)
-    time.sleep(0.5)
 
 
 def _speak_phrase_greeting(text: str):
-    """Greeting TTS: waits up to 150 s for Kokoro to finish its model load.
+    """Greeting TTS: waits for voice bridge model load then speaks via Kokoro.
 
-    Cold-start Kokoro takes 60–90 s to load; this function polls every 3 s so
-    the greeting plays via the high-quality Kokoro voice once it is ready.
-    Falls back to Windows SAPI if Kokoro never comes up within the window.
+    Blocks on _models_ready (set when Whisper + OWW + Kokoro are all hot) so
+    the greeting plays in the same voice as all other Athena responses.
+    Falls back to Windows SAPI if models never come up within 150 s.
     Runs in a background executor so the greet endpoint returns immediately.
     """
-    import io, json, time, urllib.request as _urllib
-
-    deadline = time.monotonic() + 150
-    while time.monotonic() < deadline:
+    import time
+    if VOICE_AVAILABLE:
         try:
-            import soundfile as sf, sounddevice as sd, numpy as np
-            payload = json.dumps(
-                {"text": text, "voice": os.getenv("VOICE_KOKORO_VOICE", "bf_emma")}
-            ).encode()
-            req = _urllib.Request(
-                "http://127.0.0.1:8002/speak", data=payload,
-                headers={"Content-Type": "application/json"}, method="POST")
-            with _urllib.urlopen(req, timeout=20) as resp:
-                wav = resp.read()
-            data, sr = sf.read(io.BytesIO(wav))
-            sd.play(data.astype(np.float32), sr)
-            sd.wait()
+            from voice_bridge import _models_ready, _speak_sentence
+            _models_ready.wait(timeout=150)
+            _speak_sentence(text)
             print("[voice] greeting: played via Kokoro", flush=True)
             return
         except Exception as exc:
-            remaining = deadline - time.monotonic()
-            print(f"[voice] greeting: Kokoro not ready ({exc!r}), {remaining:.0f}s remaining…", flush=True)
-            if remaining > 3:
-                time.sleep(3)
-
-    # Kokoro never came up — SAPI fallback
-    print("[voice] greeting: Kokoro timed out after 150 s, using Windows SAPI", flush=True)
+            print(f"[voice] _speak_phrase_greeting bridge failed: {exc!r}", flush=True)
+    # SAPI fallback
     try:
         safe = text.replace("'", "").replace('"', " ")
         script = (

@@ -275,6 +275,18 @@ def generate_sow(client_id: int, engagement_id: int = None):
     base.log_api("claude-sonnet-4-6", resp.usage.input_tokens,
                  resp.usage.output_tokens, purpose="sow_generation")
 
+    # Gate 3 — confidence scoring: fraction of required SOW elements present
+    _required = [
+        "scope of work", "deliverable", "timeline", "fee",
+        client['name'].lower(), tier_info['label'].lower(),
+    ]
+    _lower = sow_content.lower()
+    _hits = sum(1 for m in _required if m in _lower)
+    confidence = round(_hits / len(_required), 2)
+    log.info(f"Gate 3 confidence: {confidence:.2f} ({_hits}/{len(_required)} markers)")
+    if confidence < 0.65:
+        log.warning(f"SOW confidence {confidence:.2f} below Gate 3 threshold (0.65) — escalate to review")
+
     title = f"Statement of Work — {client['name']} — {tier_info['label']}"
     doc_path = build_sow_docx(title, sow_content, client['name'])
     log.info(f"SOW saved: {doc_path}")
@@ -300,7 +312,8 @@ def generate_sow(client_id: int, engagement_id: int = None):
         file_path=str(doc_path),
     )
     mem.log_event("sow_agent", "sow_generated", subject=client['name'],
-                  metadata={"client_id": client_id, "tier": tier_key, "review_id": review_id})
+                  metadata={"client_id": client_id, "tier": tier_key,
+                            "review_id": review_id, "confidence": confidence})
     log.info(f"SOW queued for review (id={review_id})")
     print(f"SOW_GENERATED: {doc_path.name}")
 

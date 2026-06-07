@@ -419,6 +419,15 @@ class DeckAgent:
         out_path = DECKS_DIR / filename
         prs.save(str(out_path))
 
+        # Gate 10 — submit for Steven's review before treating as final
+        try:
+            from memory import Memory as _Mem
+            review_id = _Mem().submit_for_review("deck_agent", "deck", title, str(out_path))
+            log.info(f"Submitted for review: id={review_id}")
+        except Exception as _re:
+            log.warning(f"Review queue submit failed: {_re!r}")
+            review_id = None
+
         result = {
             "status":      "ok",
             "path":        str(out_path),
@@ -427,6 +436,7 @@ class DeckAgent:
             "subtitle":    plan.get("deck_subtitle", ""),
             "slide_count": n_slides,
             "deck_type":   deck_type,
+            "review_id":   review_id,
         }
         log.info(f"Deck saved: {out_path} ({n_slides} slides)")
         self._base.log("generate", subject=title,

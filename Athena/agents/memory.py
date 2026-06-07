@@ -203,7 +203,8 @@ class Memory:
             title             TEXT,
             notes             TEXT,
             regulatory_domain TEXT,
-            annotation_path   TEXT
+            annotation_path   TEXT,
+            client_id         INTEGER REFERENCES clients(id)
         );
         """)
         # Migration: add thread_id to review_queue on DBs created before LangGraph
@@ -211,6 +212,10 @@ class Memory:
         cols = [r[1] for r in self.conn.execute("PRAGMA table_info(review_queue)").fetchall()]
         if "thread_id" not in cols:
             self.conn.execute("ALTER TABLE review_queue ADD COLUMN thread_id TEXT")
+        # Migration: add client_id to kb_annotations (G-06 — per-client annotation scope).
+        ann_cols = [r[1] for r in self.conn.execute("PRAGMA table_info(kb_annotations)").fetchall()]
+        if "client_id" not in ann_cols:
+            self.conn.execute("ALTER TABLE kb_annotations ADD COLUMN client_id INTEGER REFERENCES clients(id)")
         self.conn.commit()
 
         # Migration: agent_learning.url_hash was originally declared globally UNIQUE.
@@ -794,15 +799,16 @@ class Memory:
     def save_annotation(self, review_item_id: int, decision: str, agent: str,
                         item_type: str, title: str, notes: str,
                         annotation_path: str = None,
-                        regulatory_domain: str = None) -> int:
+                        regulatory_domain: str = None,
+                        client_id: int = None) -> int:
         """Persist Steven's review decision as a KB annotation for future agent grounding."""
         cur = self.conn.execute(
             """INSERT INTO kb_annotations
                (created_at,review_item_id,decision,agent,item_type,title,
-                notes,regulatory_domain,annotation_path)
-               VALUES (?,?,?,?,?,?,?,?,?)""",
+                notes,regulatory_domain,annotation_path,client_id)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
             (datetime.now().isoformat(), review_item_id, decision, agent,
-             item_type, title, notes, regulatory_domain, annotation_path)
+             item_type, title, notes, regulatory_domain, annotation_path, client_id)
         )
         self.conn.commit()
         return cur.lastrowid
@@ -892,6 +898,12 @@ class Memory:
         rows = self.conn.execute(
             "SELECT * FROM review_queue WHERE status IN ('approved','rejected') "
             "ORDER BY reviewed_at DESC LIMIT ?", (limit,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_approved_reviews(self):
+        rows = self.conn.execute(
+            "SELECT * FROM review_queue WHERE status='approved' ORDER BY reviewed_at DESC"
         ).fetchall()
         return [dict(r) for r in rows]
 

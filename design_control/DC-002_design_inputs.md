@@ -1,5 +1,5 @@
 # DC-002 — Design Inputs
-**Document:** DC-002 · Version 1.7 · 2026-06-06  
+**Document:** DC-002 · Version 1.8 · 2026-06-06  
 **Approved by:** Steven Tran
 
 Design inputs are specific, verifiable requirements derived from the user
@@ -35,7 +35,7 @@ Each entry:
 | DI-002-B | UN-002 | Review queue shall support approve action that marks item final | `POST /api/review/{id}/approve` sets status to "approved" | P0 | VERIFIED |
 | DI-002-C | UN-002 | Review queue shall support reject action that halts delivery | `POST /api/review/{id}/reject` sets status to "rejected" | P0 | VERIFIED |
 | DI-002-D | UN-002 | Review queue shall support edit-and-rewrite via natural language instruction | `POST /api/review/{id}/edit` rewrites content at consulting quality | P1 | VERIFIED |
-| DI-002-E | UN-002 | Rejected items shall not appear in the Documents hub or be delivered to any output surface | Rejected item absent from `GET /api/documents` | P0 | PARTIAL |
+| DI-002-E | UN-002 | Only approved items shall appear in the Documents hub — items with any other review status (pending, rejected, or not yet submitted) shall be excluded | `GET /api/documents` cross-references `review_queue` approved set via `get_approved_reviews()` | P0 | VERIFIED |
 
 ### UN-003 — Knowledge Base
 
@@ -56,7 +56,7 @@ Each entry:
 | DI-004-B | UN-004 | System shall transcribe voice queries via Whisper and log confidence score | Whisper model loads at startup; `[low conf]` tag written to log on low-confidence result | P0 | VERIFIED |
 | DI-004-C | UN-004 | First TTS audio byte shall be produced within 2 seconds of query completion | Streaming sentence-split pipeline; first sentence dispatched to Kokoro before full response | P0 | PARTIAL |
 | DI-004-D | UN-004 | Voice bridge shall classify query intent and route to the correct agent via `tool_use` | `voice_bridge.py` contains tool-use dispatch logic | P0 | VERIFIED |
-| DI-004-E | UN-004 | SILENCE_DURATION shall be 0.8 s (optimized for responsiveness while remaining above the 0.8 s floor that prevents mid-sentence cutoff) | `SILENCE_DURATION` default in `voice_bridge.py` equals 0.8 and `silence_duration` in `settings.json` equals 0.8 | P0 | VERIFIED |
+| DI-004-E | UN-004 | SILENCE_DURATION shall be 0.65 s (BUG-2 latency fix 2026-06-06 — reduced from 0.8 s; 0.65 s is the minimum that avoids mid-sentence cutoff on the RTX 4070 + Whisper base.en stack) | `SILENCE_DURATION` default in `voice_bridge.py` equals 0.65 | P0 | VERIFIED |
 
 ### UN-005 — Task Completion Notifications
 
@@ -239,6 +239,34 @@ Each entry:
 | ID | Source | Requirement Statement | Verification | Priority | Status |
 |---|---|---|---|---|---|
 | DI-021-A | UN-021 | The Athena startup script shall detect whether another Athena instance is already running in the same Windows session by testing whether port 8000 is bound (`Get-NetTCPConnection`) or whether the recorded Chrome PID is still alive; if a running instance is found it shall either bring the existing instance to the foreground and exit cleanly without starting any new services, or stop the existing instance completely before starting a new one — at no point shall two complete Athena instances (backend + frontend + Chrome) be running simultaneously | `athena_lib.ps1` defines `Test-AthenaRunning` using `Get-NetTCPConnection -LocalPort 8000`; `start_athena.ps1` calls `Test-AthenaRunning` before starting any services and either exits without launching or runs `stop_athena.ps1` before proceeding | P0 | VERIFIED |
+
+---
+
+## Phase 2C — Client Lifecycle & Regulatory Agents
+
+### UN-024 — Statement of Work Generation
+
+| ID | Source | Requirement Statement | Verification | Priority | Status |
+|---|---|---|---|---|---|
+| DI-024-A | UN-024 | SOW agent shall generate a branded .docx SOW, submit it to the review queue (Gate 10), and compute a Gate 3 confidence score ≥ 0.65 before final submission | `sow_agent.py` calls `submit_for_review()` after docx save; confidence score computed from required SOW element presence | P0 | VERIFIED |
+
+### UN-025 — Regulatory Gap Assessment
+
+| ID | Source | Requirement Statement | Verification | Priority | Status |
+|---|---|---|---|---|---|
+| DI-025-A | UN-025 | Regulatory strategy agent shall generate a gap assessment .docx, submit it to the review queue (Gate 10), and compute a Gate 3 confidence score ≥ 0.65 | `regulatory_strategy_agent.py` calls `submit_for_review()` after docx save; confidence score present in metadata | P0 | VERIFIED |
+
+### UN-026 — Application Startup Loading Experience
+
+| ID | Source | Requirement Statement | Verification | Priority | Status |
+|---|---|---|---|---|---|
+| DI-026-A | UN-026 | The React application shall display a full-screen loading overlay with animated progress bar from page load until the main WebSocket connection is established; the overlay shall dismiss automatically on first WS connect | `App.jsx` contains `startupDone` state; overlay shows while `!startupDone`; `ws.onopen` handler sets `startupDone = true` | P0 | VERIFIED |
+
+### UN-027 — Documents Hub Approval Gate
+
+| ID | Source | Requirement Statement | Verification | Priority | Status |
+|---|---|---|---|---|---|
+| DI-027-A | UN-027 | The Documents hub (`GET /api/documents`) shall only surface files whose `file_path` appears in the `review_queue` table with `status = 'approved'` — pending, rejected, and unsubmitted files shall not appear | `server.py` `list_documents()` calls `mem.get_approved_reviews()` and filters disk scan to the approved path set | P0 | VERIFIED |
 
 ---
 

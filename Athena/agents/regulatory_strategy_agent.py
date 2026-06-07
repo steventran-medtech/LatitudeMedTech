@@ -314,6 +314,18 @@ def run_assessment(device_type: str, classification: str, markets: list,
     base.log_api("claude-sonnet-4-6", resp.usage.input_tokens,
                  resp.usage.output_tokens, purpose="regulatory_gap_assessment")
 
+    # Gate 3 — confidence scoring: fraction of required regulatory elements present
+    _required = [
+        "gap", "requirement", "pathway", "regulation",
+        device_type.lower(), classification.lower(),
+    ] + [m.lower() for m in markets[:2]]
+    _lower = assessment_content.lower()
+    _hits = sum(1 for m in _required if m in _lower)
+    confidence = round(_hits / len(_required), 2)
+    log.info(f"Gate 3 confidence: {confidence:.2f} ({_hits}/{len(_required)} markers)")
+    if confidence < 0.65:
+        log.warning(f"Assessment confidence {confidence:.2f} below Gate 3 threshold (0.65) — escalate")
+
     title = f"Regulatory Gap Assessment — {device_type} — {', '.join(markets)}"
     doc_path = build_regulatory_docx(title, assessment_content, device_type)
     log.info(f"Gap assessment saved: {doc_path}")
@@ -342,6 +354,7 @@ def run_assessment(device_type: str, classification: str, markets: list,
             "markets": markets,
             "client_id": client_id,
             "review_id": review_id,
+            "confidence": confidence,
         }
     )
     log.info(f"Gap assessment queued for review (id={review_id})")

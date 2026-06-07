@@ -1,5 +1,5 @@
 # DC-004 — Requirements Traceability Matrix (RTM)
-**Document:** DC-004 · Version 1.8 · 2026-06-06  
+**Document:** DC-004 · Version 1.9 · 2026-06-06  
 **Approved by:** Steven Tran
 
 This is the single source of truth for end-to-end coverage. Every user need
@@ -30,14 +30,14 @@ column are open findings requiring immediate remediation.
 | UN-002 | | DI-002-B | Approve action | `server.py` POST /api/review/{id}/approve | `test_DI_002_B` | VERIFIED |
 | UN-002 | | DI-002-C | Reject action | `server.py` POST /api/review/{id}/reject | `test_DI_002_C` | VERIFIED |
 | UN-002 | | DI-002-D | Edit-and-rewrite action | `server.py` POST /api/review/{id}/edit | `test_DI_002_D` | VERIFIED |
-| UN-002 | | DI-002-E | Rejected items not in Docs hub | `server.py` document filtering | `test_DI_002_E` | PARTIAL |
+| UN-002 | | DI-002-E | Only approved items in Docs hub | `server.py` `list_documents()` + `get_approved_reviews()` | `test_DI_027_A` | VERIFIED |
 | UN-003 | Knowledge base | DI-003-A | KBQuery searchable by agents | `kb_query.py` KBQuery | `test_DI_003_A` | VERIFIED |
 | UN-003 | | DI-003-B | RAG indexes FDA/EU/IMDRF | `knowledge_base/` subdirs | `test_DI_003_B` | VERIFIED |
 | UN-004 | Voice interaction | DI-004-A | Wake threshold ≤ 0.35 | `voice_bridge.py` WAKE_THRESHOLD | `test_DI_004_A` | VERIFIED |
 | UN-004 | | DI-004-B | Whisper STT + confidence log | `voice_bridge.py` whisper | `test_DI_004_B` | VERIFIED |
 | UN-004 | | DI-004-C | First audio ≤ 2s | Kokoro streaming pipeline | `test_DI_004_C` | PARTIAL |
 | UN-004 | | DI-004-D | Intent routing via tool_use | `voice_bridge.py` dispatch | `test_DI_004_D` | VERIFIED |
-| UN-004 | | DI-004-E | SILENCE_DURATION = 0.8s (C3 change — responsiveness) | `voice_bridge.py` constant + `settings.json` | `test_DI_004_E` | VERIFIED |
+| UN-004 | | DI-004-E | SILENCE_DURATION = 0.65s (BUG-2 latency fix 2026-06-06) | `voice_bridge.py` constant | `test_DI_004_E` | VERIFIED |
 | UN-005 | Task notifications | DI-005-A | Notify endpoint exists | `server.py` POST /api/voice/notify | `test_DI_005_A` | VERIFIED |
 | UN-005 | | DI-005-B | Notification only if voice active | `voice_bridge.py` queue guard | `test_DI_005_B` | VERIFIED |
 | UN-006 | Persistent voice session | DI-006-A | Session persists across tabs | `useVoiceSession.js` app-level | `test_DI_006_A` | VERIFIED |
@@ -93,17 +93,21 @@ column are open findings requiring immediate remediation.
 | UN-020 | | DI-020-D | Queue auto-refreshes on agent_done WebSocket event | `ReviewView.jsx` `useEffect` on `reviewRefreshToken` | `test_DI_020_D` | VERIFIED |
 | UN-020 | | DI-020-E | Document content viewable inline via ReviewViewer | `ReviewView.jsx` `ReviewViewer` fetches content inline | `test_DI_020_E` | VERIFIED |
 | UN-021 | Single-instance enforcement | DI-021-A | Second Athena launch blocked by port/Chrome-PID check + dialog or clean stop-before-restart | `athena_lib.ps1` `Test-AthenaRunning` + `start_athena.ps1` guard block | `test_DI_021_A` | VERIFIED |
+| UN-024 | SOW agent (Phase 2C) | DI-024-A | SOW agent: Gate 10 review submission + Gate 3 confidence score | `agents/sow_agent.py` | `test_DI_024_A` | VERIFIED |
+| UN-025 | Regulatory strategy (Phase 2C) | DI-025-A | Regulatory strategy agent: Gate 10 + Gate 3 confidence | `agents/regulatory_strategy_agent.py` | `test_DI_025_A` | VERIFIED |
+| UN-026 | App startup loading (Phase 2C) | DI-026-A | React loading overlay with animated bar until WS connects | `App.jsx` `startupDone` state | `test_DI_026_A` | VERIFIED |
+| UN-027 | Documents hub approval gate | DI-027-A | Documents hub shows only Gate 10-approved files | `server.py` `list_documents()` | `test_DI_027_A` | VERIFIED |
 
 ---
 
-## Coverage Summary (v1.8)
+## Coverage Summary (v1.9)
 
 | Metric | Count |
 |---|---|
-| Total user needs | 23 |
-| Total design inputs | 70 |
-| Design inputs with VERIFIED tests | 62 |
-| Design inputs with PARTIAL coverage | 9 |
+| Total user needs | 27 |
+| Total design inputs | 75 |
+| Design inputs with VERIFIED tests | 68 |
+| Design inputs with PARTIAL coverage | 7 |
 | Design inputs with OPEN gap | 0 |
 | Design inputs with WAIVED status | 0 |
 
@@ -118,11 +122,10 @@ Items with OPEN or PARTIAL status that are tracked as formal findings:
 
 | Finding ID | DI | Gap Description | Owner | Target |
 |---|---|---|---|---|
-| TG-001 | DI-002-E | Automated test for rejected items excluded from Documents hub not yet written | Steven | Phase 2C |
-| TG-002 | DI-004-C | Latency test (first audio ≤ 2s) requires running voice stack; manual-only | Steven | Phase 2C |
-| TG-003 | DI-007-A | Word count validation not enforced in post-processing code path | Steven | Phase 2C |
-| TG-004 | DI-008-A | Automated count of pipeline.db seed targets not yet in dc_verify.py | Steven | Phase 2C |
-| TG-005 | DI-008-B | Channel type validation against paid-media exclusion list not automated | Steven | Phase 2C |
-| TG-006 | DI-009-A | Deck section completeness check requires PPTX inspection; manual-only | Steven | Phase 2C |
-| TG-007 | DI-010-C | No automated check that ISO standard files are excluded from RAG ingestion | Steven | Phase 2C |
-| TG-008 | DI-015-F | Session auth guard is present but coverage of all non-health routes not automated | Steven | Phase 2C |
+| TG-002 | DI-004-C | Latency test (first audio ≤ 2s) requires running voice stack; manual-only | Steven | Phase 3 |
+| TG-003 | DI-007-A | Word count validation not enforced in post-processing code path | Steven | Phase 3 |
+| TG-004 | DI-008-A | Automated count of pipeline.db seed targets not yet in dc_verify.py | Steven | Phase 3 |
+| TG-005 | DI-008-B | Channel type validation against paid-media exclusion list not automated | Steven | Phase 3 |
+| TG-006 | DI-009-A | Deck section completeness check requires PPTX inspection; manual-only | Steven | Phase 3 |
+| TG-007 | DI-010-C | No automated check that ISO standard files are excluded from RAG ingestion | Steven | Phase 3 |
+| TG-008 | DI-015-F | Session auth guard is present but coverage of all non-health routes not automated | Steven | Phase 3 |

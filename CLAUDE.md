@@ -1,5 +1,5 @@
 # Athena — Standing Orders
-**Version:** 2026-06-06 v12 · Aligned with `ATHENA_ARCHITECTURE_v2.md` (Constitution)
+**Version:** 2026-06-06 v13 · Aligned with `ATHENA_ARCHITECTURE_v2.md` (Constitution)
 **Authority:** Steven Tran, CEO/Managing Partner, Latitude MedTech
 **Purpose:** What Claude reads and operates by before every Athena session. Update after every session. Target: ≤230 lines, every line current.
 
@@ -32,7 +32,8 @@ No output reduces a person to a conversion rate. No output overstates certainty.
 | 1A — Coaching Core | ✅ Complete | Voice, coaching brief, content, M&A, consulting, deck, marketing agents live |
 | 2A — Voice + Visual | ✅ Complete | Deck Agent, DeckView gallery, dashboard charts |
 | 2B — Agent Health + UX | ✅ Complete | Review queue, skills profiles, race condition fixes, dead code removed |
-| 2B Gate | ⏳ Pending | Steven runs full coaching + voice workflow end-to-end |
+| 2C — Client Lifecycle | ✅ Complete | SOW agent, regulatory strategy agent, QMS simulator, Substack agent, ISO coach |
+| 2C Gate | ⏳ Pending | E2E alignment pass: BUG-1–6 fixed, G-01/04/06/08/09 addressed (2026-06-06) |
 | 3 — Consulting Core | 🔒 Held | Blocked: Phase 1 revenue + non-compete clearance + RAC engagement |
 
 **Revenue Gate is firm (decided 2026-06-05):** Phase 3 work does not begin until Phase 1 generates revenue.
@@ -89,7 +90,12 @@ cd Athena\voice; venv\Scripts\activate                                       # M
 | Manager | Coaching Brief Agent | `coaching_brief_agent.py` |
 | Manager | Content Agent | `content_agent.py` |
 | Manager | Deck Agent | `agents/deck_agent.py` |
+| Manager | SOW Agent | `agents/sow_agent.py` |
+| Manager | Regulatory Strategy Agent | `agents/regulatory_strategy_agent.py` |
+| Manager | ISO Coach Agent | `agents/iso_coach_agent.py` |
+| Manager | QMS Simulator Agent | `agents/qms_simulator_agent.py` |
 | Associate | Marketing Agent | `marketing_agent.py` |
+| Associate | Substack Agent | `agents/substack_agent.py` |
 | Infrastructure | Human Review Queue | `server.py` review endpoints |
 
 **Subagent hard limits:** Max depth 2 · Max 5 children per parent · Child context isolated · All outputs return to parent for synthesis.

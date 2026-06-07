@@ -23,6 +23,23 @@ record of what changed between each version. Keep them in lock-step — see
 
 ---
 
+## [0.5.2] — 2026-06-06 (E2E Architecture Alignment)
+
+### Fixed
+- **BUG-1** Intro/exit voice now speaks via Kokoro (bf_emma) — `_speak_phrase` and `_speak_phrase_greeting` in server.py delegate to `voice_bridge._speak_sentence` instead of using the Windows SAPI voice
+- **BUG-2** Response latency reduced: `SILENCE_DURATION` 0.8→0.65 s; post-response cooldown 1.0→0.5 s + mic flush 1.5→0.75 s; `_correct_transcript` skipped for confident (non-low-conf) transcripts
+- **BUG-3** Deliverable completion announcements no longer cut off: removed duplicate frontend `fetch('/api/voice/notify', ...)` from `agent_done` handler; server-side `run_agent()` batching is the single notification path
+- **BUG-4** Documents hub now shows only Gate-10-approved deliverables; `list_documents()` cross-references `review_queue` approved set
+- **BUG-5 / G-08** `deck_agent.py` now calls `submit_for_review()` after saving PPTX; iso_coach_agent already had Gate 10 in CLI path (confirmed)
+- **BUG-6** App.jsx shows a full-screen loading overlay with animated progress bar from launch until the main WebSocket connects
+
+### Added
+- `memory.get_approved_reviews()` — returns all review_queue rows with `status='approved'`
+- `kb_annotations.client_id` column + migration for per-client annotation scoping (G-06)
+- Gate 3 confidence scoring in `sow_agent.py` and `regulatory_strategy_agent.py` (G-01)
+- Phase 2C design inputs: UN-024/025/026/027 in DC-002 v1.8, DC-004 v1.9, dc_verify.py (66 tests, 0 failures)
+- Phase 2C agent roster added to CLAUDE.md v13
+
 ## [Unreleased]
 
 _Changes landed on `main` but not yet stamped into a numbered release go here._
