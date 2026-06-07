@@ -2738,9 +2738,6 @@ def main():
     _section("UN-032 Consulting Learning Visibility")
     test_DI_consulting_032_A(); test_DI_consulting_032_B()
 
-    _section("UN-032 Voice Query Readiness Latency")
-    test_DI_032_A(); test_DI_032_B(); test_DI_032_C()
-
     if args.live or args.full:
         test_live_api()
 

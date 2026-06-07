@@ -2381,7 +2381,7 @@ export default function App(){
             <div style={{height:"100%",borderRadius:99,background:C.ocean,
               animation:"athenaLoadBar 1.6s ease-in-out infinite"}}/>
           </div>
-          <style>{`@keyframes athenaLoadBar{0%{width:0%;margin-left:0}60%{width:60%;margin-left:10%}100%{width:0%;margin-left:100%}}`}</style>
+          <style>{`@keyframes athenaLoadBar{0%{width:0%;margin-left:0}45%{width:60%;margin-left:0}100%{width:60%;margin-left:100%}}`}</style>
         </div>
       )}
       <Toaster toasts={toasts}/>
