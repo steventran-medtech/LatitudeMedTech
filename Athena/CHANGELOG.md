@@ -29,6 +29,7 @@ record of what changed between each version. Keep them in lock-step — see
 - **UN-002 / CO-005** Document Queue tab â merged Documents and Review Queue into a single three-filter view (Pending, Approved, Rejected); `ReviewView.jsx` unified three-state tab architecture; `App.jsx` NAV_ITEMS consolidated to `id:"queue"` (DI-002-E, DI-002-F, DI-002-G)
 
 ### Changed
+- **UN-007, UN-002 / CO-011** Tab label + routing corrections: renamed "Content Drafts" tab to "MedTech Meridian Drafts" (NAV_ITEMS + ContentView h2); fixed AGENT_TAB — `coaching_brief`→`"coaching"`, `consulting_agent`/`ma_intelligence_agent`/`sow_agent`/`regulatory_strategy_agent`→`"queue"`; fixed WorkQueuePanel routing target for `awaiting_review` from `"review"` to `"queue"` (DI-007-F, DI-002-H, DI-002-I)
 - **UN-019 / CO-008** Async startup — removed `$modelTimeout` blocking poll from `start_athena.ps1`; Chrome now opens as soon as backend + frontend are HTTP-ready; voice models continue preloading in background thread; warm-start time drops from up to 180 s to under 10 s (DI-019-K)
 
 ### Added

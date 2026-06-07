@@ -1,5 +1,5 @@
-# DC-003 — Design Outputs
-**Document:** DC-003 · Version 1.8 · 2026-06-07  
+﻿# DC-003 — Design Outputs
+**Document:** DC-003 · Version 1.9 · 2026-06-07
 **Approved by:** Steven Tran
 
 Design outputs are the code artifacts, APIs, data structures, and
@@ -44,10 +44,10 @@ Athena/
 | Approve endpoint | `ui/backend/server.py` | `POST /api/review/{item_id}/approve` | DI-002-B |
 | Reject endpoint | `ui/backend/server.py` | `POST /api/review/{item_id}/reject` | DI-002-C |
 | Edit-and-rewrite endpoint | `ui/backend/server.py` | `POST /api/review/{item_id}/edit` | DI-002-D |
-| Review UI | `ui/frontend/src/ReviewView.jsx` | Full component â three-tab Document Queue | DI-002-A through DI-002-G |
+| Review UI | `ui/frontend/src/ReviewView.jsx` | Full component — three-tab Document Queue | DI-002-A through DI-002-G |
 | Submit for review helper | `agents/briefing_agent.py`, `agents/marketing_agent.py` | `submit_for_review()` calls | DI-002-A, DI-012-B |
-| Document Queue nav entry | `ui/frontend/src/App.jsx` | `NAV_ITEMS` â `id:"queue"`, `label:"Document Queue"` replaces Documents + Review Queue | DI-002-G |
-| Approved docs loader | `ui/frontend/src/ReviewView.jsx` | `loadApproved()` â fetches `GET /api/documents` on Approved tab activation | DI-002-E |
+| Document Queue nav entry | `ui/frontend/src/App.jsx` | `NAV_ITEMS` — `id:"queue"`, `label:"Document Queue"` replaces Documents + Review Queue | DI-002-G |
+| Approved docs loader | `ui/frontend/src/ReviewView.jsx` | `loadApproved()` — fetches `GET /api/documents` on Approved tab activation | DI-002-E |
 | Rejected docs filter | `ui/frontend/src/ReviewView.jsx` | `histItems.filter(i => i.status === "rejected")` in Rejected tab section | DI-002-F |
 | Approved doc viewer | `ui/frontend/src/ReviewView.jsx` | `FileViewer` render gated on `viewingApproved` state | DI-002-E |
 
@@ -263,3 +263,13 @@ Athena/
 | Pitch deck exec_summary slide | `agents/deck_agent.py` | `_DECK_GUIDES["pitch"]` — exec_summary added after cover | DI-030-A |
 | McKinsey quality directives | `agents/content_agent.py`, `briefing_agent.py`, `ma_intelligence_agent.py`, `regulatory_strategy_agent.py`, `sow_agent.py`, `deck_agent.py` | System prompt / SYSTEM / agent description constants | DI-030-B |
 | Brand identity injection | `agents/agent_base.py` | `build_system_prompt()` / system prompt `parts` list with "Latitude MedTech LLC" | DI-030-C |
+| Publication format guide | `agents/agent_base.py` | `PUBLICATION_FORMAT_GUIDE` dict + `system_prompt()` injection | DI-030-D |
+| Agent persona format sections | `.claude/agents/content-agent.md`, `consulting-agent.md`, `briefing-agent.md`, `ma-intelligence-agent.md`, `marketing-agent.md`, `iso-agent.md`, `deck-agent.md`, `coaching-agent.md` | `## Output Format Standard` section in each file | DI-030-E |
+
+---
+
+## DO-034 — Universal Agent Queue Submission
+
+| Design Output | File | Symbol / Route | Implements |
+|---|---|---|---|
+| QMS simulator review submission | `agents/qms_simulator_agent.py` | `_MEM.submit_for_review()` call in `run()` after bundle index written | DI-034-A |

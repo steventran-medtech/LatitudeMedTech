@@ -1,5 +1,5 @@
 # DC-002 — Design Inputs
-**Document:** DC-002 · Version 2.7 · 2026-06-07  
+**Document:** DC-002 · Version 2.9 · 2026-06-07  
 **Approved by:** Steven Tran
 
 Design inputs are specific, verifiable requirements derived from the user
@@ -289,9 +289,11 @@ Each entry:
 
 | ID | Source | Requirement Statement | Verification | Priority | Status |
 |---|---|---|---|---|---|
-| DI-030-A | UN-030 | All 6 `_DECK_GUIDES` entries in `deck_agent.py` ("strategy", "pitch", "regulatory", "coaching", "ma", "briefing") shall include "exec_summary" in their slide-sequence string so that every deck type leads with a McKinsey-standard executive summary slide | All 6 values in `_DECK_GUIDES` contain "exec_summary" | P1 | OPEN |
-| DI-030-B | UN-030 | All 6 deliverable-generating agent Python files (`content_agent.py`, `briefing_agent.py`, `ma_intelligence_agent.py`, `regulatory_strategy_agent.py`, `sow_agent.py`, `deck_agent.py`) shall contain at least one of "McKinsey", "Big 4", "pyramid", or "SCQA" as a quality directive in their system prompt or agent description | Grep across the 6 files for `McKinsey\|Big.4\|pyramid\|SCQA` | P1 | OPEN |
-| DI-030-C | UN-030 | `agent_base.py` shall inject "Latitude MedTech LLC" brand identity into all agent system prompts via a system-prompt construction routine | `agent_base.py` contains "Latitude MedTech LLC" and a system-prompt construction pattern (function or list) | P1 | OPEN |
+| DI-030-A | UN-030 | All 6 `_DECK_GUIDES` entries in `deck_agent.py` ("strategy", "pitch", "regulatory", "coaching", "ma", "briefing") shall include "exec_summary" in their slide-sequence string so that every deck type leads with a McKinsey-standard executive summary slide | All 6 values in `_DECK_GUIDES` contain "exec_summary" | P1 | VERIFIED |
+| DI-030-B | UN-030 | All 6 deliverable-generating agent Python files (`content_agent.py`, `briefing_agent.py`, `ma_intelligence_agent.py`, `regulatory_strategy_agent.py`, `sow_agent.py`, `deck_agent.py`) shall contain at least one of "McKinsey", "Big 4", "pyramid", or "SCQA" as a quality directive in their system prompt or agent description | Grep across the 6 files for `McKinsey\|Big.4\|pyramid\|SCQA` | P1 | VERIFIED |
+| DI-030-C | UN-030 | `agent_base.py` shall inject "Latitude MedTech LLC" brand identity into all agent system prompts via a system-prompt construction routine | `agent_base.py` contains "Latitude MedTech LLC" and a system-prompt construction pattern (function or list) | P1 | VERIFIED |
+| DI-030-D | UN-030 | `agent_base.py` shall define a `PUBLICATION_FORMAT_GUIDE` class-level dict mapping each agent name to a publication-style directive string, and `system_prompt()` shall inject the matching directive into the system prompt via `PUBLICATION_FORMAT_GUIDE.get(self.name, "")` | `agent_base.py` contains `PUBLICATION_FORMAT_GUIDE` dict AND `PUBLICATION_FORMAT_GUIDE.get(self.name` in `system_prompt()` | P1 | VERIFIED |
+| DI-030-E | UN-030 | All 8 production agent persona files (content, briefing, consulting, ma-intelligence, marketing, iso, deck, coaching) shall contain a `## Output Format Standard` section that specifies the publication style for that agent | Each of the 8 `.claude/agents/<name>-agent.md` files contains `## Output Format Standard` | P1 | VERIFIED |
 
 ---
 
@@ -327,3 +329,23 @@ Adding a new DI requires:
 5. Add a corresponding `test_DI_NNN_X()` function to `dc_verify.py`.
 6. Update DC-004 traceability matrix.
 7. Change status to VERIFIED once the test passes on a real run.
+
+### UN-033 — Voice Query Readiness Latency
+
+| ID | Source | Requirement Statement | Verification | Priority | Status |
+|---|---|---|---|---|---|
+| DI-033-A | UN-033 | `_listen_for_wake` shall accept a `stream` parameter and shall not open an `sd.InputStream` internally | `voice_bridge.py` `def _listen_for_wake` signature contains `stream` parameter; no `sd.InputStream(` in body | P1 | VERIFIED |
+| DI-033-B | UN-033 | `_record_query` shall accept a `stream` parameter and shall not open an `sd.InputStream` internally | `voice_bridge.py` `def _record_query` signature contains `stream` parameter; no `sd.InputStream(` in body | P1 | VERIFIED |
+| DI-033-C | UN-033 | `_voice_loop` shall open exactly one `sd.InputStream` per listen/record cycle and pass it to both `_listen_for_wake` and `_record_query` | `voice_bridge.py` `_voice_loop` body contains `with sd.InputStream(`; calls `_listen_for_wake(oww, stream)` and `_record_query(stream)` | P1 | VERIFIED |
+
+### UN-034 — Engineering Process Integrity
+
+| ID | Source | Requirement Statement | Verification | Priority | Status |
+|---|---|---|---|---|---|
+| DI-034-A | UN-034 | `CLAUDE.md` shall contain the co-commit rule: any code commit affecting a behavioral change **must also update at least one design control document** | `CLAUDE.md` contains phrase "must also update at least one design control document" | P0 | VERIFIED |
+| DI-034-B | UN-034 | `CLAUDE.md` shall contain an Auth Centralization Standard section declaring that all authentication logic lives exclusively in `AuthMiddleware` and `auth_utils.py` | `CLAUDE.md` contains "Auth Centralization Standard" | P1 | VERIFIED |
+| DI-034-C | UN-034 | `CLAUDE.md` shall contain a voice_bridge.py Boundary section declaring that `voice_bridge.py` owns all audio I/O | `CLAUDE.md` contains "voice_bridge.py Boundary" | P1 | VERIFIED |
+| DI-034-D | UN-034 | `CLAUDE.md` shall document the forward-only progress bar constraint in a Progress Bar Specification section | `CLAUDE.md` contains "Progress Bar Specification" | P1 | VERIFIED |
+| DI-034-E | UN-034 | `CLAUDE.md` shall contain an App.jsx Responsibility Scope section defining what `App.jsx` owns and does not own | `CLAUDE.md` contains "App.jsx Responsibility Scope" | P1 | VERIFIED |
+| DI-034-F | UN-034 | `CLAUDE.md` shall contain a CLAUDE.md Update Policy section declaring when this file must be updated | `CLAUDE.md` contains "CLAUDE.md Update Policy" | P1 | VERIFIED |
+

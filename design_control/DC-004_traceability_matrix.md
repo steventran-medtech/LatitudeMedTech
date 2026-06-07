@@ -1,5 +1,5 @@
-# DC-004 — Requirements Traceability Matrix (RTM)
-**Document:** DC-004 · Version 2.8 · 2026-06-07  
+﻿# DC-004 — Requirements Traceability Matrix (RTM)
+**Document:** DC-004 · Version 2.8 · 2026-06-07
 **Approved by:** Steven Tran
 
 This is the single source of truth for end-to-end coverage. Every user need
@@ -33,6 +33,8 @@ column are open findings requiring immediate remediation.
 | UN-002 | | DI-002-E | Approved items in Document Queue Approved filter only | `ReviewView.jsx` `loadApproved()` + `GET /api/documents` | `test_DI_002_E` | VERIFIED |
 | UN-002 | | DI-002-F | Three-state filter: Pending/Approved/Rejected | `ReviewView.jsx` `useState("pending")` + tabs array | `test_DI_002_F` | VERIFIED |
 | UN-002 | | DI-002-G | App.jsx NAV_ITEMS has id:queue; id:documents and id:review absent | `App.jsx` NAV_ITEMS | `test_DI_002_G` | VERIFIED |
+| UN-002 | | DI-002-H | AGENT_TAB maps all agents to valid NAV_ITEMS tab IDs | `App.jsx` AGENT_TAB — no "review"/"documents" values; coaching_brief→"coaching"; 4 agents→"queue" | `test_DI_002_H` | VERIFIED |
+| UN-002 | | DI-002-I | WorkQueuePanel routes awaiting_review to "queue" not "review" | `App.jsx` WorkQueuePanel routing expression | `test_DI_002_I` | VERIFIED |
 | UN-003 | Knowledge base | DI-003-A | KBQuery searchable by agents | `kb_query.py` KBQuery | `test_DI_003_A` | VERIFIED |
 | UN-003 | | DI-003-B | RAG indexes FDA/EU/IMDRF | `knowledge_base/` subdirs | `test_DI_003_B` | VERIFIED |
 | UN-003 | | DI-003-C | RAG report with "Newly Ingested Documents" section submitted to review queue | `agents/rag_agent.py` `main()` + `submit_for_review()` | `test_DI_003_C` | OPEN |
@@ -52,6 +54,7 @@ column are open findings requiring immediate remediation.
 | UN-007 | | DI-007-C | Banned phrases enforced | `content_agent.py` system prompt | `test_DI_007_C` | VERIFIED |
 | UN-007 | | DI-007-D | Non-Latin chars stripped | `content_agent.py` clean_title | `test_DI_007_D` | VERIFIED |
 | UN-007 | | DI-007-E | YAML frontmatter stripped in UI | `App.jsx` renderInline | `test_DI_007_E` | VERIFIED |
+| UN-007 | | DI-007-F | Content tab labeled "MedTech Meridian Drafts" in NAV_ITEMS and ContentView h2 | `App.jsx` NAV_ITEMS label + ContentView h2 | `test_DI_007_F` | VERIFIED |
 | UN-008 | Marketing pipeline | DI-008-A | Pipeline DB ≥ 20 targets | `marketing_agent.py` pipeline.db | `test_DI_008_A` | PARTIAL |
 | UN-008 | | DI-008-B | Zero-cash channels only | `marketing_agent.py` seed data | `test_DI_008_B` | PARTIAL |
 | UN-009 | Slide deck generation | DI-009-A | Deck with required sections | `deck_agent.py` slide sequence | `test_DI_009_A` | PARTIAL |

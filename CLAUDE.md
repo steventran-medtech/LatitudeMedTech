@@ -166,6 +166,37 @@ Gate 10 is the only gate owned by a human. It is also the only gate that matters
 
 ---
 
+---
+
+## Engineering Integrity Standards
+
+These constraints are formally verified by `dc_verify.py` (DI-034-A through DI-034-F). No PR may be merged if any of these fail.
+
+### Co-Commit Rule
+
+Every code commit that introduces a behavioral change **must also update at least one design control document** (DC-002, DC-003, DC-004, or DC-006). Code changes without DC traceability will be blocked by `dc_verify.py`.
+
+### Auth Centralization Standard
+
+All authentication logic **must live exclusively in `AuthMiddleware` and `auth_utils.py`**. No agent, route handler, or WebSocket handler may implement its own token check. New routes must be registered in the exempt list OR gated by `AuthMiddleware` — never both.
+
+### voice_bridge.py Boundary
+
+`voice_bridge.py` owns all audio I/O. No other module may open `sd.InputStream` or `sd.OutputStream`. Agents that need audio must call the voice bridge API — they must never import `sounddevice` directly.
+
+### Progress Bar Specification
+
+The splash progress bar must only move **forward**. `setProgress(n)` must be ignored if `n <= current`. The bar must not show a numeric percentage counter (UN-019). Forward-only enforcement is tested by `test_DI_019_H`.
+
+### App.jsx Responsibility Scope
+
+`App.jsx` owns: agent registry (`AGENT_DISPLAY`, `AGENT_ETA_SECONDS`, `AGENT_TAB`), global WebSocket connection, tab navigation, and top-level layout. It must NOT contain business logic, data fetching outside of WebSocket events, or agent-specific rendering — those belong in the relevant `*View.jsx` component.
+
+### CLAUDE.md Update Policy
+
+This file (`CLAUDE.md`) is a living design document. It **must be updated** in the same commit as any change to: the agent roster, the verification gate list, the hard rules, the security controls, the Engineering Integrity Standards, or the version/recent-changes table. Stale CLAUDE.md content is treated as a DC gap.
+
+
 ## Security Controls *(active as of 2026-06-05)*
 
 - **CC6.6 Auth:** `AuthMiddleware` validates `X-Athena-Key` on every API request (timing-safe `secrets.compare_digest`); WebSocket rejects without `?token=`. Only `/api/auth/token` and `/api/version` exempt — GET calls are NOT exempt.
@@ -235,6 +266,8 @@ Update this file's version line (date + vN) in the same final commit.
 | 2026-06-07 | CO-008 (UN-019 / DI-019-K): removed `$modelTimeout` blocking poll from `start_athena.ps1`; voice models load async in background; warm-start ≤ 10 s | DI-019-K |
 | 2026-06-07 | Version 0.5.6 — async startup, warm-start under 10 s |  |
 | 2026-06-07 | CO-005 (UN-002): Document Queue tab merged Documents + Review Queue into Pending/Approved/Rejected three-filter view; App.jsx NAV_ITEMS consolidated to id:queue | DI-002-E, DI-002-F, DI-002-G |
+| 2026-06-07 | CO-010 (UN-033): `_voice_loop` shares one `sd.InputStream` per query cycle between `_listen_for_wake` and `_record_query` — eliminates 200-500 ms Windows MME close/reopen gap after wake detection | DI-033-A, DI-033-B, DI-033-C |
+| 2026-06-07 | CO-011 (UN-007, UN-002): renamed "Content Drafts" → "MedTech Meridian Drafts" (NAV_ITEMS + ContentView h2); fixed AGENT_TAB — coaching_brief→"coaching", 4 agents→"queue"; fixed WorkQueuePanel awaiting_review routing "review"→"queue" | DI-007-F, DI-002-H, DI-002-I |
 | 2026-06-06 | DI-019-J (C2): splash `#dots` now cycles `.`/`..`/`...` via VBScript `TickDots` at 400 ms/state; CSS `dotFlash` wave removed | DI-019-J |
 
 ---
