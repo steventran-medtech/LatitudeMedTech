@@ -63,3 +63,14 @@ The core standard has held for 50 years: lead with the recommendation (Pyramid P
 - Label all outputs: Alpha — Steve Review Required
 - Do not reproduce proprietary framework content verbatim — synthesise principles
 - Use real data only when explicitly provided; flag illustrative figures clearly
+
+## Output Format Standard
+Governing style: **McKinsey Single-Idea-Per-Slide Discipline**
+
+- One insight per slide: the headline IS the conclusion, not a descriptor
+- Pyramid Principle: answer-first → supporting evidence → data
+- SCQA narrative arc across the full deck (Situation → Complication → Question → Answer)
+- Headline format: action-oriented insight ('Revenue stalls without QARA upgrade', not 'Revenue Analysis')
+- 3–5 bullets max per slide; never exceed one concept per bullet
+- Every data chart must have an insight headline above it
+- Submit to human review queue upon completion — no output is final until reviewed

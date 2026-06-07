@@ -1,5 +1,5 @@
 # DC-006 — Change Control
-**Document:** DC-006 · Version 1.0 · 2026-06-05  
+**Document:** DC-006 · Version 1.1 · 2026-06-07  
 **Approved by:** Steven Tran
 
 ---
@@ -15,15 +15,16 @@ Every CO gets a unique ID at kickoff. Assign the next available CO-NNN here befo
 | CO-003 | 2026-06-07 | C2 | 3 | feat/co-003-un-003-023-rag-reports-historical | DI-003-C, DI-003-D, DI-023-B, DI-023-C | MERGED (PR #89) |
 
 | CO-004 | 2026-06-07 | C2 | 2 | feat/co-004-un-031-tab-singleton | DI-031-A, DI-031-B | MERGED (4f20d0e, PR #92) |
-| CO-005 | 2026-06-07 | C3 | 3 | chore/co-005-un-002-document-queue | DI-002-E (mod), DI-002-F, DI-002-G | OPEN |
+| CO-005 | 2026-06-07 | C3 | 3 | chore/co-005-un-002-document-queue | DI-002-E (mod), DI-002-F, DI-002-G | MERGED |
 | CO-006 | 2026-06-07 | C2 | 2 | feat/co-006-consulting-learning-reports | DI-032-A, DI-032-B, DI-023-D | OPEN |
 
 | CO-007 | 2026-06-07 | C3 | 1 | chore/co-007-intro-exit-variations | — | MERGED |
 | CO-008 | 2026-06-07 | C3 | 3 | feat/co-008-un-019-startup-under-10s | DI-019-K (new) | MERGED (1a7525b, PR #91) |
 | CO-009 | 2026-06-07 | C2 | 1 | feat/co-009-un-034-progress-bar-no-backward | — | MERGED |
+| CO-010 | 2026-06-07 | C2/C3 | 3 | feat/co-008-un-033-voice-ready-latency | UN-033 (new), UN-034 (new), DI-033-A/B/C (VERIFIED), DI-030-D/E (new), DI-034-A-F (new) | OPEN |
 
 **Status values:** OPEN · MERGED · ABANDONED  
-**Next available ID:** CO-010
+**Next available ID:** CO-011
 
 ---
 

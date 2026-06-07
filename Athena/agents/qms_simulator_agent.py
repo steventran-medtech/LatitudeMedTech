@@ -1636,6 +1636,17 @@ class QMSSimulator:
                 )
             except Exception:
                 pass
+        if _MEM:
+            try:
+                bundle_index_path = run_dir / "QMS_BUNDLE_INDEX.md"
+                _MEM.submit_for_review(
+                    "qms_simulator",
+                    "qms_bundle",
+                    f"QMS Bundle — {trade_name} / {lot}",
+                    str(bundle_index_path),
+                )
+            except Exception as e:
+                log.warning(f"Could not submit QMS bundle for review: {e}")
 
         log.info(f"{'='*60}")
         log.info(f"QMS BUNDLE COMPLETE — {len(docs) + 2} files (11 documents)")

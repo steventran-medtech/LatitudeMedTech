@@ -71,7 +71,7 @@ const S = {
 const NAV_VOICE = {id:"voice", label:"Athena Voice", group:"athena"};
 const NAV_ITEMS = [
   {id:"briefing",  label:"Daily Briefing",   group:"work"},
-  {id:"content",   label:"Content Drafts",   group:"work"},
+  {id:"content",   label:"MedTech Meridian Drafts", group:"work"},
   {id:"coaching",  label:"Coaching",         group:"work"},
   {id:"clients",   label:"Clients",          group:"work"},
   {id:"marketing", label:"Marketing",        group:"work"},
@@ -1040,7 +1040,7 @@ function ContentView({onGenerate}){
   return(
     <div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
-        <h2 style={S.h2}>Content Drafts</h2>
+        <h2 style={S.h2}>MedTech Meridian Drafts</h2>
         <div style={{display:"flex",gap:10,alignItems:"center"}}>
           {genStatus&&<span style={{fontFamily:"Helvetica,sans-serif",fontSize:11,color:C.teal}}>{genStatus}</span>}
           {content&&<button style={S.btn("ocean")} onClick={()=>exportDoc(true)}>View as Doc</button>}
@@ -1397,11 +1397,11 @@ const AGENT_TAB = {
   content_agent:         "content",
   marketing_agent:       "marketing",
   iso_coach:             "iso",
-  coaching_brief:              "review",
-  consulting_agent:            "documents",
-  ma_intelligence_agent:       "documents",
-  sow_agent:                   "review",
-  regulatory_strategy_agent:   "review",
+  coaching_brief:              "coaching",
+  consulting_agent:            "queue",
+  ma_intelligence_agent:       "queue",
+  sow_agent:                   "queue",
+  regulatory_strategy_agent:   "queue",
   deck_agent:            "decks",
 };
 
@@ -1552,7 +1552,7 @@ function WorkQueuePanel({ taskQueue, onNavigate }) {
         const dot = DOT[t.status] ?? DOT.done;
         // Items pending human review route to the Review queue; everything else
         // goes to the agent's own output tab.
-        const target = t.status === "awaiting_review" ? "review" : AGENT_TAB[t.agentId];
+        const target = t.status === "awaiting_review" ? "queue" : AGENT_TAB[t.agentId];
         const clickable = t.status !== "running" && target;
         return (
           <div key={t.id}

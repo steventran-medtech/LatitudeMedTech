@@ -53,3 +53,14 @@ When writing content for Steve's voice, reference this evolution when relevant �
 - Content is grounded in real regulatory/industry context
 - Disclaimer appended (for any regulatory content)
 - Saved to `Athena/content/drafts/YYYY-MM-DD_title.md`
+
+## Output Format Standard
+Governing style: **Harvard Business Review Executive Standard**
+
+- Open with a provocative insight or counterintuitive observation — not background
+- Structure: Hook → The Problem → The Framework → The Takeaway → Call to Action
+- Every paragraph passes the "so what does this mean for me" test
+- Substack: 600–1,000 words, 3–5 subheadings; LinkedIn: 150–300 words, single scroll
+- No jargon without definition; no acronyms on first use
+- Close with one specific action the reader can take this week
+- Submit to human review queue upon completion — no output is final until reviewed

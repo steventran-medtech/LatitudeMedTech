@@ -2468,6 +2468,84 @@ def test_DI_030_C():
              "Add 'Latitude MedTech LLC' to the system prompt template in agent_base.py")
 
 
+# ── UN-030 / Publication Format Guide + Agent Persona Sections (CO-010) ──────
+
+def test_DI_030_D():
+    """DI-030-D: agent_base.py defines PUBLICATION_FORMAT_GUIDE dict + system_prompt() injects it"""
+    di = "DI-030-D"
+    if _skip_if_filtered(di): return
+    f = AGENTS / "agent_base.py"
+    if not f.exists():
+        _log(FAIL, di, "agent_base.py not found", str(f))
+        return
+    content = _read(f)
+    has_guide = "PUBLICATION_FORMAT_GUIDE" in content
+    has_inject = bool(re.search(
+        r'def system_prompt\b.*?PUBLICATION_FORMAT_GUIDE',
+        content, re.DOTALL
+    ))
+    if not has_guide:
+        _log(FAIL, di, "PUBLICATION_FORMAT_GUIDE dict not found in agent_base.py",
+             "Add PUBLICATION_FORMAT_GUIDE dict mapping agent names to publication-style directives")
+        return
+    if not has_inject:
+        _log(FAIL, di, "system_prompt() does not reference PUBLICATION_FORMAT_GUIDE in agent_base.py",
+             "Add PUBLICATION_FORMAT_GUIDE.get(self.name) injection inside system_prompt()")
+        return
+    _log(PASS, di, "PUBLICATION_FORMAT_GUIDE defined and injected in system_prompt()")
+    return True
+
+
+def test_DI_030_E():
+    """DI-030-E: All 8 production persona .md files contain '## Output Format Standard' section"""
+    di = "DI-030-E"
+    if _skip_if_filtered(di): return
+    persona_files = [
+        "content-agent.md", "consulting-agent.md", "briefing-agent.md",
+        "ma-intelligence-agent.md", "marketing-agent.md", "iso-agent.md",
+        "deck-agent.md", "coaching-agent.md",
+    ]
+    agents_dir = ROOT / ".claude" / "agents"
+    missing_section = []
+    missing_file    = []
+    for fname in persona_files:
+        fpath = agents_dir / fname
+        if not fpath.exists():
+            missing_file.append(fname)
+            continue
+        if "## Output Format Standard" not in _read(fpath):
+            missing_section.append(fname)
+    if missing_file:
+        _log(FAIL, di, f"Persona file(s) not found: {missing_file}",
+             f"Create missing files in {agents_dir}")
+        return
+    if missing_section:
+        _log(FAIL, di, f"'## Output Format Standard' section missing from: {missing_section}",
+             "Add '## Output Format Standard' section with publication style to each listed file")
+        return
+    _log(PASS, di, "All 8 production persona files contain '## Output Format Standard' section")
+    return True
+
+
+# ── UN-034 / All-Agent Review Queue Submission (CO-010) ──────────────────────
+
+def test_DI_034_A():
+    """DI-034-A: qms_simulator_agent.py calls submit_for_review() after bundle generation"""
+    di = "DI-034-A"
+    if _skip_if_filtered(di): return
+    f = AGENTS / "qms_simulator_agent.py"
+    if not f.exists():
+        _log(FAIL, di, "qms_simulator_agent.py not found", str(f))
+        return
+    content = _read(f)
+    if "submit_for_review(" not in content:
+        _log(FAIL, di, "submit_for_review() not called in qms_simulator_agent.py",
+             "Add _MEM.submit_for_review() call in run() after bundle index is written")
+        return
+    _log(PASS, di, "qms_simulator_agent.py contains submit_for_review() call")
+    return True
+
+
 # ── UN-033 / Voice Query Readiness Latency (CO-008 — OPEN) ──────────────────
 
 def test_DI_033_A():
@@ -2515,6 +2593,11 @@ def test_DI_033_B():
         return
     _log(PASS, di, "_record_query accepts stream parameter; no internal sd.InputStream")
 
+
+
+def test_DI_033_B_voice():
+    """Alias for DI-033-B voice stream test"""
+    return test_DI_033_B()
 
 def test_DI_033_C():
     """DI-033-C: _voice_loop opens one sd.InputStream and passes it to _listen_for_wake and _record_query"""
@@ -2646,6 +2729,87 @@ def _print_summary():
 
 # ── Entry Point ────────────────────────────────────────────────────────────────
 
+
+def test_DI_034_B():
+    """DI-034-B: CLAUDE.md contains Auth Centralization Standard section"""
+    di = "DI-034-B"
+    if _skip_if_filtered(di): return
+    f = ROOT / "CLAUDE.md"
+    if not f.exists():
+        _log(FAIL, di, "CLAUDE.md not found", str(f))
+        return
+    if "Auth Centralization Standard" not in _read(f):
+        _log(FAIL, di, "CLAUDE.md missing 'Auth Centralization Standard' section",
+             "Add Auth Centralization Standard to Engineering Integrity Standards in CLAUDE.md")
+        return
+    _log(PASS, di, "CLAUDE.md contains Auth Centralization Standard")
+    return True
+
+
+def test_DI_034_C():
+    """DI-034-C: CLAUDE.md contains voice_bridge.py Boundary section"""
+    di = "DI-034-C"
+    if _skip_if_filtered(di): return
+    f = ROOT / "CLAUDE.md"
+    if not f.exists():
+        _log(FAIL, di, "CLAUDE.md not found", str(f))
+        return
+    if "voice_bridge.py Boundary" not in _read(f):
+        _log(FAIL, di, "CLAUDE.md missing 'voice_bridge.py Boundary' section",
+             "Add voice_bridge.py Boundary to Engineering Integrity Standards in CLAUDE.md")
+        return
+    _log(PASS, di, "CLAUDE.md contains voice_bridge.py Boundary")
+    return True
+
+
+def test_DI_034_D():
+    """DI-034-D: CLAUDE.md documents the forward-only progress bar constraint"""
+    di = "DI-034-D"
+    if _skip_if_filtered(di): return
+    f = ROOT / "CLAUDE.md"
+    if not f.exists():
+        _log(FAIL, di, "CLAUDE.md not found", str(f))
+        return
+    if "Progress Bar Specification" not in _read(f):
+        _log(FAIL, di, "CLAUDE.md missing 'Progress Bar Specification' section",
+             "Add Progress Bar Specification to Engineering Integrity Standards in CLAUDE.md")
+        return
+    _log(PASS, di, "CLAUDE.md contains Progress Bar Specification")
+    return True
+
+
+def test_DI_034_E():
+    """DI-034-E: CLAUDE.md contains App.jsx Responsibility Scope section"""
+    di = "DI-034-E"
+    if _skip_if_filtered(di): return
+    f = ROOT / "CLAUDE.md"
+    if not f.exists():
+        _log(FAIL, di, "CLAUDE.md not found", str(f))
+        return
+    if "App.jsx Responsibility Scope" not in _read(f):
+        _log(FAIL, di, "CLAUDE.md missing 'App.jsx Responsibility Scope' section",
+             "Add App.jsx Responsibility Scope to Engineering Integrity Standards in CLAUDE.md")
+        return
+    _log(PASS, di, "CLAUDE.md contains App.jsx Responsibility Scope")
+    return True
+
+
+def test_DI_034_F():
+    """DI-034-F: CLAUDE.md contains CLAUDE.md Update Policy section"""
+    di = "DI-034-F"
+    if _skip_if_filtered(di): return
+    f = ROOT / "CLAUDE.md"
+    if not f.exists():
+        _log(FAIL, di, "CLAUDE.md not found", str(f))
+        return
+    if "CLAUDE.md Update Policy" not in _read(f):
+        _log(FAIL, di, "CLAUDE.md missing 'CLAUDE.md Update Policy' section",
+             "Add CLAUDE.md Update Policy to Engineering Integrity Standards in CLAUDE.md")
+        return
+    _log(PASS, di, "CLAUDE.md contains CLAUDE.md Update Policy")
+    return True
+
+
 def main():
     global _di_filter, _verbose
 
@@ -2730,13 +2894,22 @@ def main():
     _section("UN-029 Audio Device Detection")
     test_DI_029_A(); test_DI_029_B(); test_DI_029_C()
 
-    _section("UN-030 McKinsey/Latitude Brand Formatting Standard")
+    _section("UN-030 McKinsey/Latitude Brand Formatting Standard + Publication Guides (CO-010)")
     test_DI_030_A(); test_DI_030_B(); test_DI_030_C()
+    test_DI_030_D(); test_DI_030_E()
 
     _section("UN-032 Consulting Learning Visibility")
     test_DI_consulting_032_A(); test_DI_consulting_032_B()
 
-    # UN-033 (DI-033-A/B/C) deregistered — CO-008 re-enables with implementation
+    _section("UN-034 All-Agent Review Queue Submission (CO-010)")
+    test_DI_034_A()
+    test_DI_034_B(); test_DI_034_C()
+    test_DI_034_D(); test_DI_034_E(); test_DI_034_F()
+
+
+    _section("UN-033 Voice Query Readiness Latency (CO-010)")
+    test_DI_033_A(); test_DI_033_B_voice(); test_DI_033_C()
+
 
     if args.live or args.full:
         test_live_api()

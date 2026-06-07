@@ -1,5 +1,5 @@
 # DC-001 — Intended Use & User Needs
-**Document:** DC-001 · Version 1.4 · 2026-06-07  
+**Document:** DC-001 · Version 1.5 · 2026-06-07  
 **Approved by:** Steven Tran
 
 ---
@@ -89,6 +89,7 @@ These are the enumerated, controlled user needs for Athena v0.5 (Alpha).
 | UN-005 | Be verbally notified when a long-running agent task completes, without checking the UI | P1 |
 | UN-006 | Keep my voice session alive as I navigate between UI tabs, without losing context or resetting | P1 |
 | UN-022 | Interact with a voice agent that responds with the quality and conversational fluency expected of a chief of staff or expert management consultant — audible response shall commence within 2 seconds of completing a spoken query | P1 |
+| UN-033 | Stream-sharing within the voice pipeline shall keep response-ready latency below 250 ms on warm hardware by reusing a single audio stream across wake-word detection and query recording | P1 |
 
 ### Content & Marketing
 
@@ -115,6 +116,7 @@ These are the enumerated, controlled user needs for Athena v0.5 (Alpha).
 | UN-013 | See real-time system health, agent status, token spend, and knowledge base growth in a dashboard | P1 |
 | UN-014 | Track each agent's accumulated learning, skills profile, and last-learning timestamp | P1 |
 | UN-032 | After each Consulting Agent learning run, receive a human-readable summary of every item ingested — source, title, category, and chunk count — submitted to the review queue so I can approve, reject, or edit the summary before it influences agent outputs | P1 |
+| UN-034 | Engineering integrity standards (co-commit rule, auth centralization, audio boundary, progress bar spec, App.jsx scope, CLAUDE.md update policy) shall be formally documented in CLAUDE.md and verified by `dc_verify.py` | P0 |
 
 ### Security & Compliance
 

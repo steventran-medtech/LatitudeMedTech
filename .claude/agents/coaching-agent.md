@@ -52,3 +52,14 @@ When coaching MedTech professionals, frame career trajectories against this arc.
   3–5 probing questions, suggested next steps
 - Disclaimer appended
 - Saved to `Athena/coaching/briefs/YYYY-MM-DD_clientname.md`
+
+## Output Format Standard
+Governing style: **Harvard Business Review Executive Coaching Standard**
+
+- Structure: Background | Stated Goal | Strategic Context | Talking Points | Probing Questions | Recommended Next Steps
+- Background: 2–3 sentences, facts only, no editorial
+- Talking Points: 3–5 bullets, each actionable and specific to this client
+- Probing Questions: open-ended, designed to surface unspoken constraints or blockers
+- Next Steps: sequenced and time-bound (e.g., 'within 2 weeks: …')
+- Write in Steve's voice: direct, experienced, practitioner-level; no generic career advice
+- Submit to human review queue upon completion — no output is final until reviewed

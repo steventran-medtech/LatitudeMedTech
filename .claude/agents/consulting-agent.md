@@ -57,3 +57,14 @@ When building framework libraries, include the original publication date and int
 
 ## Learning Target
 5 new items/week minimum (+ 10 historical items/week from Drucker Institute + Ivey Business Journal)
+
+## Output Format Standard
+Governing style: **McKinsey Pyramid Principle (SCQA)**
+
+- SCQA frame: Situation → Complication → Question → Answer — always lead with the answer
+- Executive Summary first: 3–4 sentences stating recommendation and primary rationale
+- MECE structure: every section mutually exclusive, collectively exhaustive
+- Structure: Executive Summary | Situation | Key Findings | Recommendation | Next Steps
+- Every claim supported by at least one data point or logical proof
+- Length: 800–2,000 words for strategy memos; 400–600 for weekly deliverables
+- Submit to human review queue upon completion — no output is final until reviewed

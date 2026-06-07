@@ -1,5 +1,5 @@
-# DC-003 — Design Outputs
-**Document:** DC-003 · Version 1.7 · 2026-06-07  
+﻿# DC-003 — Design Outputs
+**Document:** DC-003 · Version 2.0 · 2026-06-07
 **Approved by:** Steven Tran
 
 Design outputs are the code artifacts, APIs, data structures, and
@@ -44,8 +44,12 @@ Athena/
 | Approve endpoint | `ui/backend/server.py` | `POST /api/review/{item_id}/approve` | DI-002-B |
 | Reject endpoint | `ui/backend/server.py` | `POST /api/review/{item_id}/reject` | DI-002-C |
 | Edit-and-rewrite endpoint | `ui/backend/server.py` | `POST /api/review/{item_id}/edit` | DI-002-D |
-| Review UI | `ui/frontend/src/ReviewView.jsx` | Full component | DI-002-A through DI-002-D |
+| Review UI | `ui/frontend/src/ReviewView.jsx` | Full component — three-tab Document Queue | DI-002-A through DI-002-G |
 | Submit for review helper | `agents/briefing_agent.py`, `agents/marketing_agent.py` | `submit_for_review()` calls | DI-002-A, DI-012-B |
+| Document Queue nav entry | `ui/frontend/src/App.jsx` | `NAV_ITEMS` — `id:"queue"`, `label:"Document Queue"` replaces Documents + Review Queue | DI-002-G |
+| Approved docs loader | `ui/frontend/src/ReviewView.jsx` | `loadApproved()` — fetches `GET /api/documents` on Approved tab activation | DI-002-E |
+| Rejected docs filter | `ui/frontend/src/ReviewView.jsx` | `histItems.filter(i => i.status === "rejected")` in Rejected tab section | DI-002-F |
+| Approved doc viewer | `ui/frontend/src/ReviewView.jsx` | `FileViewer` render gated on `viewingApproved` state | DI-002-E |
 
 ---
 
@@ -74,6 +78,7 @@ Athena/
 | Kokoro TTS server | `voice/kokoro_server.py`, port 8002 | Sentence-split streaming pipeline | DI-004-C |
 | Intent classification + dispatch | `voice/voice_bridge.py` | Claude Haiku `tool_use` in `_classify_and_dispatch()` | DI-004-D |
 | Voice API | `ui/backend/server.py` | `WebSocket /ws/voice`, `POST /api/voice/query` | DI-004-A through DI-004-D |
+| Shared mic stream per listen/record cycle | `voice/voice_bridge.py` | `_voice_loop` — opens one `sd.InputStream` per query cycle; passes `stream` to `_listen_for_wake(oww_model, stream)` and `_record_query(stream)` | DI-033-A, DI-033-B, DI-033-C |
 
 ---
 
@@ -258,3 +263,26 @@ Athena/
 | Pitch deck exec_summary slide | `agents/deck_agent.py` | `_DECK_GUIDES["pitch"]` — exec_summary added after cover | DI-030-A |
 | McKinsey quality directives | `agents/content_agent.py`, `briefing_agent.py`, `ma_intelligence_agent.py`, `regulatory_strategy_agent.py`, `sow_agent.py`, `deck_agent.py` | System prompt / SYSTEM / agent description constants | DI-030-B |
 | Brand identity injection | `agents/agent_base.py` | `build_system_prompt()` / system prompt `parts` list with "Latitude MedTech LLC" | DI-030-C |
+| Publication format guide | `agents/agent_base.py` | `PUBLICATION_FORMAT_GUIDE` dict + `system_prompt()` injection | DI-030-D |
+| Agent persona format sections | `.claude/agents/content-agent.md`, `consulting-agent.md`, `briefing-agent.md`, `ma-intelligence-agent.md`, `marketing-agent.md`, `iso-agent.md`, `deck-agent.md`, `coaching-agent.md` | `## Output Format Standard` section in each file | DI-030-E |
+
+---
+
+## DO-033 — Voice Query Readiness Latency
+
+| Design Output | File | Symbol / Route | Implements |
+|---|---|---|---|
+| Single shared audio stream | `Athena/voice/voice_bridge.py` | `_voice_loop` — opens one `sd.InputStream` per query cycle, passes to `_listen_for_wake` and `_record_query` | DI-033-A, DI-033-B, DI-033-C |
+
+## DO-034 — Engineering Process Integrity
+
+| Design Output | File | Symbol / Route | Implements |
+|---|---|---|---|
+| Co-commit rule documentation | `CLAUDE.md` | Engineering Integrity Standards § Co-Commit Rule | DI-034-A |
+| Auth Centralization Standard | `CLAUDE.md` | Engineering Integrity Standards § Auth Centralization Standard | DI-034-B |
+| voice_bridge.py Boundary declaration | `CLAUDE.md` | Engineering Integrity Standards § voice_bridge.py Boundary | DI-034-C |
+| Progress Bar Specification | `CLAUDE.md` | Engineering Integrity Standards § Progress Bar Specification | DI-034-D |
+| App.jsx Responsibility Scope | `CLAUDE.md` | Engineering Integrity Standards § App.jsx Responsibility Scope | DI-034-E |
+| CLAUDE.md Update Policy | `CLAUDE.md` | Engineering Integrity Standards § CLAUDE.md Update Policy | DI-034-F |
+| QMS simulator review submission | `agents/qms_simulator_agent.py` | `_MEM.submit_for_review()` call in `run()` after bundle index written | DI-020-A (satisfies all-agent queue submission) |
+

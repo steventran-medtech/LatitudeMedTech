@@ -120,6 +120,125 @@ HISTORICAL_CONTEXT = {
 }
 
 
+PUBLICATION_FORMAT_GUIDE = {
+    "briefing": (
+        "## Publication Format — MedTech Dive Editorial Standard\n"
+        "Structure every briefing output as MedTech Dive-style editorial:\n"
+        "- Inverted-pyramid lead: most newsworthy fact in the first sentence\n"
+        "- Sections: Lead | Context | Regulatory Implications | So What (for Steven)\n"
+        "- No passive voice; use active attribution ('FDA said', 'Medtronic confirmed')\n"
+        "- Every claim requires a source citation inline (e.g., 'per FDA.gov, 2026-06-07')\n"
+        "- Under 600 words for daily briefings; under 1,200 for deep-dive intelligence\n"
+        "- Headline: specific, not generic ('FDA Issues Warning Letter to Boston Scientific CGM Line', "
+        "not 'FDA Takes Action')"
+    ),
+    "ma_intelligence": (
+        "## Publication Format — MedTech Dive + McKinsey Hybrid\n"
+        "Structure M&A intelligence as a hybrid of MedTech Dive news and McKinsey deal analysis:\n"
+        "- Lead with the deal headline and one-sentence strategic rationale\n"
+        "- Sections: Deal Overview | Strategic Rationale | QARA Assessment | Historical Pattern | So What\n"
+        "- QARA section must be specific: name the devices, certificates, and quality system impact\n"
+        "- Pattern section: reference at least one comparable deal from the 50-year arc\n"
+        "- Close with 2-3 implications for Latitude MedTech's advisory positioning\n"
+        "- Source all financial figures with SEC filing or press release citation"
+    ),
+    "content": (
+        "## Publication Format — Harvard Business Review Executive Standard\n"
+        "Structure all content as HBR-quality practitioner writing:\n"
+        "- Open with a provocative insight or counterintuitive observation (not background)\n"
+        "- Sections: Hook | The Problem | The Framework | The Takeaway | Call to Action\n"
+        "- Use the 'manager test': every paragraph must answer 'so what does this mean for me'\n"
+        "- Substack: 600–1,000 words with 3-5 subheadings; LinkedIn: 150–300 words single scroll\n"
+        "- No jargon without definition; no acronyms on first use\n"
+        "- End with one specific action the reader can take this week"
+    ),
+    "coaching": (
+        "## Publication Format — Harvard Business Review Executive Coaching Standard\n"
+        "Structure all coaching briefs as HBR-quality coaching documentation:\n"
+        "- Sections: Background | Stated Goal | Strategic Context | Talking Points | "
+        "Probing Questions | Recommended Next Steps\n"
+        "- Talking Points: 3-5 bullets, actionable and specific to this client\n"
+        "- Questions: open-ended, designed to surface unspoken constraints\n"
+        "- Next Steps: sequenced and time-bound (e.g., 'within 2 weeks: …')\n"
+        "- Write in Steve's voice: direct, experienced, practitioner-level; no generic career advice"
+    ),
+    "consulting": (
+        "## Publication Format — McKinsey Pyramid Principle (SCQA)\n"
+        "Structure all consulting deliverables using the McKinsey Pyramid Principle:\n"
+        "- SCQA frame: Situation → Complication → Question → Answer (lead with the answer)\n"
+        "- Executive summary first: 3-4 sentences stating the recommendation and primary rationale\n"
+        "- MECE structure: every section mutually exclusive, collectively exhaustive\n"
+        "- Sections: Executive Summary | Situation | Key Findings | Recommendation | Next Steps\n"
+        "- Length: 800–2,000 words for strategy memos; 400–600 for weekly deliverables"
+    ),
+    "deck": (
+        "## Publication Format — McKinsey Single-Idea-Per-Slide Discipline\n"
+        "Structure all slide content using McKinsey's proven standard:\n"
+        "- One insight per slide: the headline IS the conclusion, not a descriptor\n"
+        "- Pyramid Principle: answer-first → supporting evidence → data\n"
+        "- SCQA narrative arc across the full deck\n"
+        "- Headline format: action-oriented insight ('Revenue stalls without QARA upgrade')\n"
+        "- 3-5 bullets max per slide; never exceed one concept per bullet\n"
+        "- Every data chart must have an insight headline above it"
+    ),
+    "sow": (
+        "## Publication Format — McKinsey Engagement Letter Standard\n"
+        "Structure all SOWs using McKinsey engagement standard:\n"
+        "- Lead with scope, deliverables, and success criteria — not background\n"
+        "- Sections: Engagement Objective | Scope of Work | Deliverables | Timeline | "
+        "Assumptions | Fees\n"
+        "- Each deliverable: specific, measurable, reviewer-assignable\n"
+        "- Timeline: milestone table with owner and acceptance criteria per milestone\n"
+        "- No ambiguous language: 'up to X' must be replaced with exact commitments or ranges\n"
+        "- Alpha label and disclaimer on every draft"
+    ),
+    "regulatory_strategy": (
+        "## Publication Format — PwC Regulatory Advisory Standard\n"
+        "Structure all regulatory strategy documents as PwC-quality advisory:\n"
+        "- Executive Summary first: regulatory pathway, timeline, top 3 risks\n"
+        "- Sections: Regulatory Classification | Pathway Analysis | Risk Register | "
+        "Timeline | Action Plan\n"
+        "- Risk Register: each risk rated Likelihood × Impact; mitigation owner named\n"
+        "- Cite FDA guidance documents and ISO standards by full title and date\n"
+        "- Flag all 'judgment call' areas explicitly — never bury uncertainty in passive constructions\n"
+        "- Alpha label and RAC review gate clearly marked on every output"
+    ),
+    "iso_coach": (
+        "## Publication Format — PwC Quality Advisory Standard\n"
+        "Structure all ISO/QMS advisory outputs as PwC-quality advisory:\n"
+        "- Lead with the audit risk classification: Critical / Major / Minor\n"
+        "- Sections: Clause Reference | Current State | Gap | Risk Level | "
+        "Recommended Action | Verification\n"
+        "- Every gap statement is specific to the client's system — not generic\n"
+        "- Recommended actions sequenced: immediate (0–30 days) / near-term (30–90 days) / "
+        "strategic (90+ days)\n"
+        "- Reference ISO clause numbers specifically (e.g., §7.3.2 Design Controls)\n"
+        "- Alpha label and RAC review gate on every output"
+    ),
+    "qms_simulator": (
+        "## Publication Format — PwC Quality Advisory Standard (Training Use)\n"
+        "Structure all QMS simulator outputs as PwC-quality mock audit documentation:\n"
+        "- DHR/DMR format: ISO 13485:2016 section references on every document header\n"
+        "- CAPA records: 5-Why root cause, risk rating, corrective action, "
+        "verification method, owner\n"
+        "- Risk Management: ISO 14971 table — hazard, severity, probability, RPN, control\n"
+        "- SOP references: clause-mapped; every SOP traceable to a standard requirement\n"
+        "- Training records: competency-based, with assessment criteria and sign-off fields\n"
+        "- DISCLAIMER on every document: fictional for mock audit training only"
+    ),
+    "marketing": (
+        "## Publication Format — Harvard Business Review Practitioner Plan\n"
+        "Structure all marketing plans and briefs as HBR-quality practitioner documents:\n"
+        "- Lead with the strategic objective and 30-day priority action\n"
+        "- Tactic scorecard table: Tactic | Mobility | Cost | Hours/Week | Expected Output\n"
+        "- Remote/zero-cost tactics sorted to the top\n"
+        "- Sections: Objective | Tactic Scorecard | Weekly Plan | Metrics | Future Pipeline\n"
+        "- Every tactic tagged: Remote / Local / [DEFERRED]\n"
+        "- Future Pipeline: deferred tactics with explicit unlock triggers"
+    ),
+}
+
+
 class AgentBase:
     def __init__(self, agent_name: str):
         self.name    = agent_name
@@ -208,6 +327,9 @@ class AgentBase:
                 f"context to show how far the field has come and where current practice sits "
                 f"on that arc:\n{hist}"
             )
+        fmt = PUBLICATION_FORMAT_GUIDE.get(self.name)
+        if fmt:
+            parts.append(f"\n{fmt}")
         if task_context:
             parts.append(f"\n## Current Task\n{task_context}")
         if include_kb:
