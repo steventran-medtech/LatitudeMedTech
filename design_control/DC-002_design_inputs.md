@@ -1,5 +1,5 @@
 # DC-002 — Design Inputs
-**Document:** DC-002 · Version 1.6 · 2026-06-06  
+**Document:** DC-002 · Version 1.7 · 2026-06-06  
 **Approved by:** Steven Tran
 
 Design inputs are specific, verifiable requirements derived from the user
@@ -137,7 +137,7 @@ Each entry:
 
 | ID | Source | Requirement Statement | Verification | Priority | Status |
 |---|---|---|---|---|---|
-| DI-023-A | UN-023 | The knowledge base ingestion pipeline shall not apply a date filter that excludes documents published or effective more than 50 years before the current year; RAG search queries shall include non-date-restricted and historically-scoped terms alongside current-year queries, so that agents can access and cite source material spanning at least 50 years | `rag_agent.py` contains no hard `cutoff_year`, `min_year`, or equivalent date filter rejecting documents older than 50 years; KB seed queries include at least one historically-scoped term not restricted to a specific recent year | P1 | OPEN |
+| DI-023-A | UN-023 | The knowledge base ingestion pipeline shall not apply a date filter that excludes documents published or effective more than 50 years before the current year; RAG search queries shall include non-date-restricted and historically-scoped terms alongside current-year queries, so that agents can access and cite source material spanning at least 50 years | `rag_agent.py` contains no hard `cutoff_year`, `min_year`, or equivalent date filter rejecting documents older than 50 years; KB seed queries include at least one historically-scoped term not restricted to a specific recent year | P1 | VERIFIED |
 
 ---
 

@@ -1,5 +1,5 @@
 # DC-004 — Requirements Traceability Matrix (RTM)
-**Document:** DC-004 · Version 1.7 · 2026-06-06  
+**Document:** DC-004 · Version 1.8 · 2026-06-06  
 **Approved by:** Steven Tran
 
 This is the single source of truth for end-to-end coverage. Every user need
@@ -60,7 +60,7 @@ column are open findings requiring immediate remediation.
 | UN-011 | | DI-011-B | Cited sources + dates | M&A agent system prompt | `test_DI_011_B` | VERIFIED |
 | UN-012 | Regulatory briefings | DI-012-A | FDA + EU MDR + IMDRF coverage | `briefing_agent.py` sources | `test_DI_012_A` | VERIFIED |
 | UN-012 | | DI-012-B | Briefings enter review queue | `briefing_agent.py` submit_for_review | `test_DI_012_B` | VERIFIED |
-| UN-023 | Historical data depth | DI-023-A | No date cutoff blocking >50-year-old sources; KB queries include historically-scoped terms | `rag_agent.py` no hard year filter; seed queries include non-date-restricted terms | `test_DI_023_A` | OPEN |
+| UN-023 | Historical data depth | DI-023-A | No date cutoff blocking >50-year-old sources; KB queries include historically-scoped terms | `rag_agent.py` no hard year filter; seed queries include non-date-restricted terms | `test_DI_023_A` | VERIFIED |
 | UN-013 | Dashboard | DI-013-A | Agent health (green/yellow/red) | `server.py` /api/dashboard | `test_DI_013_A` | VERIFIED |
 | UN-013 | | DI-013-B | Hourly token timeseries | `server.py` /api/dashboard/timeseries | `test_DI_013_B` | VERIFIED |
 | UN-013 | | DI-013-C | KB growth chart | `server.py` /api/dashboard/knowledge-growth | `test_DI_013_C` | VERIFIED |
@@ -96,13 +96,13 @@ column are open findings requiring immediate remediation.
 
 ---
 
-## Coverage Summary (v1.7)
+## Coverage Summary (v1.8)
 
 | Metric | Count |
 |---|---|
 | Total user needs | 23 |
 | Total design inputs | 70 |
-| Design inputs with VERIFIED tests | 61 |
+| Design inputs with VERIFIED tests | 62 |
 | Design inputs with PARTIAL coverage | 9 |
 | Design inputs with OPEN gap | 0 |
 | Design inputs with WAIVED status | 0 |
