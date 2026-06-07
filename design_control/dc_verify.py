@@ -2594,6 +2594,11 @@ def test_DI_033_B():
     _log(PASS, di, "_record_query accepts stream parameter; no internal sd.InputStream")
 
 
+
+def test_DI_033_B_voice():
+    """Alias for DI-033-B voice stream test"""
+    return test_DI_033_B()
+
 def test_DI_033_C():
     """DI-033-C: _voice_loop opens one sd.InputStream and passes it to _listen_for_wake and _record_query"""
     di = "DI-033-C"
@@ -2724,6 +2729,87 @@ def _print_summary():
 
 # ── Entry Point ────────────────────────────────────────────────────────────────
 
+
+def test_DI_034_B():
+    """DI-034-B: CLAUDE.md contains Auth Centralization Standard section"""
+    di = "DI-034-B"
+    if _skip_if_filtered(di): return
+    f = ROOT / "CLAUDE.md"
+    if not f.exists():
+        _log(FAIL, di, "CLAUDE.md not found", str(f))
+        return
+    if "Auth Centralization Standard" not in _read(f):
+        _log(FAIL, di, "CLAUDE.md missing 'Auth Centralization Standard' section",
+             "Add Auth Centralization Standard to Engineering Integrity Standards in CLAUDE.md")
+        return
+    _log(PASS, di, "CLAUDE.md contains Auth Centralization Standard")
+    return True
+
+
+def test_DI_034_C():
+    """DI-034-C: CLAUDE.md contains voice_bridge.py Boundary section"""
+    di = "DI-034-C"
+    if _skip_if_filtered(di): return
+    f = ROOT / "CLAUDE.md"
+    if not f.exists():
+        _log(FAIL, di, "CLAUDE.md not found", str(f))
+        return
+    if "voice_bridge.py Boundary" not in _read(f):
+        _log(FAIL, di, "CLAUDE.md missing 'voice_bridge.py Boundary' section",
+             "Add voice_bridge.py Boundary to Engineering Integrity Standards in CLAUDE.md")
+        return
+    _log(PASS, di, "CLAUDE.md contains voice_bridge.py Boundary")
+    return True
+
+
+def test_DI_034_D():
+    """DI-034-D: CLAUDE.md documents the forward-only progress bar constraint"""
+    di = "DI-034-D"
+    if _skip_if_filtered(di): return
+    f = ROOT / "CLAUDE.md"
+    if not f.exists():
+        _log(FAIL, di, "CLAUDE.md not found", str(f))
+        return
+    if "Progress Bar Specification" not in _read(f):
+        _log(FAIL, di, "CLAUDE.md missing 'Progress Bar Specification' section",
+             "Add Progress Bar Specification to Engineering Integrity Standards in CLAUDE.md")
+        return
+    _log(PASS, di, "CLAUDE.md contains Progress Bar Specification")
+    return True
+
+
+def test_DI_034_E():
+    """DI-034-E: CLAUDE.md contains App.jsx Responsibility Scope section"""
+    di = "DI-034-E"
+    if _skip_if_filtered(di): return
+    f = ROOT / "CLAUDE.md"
+    if not f.exists():
+        _log(FAIL, di, "CLAUDE.md not found", str(f))
+        return
+    if "App.jsx Responsibility Scope" not in _read(f):
+        _log(FAIL, di, "CLAUDE.md missing 'App.jsx Responsibility Scope' section",
+             "Add App.jsx Responsibility Scope to Engineering Integrity Standards in CLAUDE.md")
+        return
+    _log(PASS, di, "CLAUDE.md contains App.jsx Responsibility Scope")
+    return True
+
+
+def test_DI_034_F():
+    """DI-034-F: CLAUDE.md contains CLAUDE.md Update Policy section"""
+    di = "DI-034-F"
+    if _skip_if_filtered(di): return
+    f = ROOT / "CLAUDE.md"
+    if not f.exists():
+        _log(FAIL, di, "CLAUDE.md not found", str(f))
+        return
+    if "CLAUDE.md Update Policy" not in _read(f):
+        _log(FAIL, di, "CLAUDE.md missing 'CLAUDE.md Update Policy' section",
+             "Add CLAUDE.md Update Policy to Engineering Integrity Standards in CLAUDE.md")
+        return
+    _log(PASS, di, "CLAUDE.md contains CLAUDE.md Update Policy")
+    return True
+
+
 def main():
     global _di_filter, _verbose
 
@@ -2817,8 +2903,13 @@ def main():
 
     _section("UN-034 All-Agent Review Queue Submission (CO-010)")
     test_DI_034_A()
+    test_DI_034_B(); test_DI_034_C()
+    test_DI_034_D(); test_DI_034_E(); test_DI_034_F()
 
-    # UN-033 (DI-033-A/B/C) deregistered — CO-008 re-enables with implementation
+
+    _section("UN-033 Voice Query Readiness Latency (CO-010)")
+    test_DI_033_A(); test_DI_033_B_voice(); test_DI_033_C()
+
 
     if args.live or args.full:
         test_live_api()

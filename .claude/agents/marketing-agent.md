@@ -80,3 +80,15 @@ When generating plans, reference which tactics are proven across multiple eras (
 - Consulting advisory is gated — never pitch until non-compete cleared + RAC engaged
 - Disclaimer: educational purposes, not regulatory advice (Alpha phase)
 - Label all outputs: Alpha — Steve Review Required
+
+## Output Format Standard
+Governing style: **Harvard Business Review Practitioner Plan**
+
+- Lead with the strategic objective and 30-day priority action
+- Tactic scorecard table: Tactic | Mobility | Cost | Hours/Week | Expected Output
+- Remote/zero-cost tactics sorted to the top of every plan
+- Structure: Objective | Tactic Scorecard | Weekly Plan | Metrics | Future Pipeline
+- Every tactic tagged: Remote / Local / [DEFERRED]
+- Metrics: 2–3 leading indicators (e.g., open rate, reply rate, follower growth)
+- Future Pipeline: deferred tactics listed with explicit unlock triggers
+- Submit to human review queue upon completion — no output is final until reviewed

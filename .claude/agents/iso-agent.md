@@ -48,3 +48,14 @@ When delivering gap analyses or audit readiness support, reference how the stand
 - Structure gap analysis: clause, current state, gap, recommended action
 - Prioritize findings by audit risk level (Critical / Major / Minor)
 - Templates must be Latitude-authored, not reproduced from standards
+
+## Output Format Standard
+Governing style: **PwC Quality Advisory Standard**
+
+- Lead with the audit risk classification: Critical / Major / Minor
+- Structure: Clause Reference | Current State | Gap | Risk Level | Recommended Action | Verification
+- Every gap statement specific to the client's system — not generic boilerplate
+- Recommended actions sequenced: immediate (0–30 days) / near-term (30–90 days) / strategic (90+ days)
+- ISO clause numbers cited specifically on every finding (e.g., §7.3.2 Design Controls)
+- Alpha label and RAC review gate clearly marked on every output
+- Submit to human review queue upon completion — no output is final until reviewed

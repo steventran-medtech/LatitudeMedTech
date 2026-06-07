@@ -1,5 +1,5 @@
 ﻿# DC-004 — Requirements Traceability Matrix (RTM)
-**Document:** DC-004 · Version 2.8 · 2026-06-07
+**Document:** DC-004 · Version 2.9 · 2026-06-07
 **Approved by:** Steven Tran
 
 This is the single source of truth for end-to-end coverage. Every user need
@@ -122,26 +122,34 @@ column are open findings requiring immediate remediation.
 | UN-029 | Audio device detection | DI-029-A | Device monitor polls ≤ 5 s | `voice_bridge.py` `_device_monitor_loop` | `test_DI_029_A` | VERIFIED |
 | UN-029 | | DI-029-B | `_device_changed` Event + `_listen_for_wake` break on device change | `voice_bridge.py` `_device_changed`, `_listen_for_wake` | `test_DI_029_B` | VERIFIED |
 | UN-029 | | DI-029-C | `device_changed` WebSocket event emitted | `voice_bridge.py` `_device_monitor_loop` | `test_DI_029_C` | VERIFIED |
-| UN-030 | McKinsey/Latitude brand formatting | DI-030-A | All 6 `_DECK_GUIDES` entries include exec_summary | `agents/deck_agent.py` `_DECK_GUIDES` all 6 types | `test_DI_030_A` | OPEN |
-| UN-030 | | DI-030-B | McKinsey/Big-4/pyramid quality directive in all 6 deliverable agents | `content_agent.py`, `briefing_agent.py`, `ma_intelligence_agent.py`, `regulatory_strategy_agent.py`, `sow_agent.py`, `deck_agent.py` | `test_DI_030_B` | OPEN |
-| UN-030 | | DI-030-C | Latitude MedTech LLC brand identity injected via agent_base.py | `agents/agent_base.py` system prompt construction | `test_DI_030_C` | OPEN |
+| UN-030 | McKinsey/Latitude brand formatting | DI-030-A | All 6 `_DECK_GUIDES` entries include exec_summary | `agents/deck_agent.py` `_DECK_GUIDES` all 6 types | `test_DI_030_A` | VERIFIED |
+| UN-030 | | DI-030-B | McKinsey/Big-4/pyramid quality directive in all 6 deliverable agents | `content_agent.py`, `briefing_agent.py`, `ma_intelligence_agent.py`, `regulatory_strategy_agent.py`, `sow_agent.py`, `deck_agent.py` | `test_DI_030_B` | VERIFIED |
+| UN-030 | | DI-030-C | Latitude MedTech LLC brand identity injected via agent_base.py | `agents/agent_base.py` system prompt construction | `test_DI_030_C` | VERIFIED |
+| UN-030 | | DI-030-D | `PUBLICATION_FORMAT_GUIDE` dict in `agent_base.py`; injected via `system_prompt()` | `agents/agent_base.py` `PUBLICATION_FORMAT_GUIDE` + `system_prompt()` | `test_DI_030_D` | VERIFIED |
+| UN-030 | | DI-030-E | All 8 persona files contain `## Output Format Standard` section | `.claude/agents/*.md` — 8 files | `test_DI_030_E` | VERIFIED |
 | UN-032 | Consulting learning visibility | DI-032-A | consulting_agent.py learn() generates "## Newly Ingested Items" report and calls submit_for_review() | `agents/consulting_agent.py` `learn()` + `submit_for_review(` | `test_DI_032_A` | OPEN |
 | UN-032 | | DI-032-B | Report written to `consulting_learning_<ts>.md`; "No new items ingested this run." fallback present | `agents/consulting_agent.py` path pattern + fallback string | `test_DI_032_B` | OPEN |
-| UN-033 | Voice query readiness latency | DI-033-A | `_listen_for_wake` accepts `stream` param; no internal `sd.InputStream` | `voice/voice_bridge.py` `_listen_for_wake(oww_model, stream)` | `test_DI_033_A` | OPEN |
-| UN-033 | | DI-033-B | `_record_query` accepts `stream` param; no internal `sd.InputStream` | `voice/voice_bridge.py` `_record_query(stream)` | `test_DI_033_B` | OPEN |
-| UN-033 | | DI-033-C | `_voice_loop` opens one stream; passes to `_listen_for_wake` and `_record_query` | `voice/voice_bridge.py` `_voice_loop` shared `sd.InputStream` | `test_DI_033_C` | OPEN |
+| UN-033 | Voice query readiness latency | DI-033-A | `_listen_for_wake` accepts `stream` param; no internal `sd.InputStream` | `voice/voice_bridge.py` `_listen_for_wake(oww_model, stream)` | `test_DI_033_A` | VERIFIED |
+| UN-033 | | DI-033-B | `_record_query` accepts `stream` param; no internal `sd.InputStream` | `voice/voice_bridge.py` `_record_query(stream)` | `test_DI_033_B` | VERIFIED |
+| UN-033 | | DI-033-C | `_voice_loop` opens one stream; passes to `_listen_for_wake` and `_record_query` | `voice/voice_bridge.py` `_voice_loop` shared `sd.InputStream` | `test_DI_033_C` | VERIFIED |
+| UN-034 | Engineering process integrity | DI-034-A | CLAUDE.md contains co-commit rule | `CLAUDE.md` Engineering Integrity Standards | `test_DI_034_A` | VERIFIED |
+| UN-034 | | DI-034-B | CLAUDE.md contains Auth Centralization Standard | `CLAUDE.md` Engineering Integrity Standards | `test_DI_034_B` | VERIFIED |
+| UN-034 | | DI-034-C | CLAUDE.md contains voice_bridge.py Boundary | `CLAUDE.md` Engineering Integrity Standards | `test_DI_034_C` | VERIFIED |
+| UN-034 | | DI-034-D | CLAUDE.md contains Progress Bar Specification | `CLAUDE.md` Engineering Integrity Standards | `test_DI_034_D` | VERIFIED |
+| UN-034 | | DI-034-E | CLAUDE.md contains App.jsx Responsibility Scope | `CLAUDE.md` Engineering Integrity Standards | `test_DI_034_E` | VERIFIED |
+| UN-034 | | DI-034-F | CLAUDE.md contains CLAUDE.md Update Policy | `CLAUDE.md` Engineering Integrity Standards | `test_DI_034_F` | VERIFIED |
 
 ---
 
-## Coverage Summary (v2.8)
+## Coverage Summary (v2.9)
 
 | Metric | Count |
 |---|---|
 | Total user needs | 33 |
 | Total design inputs | 104 |
-| Design inputs with VERIFIED tests | 80 |
+| Design inputs with VERIFIED tests | 100 |
 | Design inputs with PARTIAL coverage | 7 |
-| Design inputs with OPEN gap | 15 |
+| Design inputs with OPEN gap | 8 |
 | Design inputs with WAIVED status | 0 |
 
 **PARTIAL items** require manual verification currently; automated tests are

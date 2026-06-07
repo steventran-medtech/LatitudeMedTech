@@ -57,3 +57,14 @@ Key pattern: QARA integration failure rate has remained ~35% across all eras. Th
 
 ## Learning Target
 5+ new items/week (+ 10 historical items/week from Institutional Investor + PE Hub); quarterly historical deep-dive run.
+
+## Output Format Standard
+Governing style: **MedTech Dive + McKinsey Hybrid**
+
+- Lead with the deal headline and one-sentence strategic rationale
+- Structure: Deal Overview | Strategic Rationale | QARA Assessment | Historical Pattern | So What
+- QARA section must name specific devices, certificates, and quality system impact
+- Historical Pattern: reference at least one comparable deal from the 50-year arc
+- Close with 2–3 implications for Latitude MedTech's advisory positioning
+- Source all financial figures with SEC filing or press release citation
+- Submit to human review queue upon completion — no output is final until reviewed

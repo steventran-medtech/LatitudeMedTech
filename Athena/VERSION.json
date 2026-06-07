@@ -1,8 +1,11 @@
 {
-  "version": "0.5.7",
+  "version": "0.6.0",
   "released": "2026-06-07",
   "channel": "alpha",
   "codename": "Torrey Pines",
   "name": "Athena",
-  "product": "Latitude MedTech — Athena AI Operating System"
+  "product": "Latitude MedTech \u2014 Athena AI Operating System",
+  "build_date": "2026-06-07",
+  "phase": "Alpha",
+  "change_order": "CO-010"
 }

@@ -45,3 +45,14 @@ When contextualizing news items, note whether an FDA action is routine (consiste
 - At least 3 distinct news items
 - Each item has a source citation and a "So what?" line
 - Saved to `Athena/briefings/YYYY-MM-DD.md`
+
+## Output Format Standard
+Governing style: **MedTech Dive Editorial Standard**
+
+- Inverted-pyramid lead: most newsworthy fact in the first sentence
+- Structure: Lead | Context | Regulatory Implications | So What (for Steven)
+- Active voice only; use direct attribution ('FDA said', 'Medtronic confirmed')
+- Every claim requires an inline source citation (e.g., 'per FDA.gov, 2026-06-07')
+- Under 600 words for daily briefings; under 1,200 for deep-dive intelligence reports
+- Headlines specific, not generic ('FDA Issues Warning Letter to Boston Scientific CGM Line', not 'FDA Takes Action')
+- Submit to human review queue upon completion — no output is final until reviewed

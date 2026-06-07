@@ -1,5 +1,5 @@
 ﻿# DC-003 — Design Outputs
-**Document:** DC-003 · Version 1.9 · 2026-06-07
+**Document:** DC-003 · Version 2.0 · 2026-06-07
 **Approved by:** Steven Tran
 
 Design outputs are the code artifacts, APIs, data structures, and
@@ -268,8 +268,21 @@ Athena/
 
 ---
 
-## DO-034 — Universal Agent Queue Submission
+## DO-033 — Voice Query Readiness Latency
 
 | Design Output | File | Symbol / Route | Implements |
 |---|---|---|---|
-| QMS simulator review submission | `agents/qms_simulator_agent.py` | `_MEM.submit_for_review()` call in `run()` after bundle index written | DI-034-A |
+| Single shared audio stream | `Athena/voice/voice_bridge.py` | `_voice_loop` — opens one `sd.InputStream` per query cycle, passes to `_listen_for_wake` and `_record_query` | DI-033-A, DI-033-B, DI-033-C |
+
+## DO-034 — Engineering Process Integrity
+
+| Design Output | File | Symbol / Route | Implements |
+|---|---|---|---|
+| Co-commit rule documentation | `CLAUDE.md` | Engineering Integrity Standards § Co-Commit Rule | DI-034-A |
+| Auth Centralization Standard | `CLAUDE.md` | Engineering Integrity Standards § Auth Centralization Standard | DI-034-B |
+| voice_bridge.py Boundary declaration | `CLAUDE.md` | Engineering Integrity Standards § voice_bridge.py Boundary | DI-034-C |
+| Progress Bar Specification | `CLAUDE.md` | Engineering Integrity Standards § Progress Bar Specification | DI-034-D |
+| App.jsx Responsibility Scope | `CLAUDE.md` | Engineering Integrity Standards § App.jsx Responsibility Scope | DI-034-E |
+| CLAUDE.md Update Policy | `CLAUDE.md` | Engineering Integrity Standards § CLAUDE.md Update Policy | DI-034-F |
+| QMS simulator review submission | `agents/qms_simulator_agent.py` | `_MEM.submit_for_review()` call in `run()` after bundle index written | DI-020-A (satisfies all-agent queue submission) |
+
