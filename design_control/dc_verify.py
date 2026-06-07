@@ -3184,7 +3184,7 @@ def test_DI_022_A():
 # ── UN-035 / Voice Widget Docking Persistence ─────────────────────────────────
 
 def test_DI_035_A():
-    """DI-035-A: FloatingVoiceWidget docked bar style in App.jsx contains width:'auto'"""
+    """DI-035-A: FloatingVoiceWidget docked bar style contains width:'auto' AND right:0"""
     di = "DI-035-A"
     if _skip_if_filtered(di): return
 
@@ -3195,19 +3195,27 @@ def test_DI_035_A():
         return
     content = _read(f)
 
-    # ACT — look for width:"auto" or width: "auto" near the docked bar style block
+    # ACT — both properties are required for full-width docked bar
     has_width_auto = ('width: "auto"' in content or "width:'auto'" in content
                       or 'width:"auto"' in content or "width: 'auto'" in content)
+    has_right_zero = ('right: 0' in content or 'right:0' in content
+                      or 'right:"0"' in content or "right:'0'" in content
+                      or 'right: "0"' in content)
 
     # ASSERT
-    if has_width_auto:
-        _log(PASS, di, "App.jsx FloatingVoiceWidget docked bar style contains width:\"auto\"")
+    missing = []
+    if not has_width_auto: missing.append('width:"auto" missing from docked bar style')
+    if not has_right_zero: missing.append('right:0 missing from docked bar style')
+
+    if not missing:
+        _log(PASS, di, 'App.jsx FloatingVoiceWidget docked bar style contains width:"auto" and right:0')
     else:
         _log(FAIL, di,
-             "FAIL DI-035-A: App.jsx FloatingVoiceWidget docked bar style missing width:\"auto\"",
-             "Fix: Add `width: \"auto\"` to the docked bar JSX style object in FloatingVoiceWidget "
-             "(the element with position:\"fixed\", top:0, left:0, right:0, height:VOICE_BAR_H). "
-             "This clears any pixel width set by onUndock on every re-dock.")
+             f"FAIL DI-035-A: {'; '.join(missing)}",
+             "Fix: The FloatingVoiceWidget docked bar JSX style must contain both "
+             "`right: 0` and `width: \"auto\"` "
+             "(position:\"fixed\", top:0, left:0, right:0, width:\"auto\", height:VOICE_BAR_H). "
+             "Both are required for full-width display on re-dock.")
     return True
 
 
@@ -3329,6 +3337,66 @@ def test_DI_036_C():
     return True
 
 
+def test_DI_036_D():
+    """DI-036-D: server.py list_decks() gates on get_approved_reviews"""
+    di = "DI-036-D"
+    if _skip_if_filtered(di): return
+
+    f = UI_BACK / "server.py"
+    if not f.exists():
+        _log(FAIL, di, "server.py not found", str(f))
+        return
+    content = _read(f)
+
+    import re as _re
+
+    def _fn_contains(src, fn_name, marker):
+        m = _re.search(rf"def {_re.escape(fn_name)}\s*\(.*?\).*?(?=\ndef |\Z)", src, _re.DOTALL)
+        return bool(m) and marker in m.group(0)
+
+    has_decks = _fn_contains(content, "list_decks", "get_approved_reviews")
+
+    if has_decks:
+        _log(PASS, di, "server.py list_decks() gates on get_approved_reviews()")
+    else:
+        _log(FAIL, di,
+             "FAIL DI-036-D: list_decks() missing get_approved_reviews filter",
+             'Fix: In server.py list_decks(), add `approved_paths = {r["file_path"] for r in '
+             'mem.get_approved_reviews() if r.get("file_path")}` and filter .pptx glob to '
+             "only approved paths.")
+    return True
+
+
+def test_DI_036_E():
+    """DI-036-E: server.py list_iso_lessons() gates on get_approved_reviews"""
+    di = "DI-036-E"
+    if _skip_if_filtered(di): return
+
+    f = UI_BACK / "server.py"
+    if not f.exists():
+        _log(FAIL, di, "server.py not found", str(f))
+        return
+    content = _read(f)
+
+    import re as _re
+
+    def _fn_contains(src, fn_name, marker):
+        m = _re.search(rf"def {_re.escape(fn_name)}\s*\(.*?\).*?(?=\ndef |\Z)", src, _re.DOTALL)
+        return bool(m) and marker in m.group(0)
+
+    has_iso = _fn_contains(content, "list_iso_lessons", "get_approved_reviews")
+
+    if has_iso:
+        _log(PASS, di, "server.py list_iso_lessons() gates on get_approved_reviews()")
+    else:
+        _log(FAIL, di,
+             "FAIL DI-036-E: list_iso_lessons() missing get_approved_reviews filter",
+             'Fix: In server.py list_iso_lessons(), add `approved_paths = {r["file_path"] for r in '
+             'mem.get_approved_reviews() if r.get("file_path")}` and filter .md glob to '
+             "only approved paths.")
+    return True
+
+
 def main():
     global _di_filter, _verbose
 
@@ -3434,9 +3502,10 @@ def main():
     _section("UN-022 Voice Conversation Quality (CO-016)")
     test_DI_022_A()
 
-    _section("UN-035/036 Voice Docking & Agent Tab Approval Gate (CO-016)")
+    _section("UN-035/036 Voice Docking & Agent Tab Approval Gate (CO-016/CO-017)")
     test_DI_035_A()
     test_DI_036_A(); test_DI_036_B(); test_DI_036_C()
+    test_DI_036_D(); test_DI_036_E()
 
     if args.live or args.full:
         test_live_api()

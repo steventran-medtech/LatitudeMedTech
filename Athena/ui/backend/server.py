@@ -967,8 +967,15 @@ def list_decks():
     decks_dir = ATHENA / "documents" / "decks"
     if not decks_dir.exists():
         return {"decks": []}
+    try:
+        approved_paths = {
+            r["file_path"] for r in mem.get_approved_reviews()
+            if r.get("file_path")
+        }
+    except Exception:
+        approved_paths = set()
     files = sorted(
-        [f for f in decks_dir.glob("*.pptx")],
+        [f for f in decks_dir.glob("*.pptx") if str(f) in approved_paths],
         key=lambda f: f.stat().st_mtime, reverse=True,
     )
     return {"decks": [{"filename": f.name, "path": str(f),
@@ -1900,11 +1907,20 @@ def get_brief(filename: str):
 
 @app.get("/api/iso/lessons")
 def list_iso_lessons():
+    try:
+        approved_paths = {
+            r["file_path"] for r in mem.get_approved_reviews()
+            if r.get("file_path")
+        }
+    except Exception:
+        approved_paths = set()
     all_files = []
     for sub in ("iso13485", "iso14971"):
         d = _HOME_ATHENA / "coaching" / sub
         if d.exists():
-            all_files.extend(d.glob("*.md"))
+            all_files.extend(
+                f for f in d.glob("*.md") if str(f) in approved_paths
+            )
     if not all_files:
         return {"lessons": []}
     files = sorted(all_files, key=lambda f: f.stat().st_mtime, reverse=True)

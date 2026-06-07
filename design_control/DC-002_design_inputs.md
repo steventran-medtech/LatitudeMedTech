@@ -1,5 +1,5 @@
 # DC-002 — Design Inputs
-**Document:** DC-002 · Version 3.4 · 2026-06-07  
+**Document:** DC-002 · Version 3.5 · 2026-06-07  
 **Approved by:** Steven Tran
 
 Design inputs are specific, verifiable requirements derived from the user
@@ -49,8 +49,8 @@ Each entry:
 |---|---|---|---|---|---|
 | DI-003-A | UN-003 | Knowledge base shall be searchable by all agents via `KBQuery.search()` | `kb_query.py` imports cleanly and `KBQuery()` instantiates | P1 | VERIFIED |
 | DI-003-B | UN-003 | RAG ingestion agent shall index documents from FDA, EU MDR, and IMDRF sources | KB directory contains ≥1 JSON file per knowledge subdomain | P1 | VERIFIED |
-| DI-003-C | UN-003 | RAG ingestion agent shall generate a Markdown ingestion report after each run and submit it to the review queue via `submit_for_review()`, with a report body that includes a "## Newly Ingested Documents" section listing each new document (title, URL, category, chunk count, **date_published**, **scope_summary**) or an explicit "No new documents ingested this run." message if none were found | `rag_agent.py` contains `submit_for_review()` call, "## Newly Ingested Documents" section header, `date_published`, and `scope_summary` | P1 | OPEN |
-| DI-003-D | UN-003 | The ingestion report shall be written to a file matching the `rag_summary_` path pattern under the logs directory and shall include a fallback "No new documents ingested this run." message when zero documents were ingested in the run | `rag_agent.py` source contains both `rag_summary_` path pattern and "No new documents ingested" string | P1 | OPEN |
+| DI-003-C | UN-003 | RAG ingestion agent shall generate a Markdown ingestion report after each run and submit it to the review queue via `submit_for_review()`, with a report body that includes a "## Newly Ingested Documents" section listing each new document (title, URL, category, chunk count, **date_published**, **scope_summary**) or an explicit "No new documents ingested this run." message if none were found | `rag_agent.py` contains `submit_for_review()` call, "## Newly Ingested Documents" section header, `date_published`, and `scope_summary` | P1 | VERIFIED |
+| DI-003-D | UN-003 | The ingestion report shall be written to a file matching the `rag_summary_` path pattern under the logs directory and shall include a fallback "No new documents ingested this run." message when zero documents were ingested in the run | `rag_agent.py` source contains both `rag_summary_` path pattern and "No new documents ingested" string | P1 | VERIFIED |
 
 ---
 
@@ -100,8 +100,8 @@ Each entry:
 | DI-007-D | UN-007 | Non-Latin characters shall be removed from titles before storage | `clean_title()` strips non-ASCII characters | P0 | VERIFIED |
 | DI-007-E | UN-007 | YAML frontmatter shall be stripped before content is rendered in the UI | `renderInline` / MarkdownView strips YAML frontmatter | P0 | VERIFIED |
 | DI-007-F | UN-007 | Navigation tab for MedTech Meridian content shall use `label:"MedTech Meridian Drafts"` in `NAV_ITEMS` and `ContentView` h2 shall read "MedTech Meridian Drafts" — the retired label "Content Drafts" shall not appear in either location | `App.jsx` NAV_ITEMS and ContentView h2 string search | P1 | VERIFIED |
-| DI-007-G | UN-007 | `content_agent.py` `DEVICE_SUBSECTORS` list shall contain entries mapping to all 6 required MedTech sector groups: Cardiology, IVD (In Vitro Diagnostics), Diagnostic Imaging, Orthopedics & Prosthetics, Surgical & Medical Instruments, Digital Health & Connected Care — ensuring deliverables can span all major MedTech verticals | `content_agent.py` contains all 6 required sector keywords: `Cardiology`, `IVD`, `Imaging`, `Orthopedic`, `Surgical`, `Digital Health` (case-insensitive) | P1 | OPEN |
-| DI-007-H | UN-007 | Sector and topic-category fallback selection in `content_agent.py` shall use deterministic day-of-year modulo bucketing (`tm_yday`) rather than `random.choice` so that the same calendar day always produces the same fallback sector and consecutive days produce different outputs | `content_agent.py` contains `tm_yday` and does NOT contain `random.choice` | P1 | OPEN |
+| DI-007-G | UN-007 | `content_agent.py` `DEVICE_SUBSECTORS` list shall contain entries mapping to all 6 required MedTech sector groups: Cardiology, IVD (In Vitro Diagnostics), Diagnostic Imaging, Orthopedics & Prosthetics, Surgical & Medical Instruments, Digital Health & Connected Care — ensuring deliverables can span all major MedTech verticals | `content_agent.py` contains all 6 required sector keywords: `Cardiology`, `IVD`, `Imaging`, `Orthopedic`, `Surgical`, `Digital Health` (case-insensitive) | P1 | VERIFIED |
+| DI-007-H | UN-007 | Sector and topic-category fallback selection in `content_agent.py` shall use deterministic day-of-year modulo bucketing (`tm_yday`) rather than `random.choice` so that the same calendar day always produces the same fallback sector and consecutive days produce different outputs | `content_agent.py` contains `tm_yday` and does NOT contain `random.choice` | P1 | VERIFIED |
 
 ### UN-008 — Marketing Pipeline
 
@@ -109,7 +109,7 @@ Each entry:
 |---|---|---|---|---|---|
 | DI-008-A | UN-008 | Marketing agent shall maintain a pipeline DB with ≥ 20 targets | `ops/marketing/pipeline.db` created on first run with ≥ 20 seed targets | P1 | PARTIAL |
 | DI-008-B | UN-008 | All outreach channels shall be zero-cash-budget (no paid media at Alpha) | No paid channel types in pipeline seed data | P1 | PARTIAL |
-| DI-008-C | UN-008 | `MarketingView.jsx` shall provide a bulk-select-and-delete capability for marketing output files using the `BulkBar` / `useMultiSelect` pattern — checkboxes per file, a bulk-action bar showing selected count, and a delete-selected action calling `/api/files/delete-bulk` with `folder: "marketing"` | `MarketingView.jsx` contains `useMultiSelect`, `BulkBar`, and `delete-bulk` string | P1 | OPEN |
+| DI-008-C | UN-008 | `MarketingView.jsx` shall provide a bulk-select-and-delete capability for marketing output files using the `BulkBar` / `useMultiSelect` pattern — checkboxes per file, a bulk-action bar showing selected count, and a delete-selected action calling `/api/files/delete-bulk` with `folder: "marketing"` | `MarketingView.jsx` contains `useMultiSelect`, `BulkBar`, and `delete-bulk` string | P1 | VERIFIED |
 
 ### UN-009 — Slide Deck Generation
 
@@ -137,7 +137,7 @@ Each entry:
 |---|---|---|---|---|---|
 | DI-011-A | UN-011 | M&A agent shall include QARA integration frameworks in deal analysis | QARA framework text present in `ma_intelligence_agent.py` or its agent MD | P1 | VERIFIED |
 | DI-011-B | UN-011 | M&A outputs shall cite named sources with dates | Citation requirement present in M&A agent system prompt | P1 | VERIFIED |
-| DI-011-C | UN-011 | `ma_intelligence_agent.py` system prompt shall explicitly state that historical M&A requests from any year (including pre-2020) are within scope and shall not be declined based on the age of the data — historical analysis dating back to the 1970s is a core capability | `ma_intelligence_agent.py` contains `historical` and a statement that historical requests are in scope (e.g., "historical" + "in scope" or "1970" or "any year") | P1 | OPEN |
+| DI-011-C | UN-011 | `ma_intelligence_agent.py` system prompt shall explicitly state that historical M&A requests from any year (including pre-2020) are within scope and shall not be declined based on the age of the data — historical analysis dating back to the 1970s is a core capability | `ma_intelligence_agent.py` contains `historical` and a statement that historical requests are in scope (e.g., "historical" + "in scope" or "1970" or "any year") | P1 | VERIFIED |
 
 ### UN-012 — Regulatory Briefings
 
@@ -367,7 +367,7 @@ Adding a new DI requires:
 
 | ID | Source | Requirement Statement | Verification | Priority | Status |
 |---|---|---|---|---|---|
-| DI-035-A | UN-035 | The `FloatingVoiceWidget` docked bar JSX style object in `App.jsx` shall include `width: "auto"` so that React resets any inline `width` set during undock on every subsequent dock operation, preventing the widget from reverting to the undocked pixel width | `App.jsx` `FloatingVoiceWidget` docked bar style contains `width: "auto"` | P1 | OPEN |
+| DI-035-A | UN-035 | The `FloatingVoiceWidget` docked bar JSX style object in `App.jsx` shall include `width: "auto"` and `right: 0` so that React resets any inline `width` set during undock and the bar spans the full application width on every subsequent dock operation | `App.jsx` `FloatingVoiceWidget` docked bar style contains `width: "auto"` and `right: 0` | P1 | VERIFIED |
 
 ---
 
@@ -377,7 +377,9 @@ Adding a new DI requires:
 
 | ID | Source | Requirement Statement | Verification | Priority | Status |
 |---|---|---|---|---|---|
-| DI-036-A | UN-036 | `AGENT_TAB` in `App.jsx` shall map `briefing_agent`, `content_agent`, `coaching_brief`, `marketing_agent`, `deck_agent`, and `iso_coach` to `"queue"` so that their outputs are routed to the Document Queue for approval before appearing in any agent-specific tab | `App.jsx` AGENT_TAB entries for those 6 agent IDs all equal `"queue"` | P0 | OPEN |
-| DI-036-B | UN-036 | `server.py` `list_briefings()` and `list_drafts()` shall filter their file listings to only files whose `file_path` appears in `mem.get_approved_reviews()`, matching the approval-gate pattern in `list_documents()` | `server.py` `list_briefings` and `list_drafts` functions each contain `get_approved_reviews` | P0 | OPEN |
-| DI-036-C | UN-036 | `server.py` `list_briefs()` and `list_marketing_outputs()` shall filter their file listings to only files whose `file_path` appears in `mem.get_approved_reviews()`, matching the approval-gate pattern in `list_documents()` | `server.py` `list_briefs` and `list_marketing_outputs` functions each contain `get_approved_reviews` | P0 | OPEN |
+| DI-036-A | UN-036 | `AGENT_TAB` in `App.jsx` shall map `briefing_agent`, `content_agent`, `coaching_brief`, `marketing_agent`, `deck_agent`, and `iso_coach` to `"queue"` so that their outputs are routed to the Document Queue for approval before appearing in any agent-specific tab | `App.jsx` AGENT_TAB entries for those 6 agent IDs all equal `"queue"` | P0 | VERIFIED |
+| DI-036-B | UN-036 | `server.py` `list_briefings()` and `list_drafts()` shall filter their file listings to only files whose `file_path` appears in `mem.get_approved_reviews()`, matching the approval-gate pattern in `list_documents()` | `server.py` `list_briefings` and `list_drafts` functions each contain `get_approved_reviews` | P0 | VERIFIED |
+| DI-036-C | UN-036 | `server.py` `list_briefs()` and `list_marketing_outputs()` shall filter their file listings to only files whose `file_path` appears in `mem.get_approved_reviews()`, matching the approval-gate pattern in `list_documents()` | `server.py` `list_briefs` and `list_marketing_outputs` functions each contain `get_approved_reviews` | P0 | VERIFIED |
+| DI-036-D | UN-036 | `server.py` `list_decks()` shall filter its file listing to only `.pptx` files whose `file_path` appears in `mem.get_approved_reviews()`, matching the approval-gate pattern in `list_documents()` | `server.py` `list_decks` function contains `get_approved_reviews` | P0 | VERIFIED |
+| DI-036-E | UN-036 | `server.py` `list_iso_lessons()` shall filter its file listing to only `.md` files whose `file_path` appears in `mem.get_approved_reviews()`, matching the approval-gate pattern in `list_documents()` | `server.py` `list_iso_lessons` function contains `get_approved_reviews` | P0 | VERIFIED |
 
