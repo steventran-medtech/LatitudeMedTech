@@ -1,5 +1,5 @@
 # DC-001 — Intended Use & User Needs
-**Document:** DC-001 · Version 1.5 · 2026-06-07  
+**Document:** DC-001 · Version 1.6 · 2026-06-07  
 **Approved by:** Steven Tran
 
 ---
@@ -80,6 +80,7 @@ These are the enumerated, controlled user needs for Athena v0.5 (Alpha).
 | UN-002 | Review every AI-generated output before it is delivered, acted upon, or stored as final — and be able to approve, reject, or request edits | P0 |
 | UN-003 | Maintain a persistent knowledge base of domain documents and prior interactions that agents can search | P1 |
 | UN-018 | Capture and manage the full lifecycle of coaching clients — intake, program assignment, engagement tracking, and SOW generation — through a structured form with validated required fields | P0 |
+| UN-036 | I need every agent-specific output tab (Daily Briefing, MedTech Meridian Drafts, Coaching, Marketing, Decks, ISO Case Studies) to show only approved deliverables — pending and rejected items shall not appear in any agent tab — so that I never see unapproved AI output displayed as finalized work. | P0 |
 
 ### Voice Interface
 
@@ -90,6 +91,7 @@ These are the enumerated, controlled user needs for Athena v0.5 (Alpha).
 | UN-006 | Keep my voice session alive as I navigate between UI tabs, without losing context or resetting | P1 |
 | UN-022 | Interact with a voice agent that responds with the quality and conversational fluency expected of a chief of staff or expert management consultant — audible response shall commence within 2 seconds of completing a spoken query | P1 |
 | UN-033 | Stream-sharing within the voice pipeline shall keep response-ready latency below 250 ms on warm hardware by reusing a single audio stream across wake-word detection and query recording | P1 |
+| UN-035 | I need the Athena voice widget to snap-dock to a full-width bar at the top of the application on every dock operation — not just the first — so that the voice interface is always consistently accessible after being undocked and re-docked. | P1 |
 
 ### Content & Marketing
 

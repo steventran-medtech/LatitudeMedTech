@@ -1,5 +1,5 @@
 # DC-005 — Verification Protocol
-**Document:** DC-005 · Version 2.2 · 2026-06-07  
+**Document:** DC-005 · Version 2.3 · 2026-06-07  
 **Approved by:** Steven Tran
 
 ---
@@ -111,9 +111,9 @@ Fail action: File missing or class removed — check git history for last good s
 Check: `knowledge_base/FDA`, `knowledge_base/EU_MDR`, `knowledge_base/IMDRF` exist.  
 Fail action: Directory missing — create it and run `run_rag.bat` to populate.
 
-**test_DI_003_C** — RAG ingestion report includes "Newly Ingested Documents" section and calls submit_for_review()  
-Check: `rag_agent.py` contains both `submit_for_review(` call AND the string `"## Newly Ingested Documents"`.  
-Fail action: Update the `main()` function in `rag_agent.py` to write a Markdown report with a `## Newly Ingested Documents` section and submit it via `submit_for_review()`.
+**test_DI_003_C** — RAG ingestion report includes "Newly Ingested Documents" section, calls submit_for_review(), and captures date_published + scope_summary per document  
+Check: `rag_agent.py` contains `submit_for_review(`, `"## Newly Ingested Documents"`, `date_published`, and `scope_summary`.  
+Fail action: (1) Ensure `ingest_tavily_results()`, `ingest_rss()`, and `ingest_static_docs()` store `date_published` (from `result.get("published_date","")` / `entry.published` / fallback `""`) and `scope_summary` (first ~150 chars of content). (2) Expand the report table in `main()` to include Date Published and Summary columns.
 
 **test_DI_003_D** — Ingestion report written to `rag_summary_<ts>.md` with "No new documents" fallback  
 Check: `rag_agent.py` contains both the `rag_summary_` path pattern and the string `"No new documents ingested"`.  
@@ -181,6 +181,14 @@ Fail action: System prompt replaced or truncated — content quality controls re
 Check: `clean_title` function defined in `content_agent.py`.  
 Fail action: Function removed — non-Latin characters will appear in filenames and slugs.
 
+**test_DI_007_G** — DEVICE_SUBSECTORS covers all 6 required MedTech sectors  
+Check: `content_agent.py` source contains all 6 sector keywords (case-insensitive): `Cardiology`, `IVD`, `Imaging`, `Orthopedic`, `Surgical`, `Digital Health`.  
+Fail action: Update `DEVICE_SUBSECTORS` in `content_agent.py` to include entries covering all six sectors. Add any missing ones; do not remove existing valid entries.
+
+**test_DI_007_H** — Content agent sector/topic fallback uses `tm_yday` not `random.choice`  
+Check: `content_agent.py` contains `tm_yday` AND does NOT contain `random.choice`.  
+Fail action: In `_get_next_subsector()` and `_get_next_topic_category()`, replace `random.choice(...)` fallback with `DEVICE_SUBSECTORS[datetime.now().timetuple().tm_yday % len(DEVICE_SUBSECTORS)]` (or equivalent `tm_yday` modulo pattern).
+
 ---
 
 ### DI-009 — Slide Decks
@@ -208,11 +216,23 @@ Fail action: Flag exposed in API — UI could generate all clauses at once.
 
 ---
 
+### DI-008 — Marketing Pipeline
+
+**test_DI_008_C** — MarketingView bulk delete uses BulkBar pattern  
+Check: `MarketingView.jsx` contains all three of: `useMultiSelect`, `BulkBar`, and `delete-bulk`.  
+Fail action: Add a local `useMultiSelect` hook, a local `BulkBar` component, and a `deleteSelected()` action in `MarketingView.jsx` that calls `POST /api/files/delete-bulk` with `{ folder: "marketing", filenames: [...] }`.
+
+---
+
 ### DI-011 — M&A Intelligence
 
 **test_DI_011_A** — QARA in M&A agent  
 Check: "QARA" appears in `ma_intelligence_agent.py` or `.claude/agents/ma-intelligence-agent.md`.  
 Fail action: QARA framework removed — deal analysis will miss integration risk dimension.
+
+**test_DI_011_C** — M&A system prompt accepts historical requests from any year  
+Check: `ma_intelligence_agent.py` contains the word `historical` AND at least one phrase indicating historical scope is in scope (e.g., "any year", "1970", "historical analysis is in scope", or a similar statement).  
+Fail action: Add a statement to the `ma_intelligence_agent.py` system prompt explicitly declaring that historical M&A requests from any year — including pre-2020 — are within scope and shall not be declined based on data age.
 
 ---
 
@@ -452,6 +472,41 @@ Fail action: Add an "App.jsx Responsibility Scope" subsection to the Engineering
 **test_DI_034_F** — `CLAUDE.md` contains the CLAUDE.md Update Policy section  
 Check: `CLAUDE.md` contains the heading or label "CLAUDE.md Update Policy".  
 Fail action: Add a "CLAUDE.md Update Policy" subsection to the Engineering Integrity Standards section of `CLAUDE.md`; it must state when this file must be updated.
+
+---
+
+### DI-022 — Voice Conversation Quality
+
+**test_DI_022_A** — Latency threshold is 1.75 s (C3 update CO-016)  
+Check: `DC-002_design_inputs.md` DI-022-A text contains `1.75`. This static check verifies the requirement document reflects the tightened threshold.  
+Live verification (Phase 3 manual): Time the gap between end of user speech and first audible TTS output with the full voice stack running; result must be ≤ 1.75 s.  
+Fail action: If DC-002 text does not contain `1.75`, update DI-022-A in `DC-002_design_inputs.md`. For live failures: confirm `_speak_sentence` is called inside the token-stream loop (not after full response), sentence splitter is active, and Kokoro is warm (pre-loaded).
+
+---
+
+### DI-035 — Voice Widget Docking Persistence
+
+**test_DI_035_A** — FloatingVoiceWidget docked bar style includes `width: "auto"`  
+Check: `App.jsx` `FloatingVoiceWidget` docked bar JSX style object contains `width: "auto"`.  
+Fail action: In the `FloatingVoiceWidget` component in `App.jsx`, locate the docked bar `style={{...}}` object (the element with `position:"fixed", top:0, left:0, right:0, height:VOICE_BAR_H`) and add `width: "auto"` to it. This forces React to reset the `width` style property on every re-dock, clearing any pixel width set by the `onUndock` handler's `dragRef.current.style.width = "172px"` assignment.
+
+---
+
+### DI-036 — Agent Tab Approval Gate
+
+**test_DI_036_A** — AGENT_TAB routes 6 agents to "queue"  
+Check: `App.jsx` `AGENT_TAB` constant maps all 6 of `briefing_agent`, `content_agent`, `coaching_brief`, `marketing_agent`, `deck_agent`, `iso_coach` to the value `"queue"`.  
+Fail action: Update `AGENT_TAB` in `App.jsx`: change the values for those 6 agent keys from their current tab IDs (e.g., `"briefing"`, `"content"`, `"coaching"`) to `"queue"`. This ensures the WorkQueuePanel routes their outputs to the Document Queue for approval before any tab display.
+
+**test_DI_036_B** — list_briefings() and list_drafts() gate on approved status  
+Check: `server.py` `list_briefings` function body contains `get_approved_reviews` AND `server.py` `list_drafts` function body contains `get_approved_reviews`.  
+Fail action: In `server.py`, update `list_briefings()` and `list_drafts()` to filter their file scans to only files whose `file_path` appears in the `approved_paths` set from `mem.get_approved_reviews()`. Pattern: `approved_paths = {r["file_path"] for r in mem.get_approved_reviews() if r.get("file_path")}`.
+
+**test_DI_036_C** — list_briefs() and list_marketing_outputs() gate on approved status  
+Check: `server.py` `list_briefs` function body contains `get_approved_reviews` AND `server.py` `list_marketing_outputs` function body contains `get_approved_reviews`.  
+Fail action: Apply the same approval-gate pattern to `list_briefs()` and `list_marketing_outputs()` in `server.py` as described for DI-036-B above.
+
+---
 
 ## CAPA Trigger
 

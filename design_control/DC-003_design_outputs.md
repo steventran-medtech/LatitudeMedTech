@@ -1,5 +1,5 @@
 ﻿# DC-003 — Design Outputs
-**Document:** DC-003 · Version 2.2 · 2026-06-07
+**Document:** DC-003 · Version 2.3 · 2026-06-07
 **Approved by:** Steven Tran
 
 Design outputs are the code artifacts, APIs, data structures, and
@@ -61,7 +61,7 @@ Athena/
 | RAG ingestion agent | `agents/rag_agent.py` | `RagAgent`, `learn()` | DI-003-B |
 | Central KB helper | `agents/agent_base.py` | `AgentBase.central_kb_context()` | DI-003-A |
 | KB directory | `Athena/knowledge_base/` | Subdirs: `FDA/`, `EU_MDR/`, `IMDRF/`, `consulting/`, `ma/`, `General/` | DI-003-B |
-| RAG ingestion report | `agents/rag_agent.py` | `main()` — Markdown report written to `logs/rag_summary_<timestamp>.md`; "## Newly Ingested Documents" table; submitted via `submit_for_review()` | DI-003-C, DI-003-D |
+| RAG ingestion report | `agents/rag_agent.py` | `main()` — Markdown report written to `logs/rag_summary_<timestamp>.md`; "## Newly Ingested Documents" table with `date_published` and `scope_summary` columns; submitted via `submit_for_review()` | DI-003-C, DI-003-D |
 | Historical QARA Tavily query pool | `agents/rag_agent.py` | `TAVILY_QUERIES` list — ≥5 historically-scoped entries covering regulatory history, standards evolution, GMP origins | DI-023-B |
 | Deterministic Tavily rotation | `agents/rag_agent.py` | `ingest_tavily()` — `datetime.now().timetuple().tm_yday`-based offset bucketing | DI-023-C |
 | QARA historical RSS sources | `agents/learning_sources.py` | `AGENT_SOURCES["rag"]` — RAPS, Federal Register, IMDRF, FDA Medical Devices feeds added | DI-023-B |
@@ -111,6 +111,8 @@ Athena/
 | YAML frontmatter stripper | `ui/frontend/src/App.jsx` | `renderInline()` / `MarkdownView` | DI-007-E |
 | Content API route | `ui/backend/server.py` | `POST /api/agents/content` | DI-007-A |
 | Drafts storage | `Athena/content/drafts/` | Markdown files | DI-007-A |
+| Sector coverage — all 6 MedTech verticals | `agents/content_agent.py` | `DEVICE_SUBSECTORS` list covering Cardiology, IVD, Imaging, Orthopedics, Surgical, Digital Health | DI-007-G |
+| Deterministic sector fallback | `agents/content_agent.py` | `_get_next_subsector()` and `_get_next_topic_category()` — `tm_yday` modulo bucketing, no `random.choice` | DI-007-H |
 
 ---
 
@@ -122,6 +124,7 @@ Athena/
 | Pipeline database | `Athena/ops/marketing/pipeline.db` | SQLite, lazy-created on first run | DI-008-A |
 | Marketing UI | `ui/frontend/src/MarketingView.jsx` | Full component | DI-008-A |
 | Marketing API | `ui/backend/server.py` | `POST /api/agents/marketing` | DI-008-A |
+| Marketing bulk delete | `ui/frontend/src/MarketingView.jsx` | Local `useMultiSelect` hook + `BulkBar` component + `deleteSelected()` calling `/api/files/delete-bulk` with `folder:"marketing"` | DI-008-C |
 
 ---
 
@@ -156,6 +159,7 @@ Athena/
 | M&A knowledge base | `Athena/knowledge_base/ma/` | Deal intelligence documents | DI-011-A |
 | M&A agent definition | `.claude/agents/ma-intelligence-agent.md` | QARA diligence frameworks | DI-011-A |
 | M&A API | `ui/backend/server.py` | `POST /api/agents/ma` | DI-011-A |
+| M&A historical scope statement | `agents/ma_intelligence_agent.py` | System prompt explicitly states historical M&A requests from any year are in scope | DI-011-C |
 
 ---
 
@@ -285,4 +289,22 @@ Athena/
 | App.jsx Responsibility Scope | `CLAUDE.md` | Engineering Integrity Standards § App.jsx Responsibility Scope | DI-034-E |
 | CLAUDE.md Update Policy | `CLAUDE.md` | Engineering Integrity Standards § CLAUDE.md Update Policy | DI-034-F |
 | QMS simulator review submission | `agents/qms_simulator_agent.py` | `_MEM.submit_for_review()` call in `run()` after bundle index written | DI-020-A (satisfies all-agent queue submission) |
+
+---
+
+## DO-035 — Voice Widget Docking Persistence
+
+| Design Output | File | Symbol / Route | Implements |
+|---|---|---|---|
+| Docked bar `width: "auto"` reset | `ui/frontend/src/App.jsx` | `FloatingVoiceWidget` docked bar JSX `style` object — `width: "auto"` included so React clears the DOM `width` set during undock on every re-dock | DI-035-A |
+
+---
+
+## DO-036 — Agent Tab Approval Gate
+
+| Design Output | File | Symbol / Route | Implements |
+|---|---|---|---|
+| AGENT_TAB queue routing | `ui/frontend/src/App.jsx` | `AGENT_TAB` constant — `briefing_agent`, `content_agent`, `coaching_brief`, `marketing_agent`, `deck_agent`, `iso_coach` all map to `"queue"` | DI-036-A |
+| Briefings + drafts approval gate | `ui/backend/server.py` | `list_briefings()` and `list_drafts()` — filter `file_path` against `mem.get_approved_reviews()` set | DI-036-B |
+| Briefs + marketing approval gate | `ui/backend/server.py` | `list_briefs()` and `list_marketing_outputs()` — filter `file_path` against `mem.get_approved_reviews()` set | DI-036-C |
 

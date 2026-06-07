@@ -25,6 +25,17 @@ record of what changed between each version. Keep them in lock-step — see
 
 ## [Unreleased]
 
+### CO-016 (feat) — C2/C3 Multi-requirement batch (DI-003-C mod, DI-007-G/H, DI-008-C, DI-011-C, DI-022-A mod, DI-035-A, DI-036-A/B/C)
+
+- **RAG ingestion metadata (DI-003-C):** `ingest_tavily_results()`, `ingest_static_docs()`, `ingest_rss()` now populate `date_published` and `scope_summary`; ingestion report table expanded from 3 to 5 columns.
+- **Content sector diversity (DI-007-G):** `DEVICE_SUBSECTORS` cardiovascular entry relabeled to include "Cardiology"; all 6 MedTech sectors now covered.
+- **Deterministic fallback (DI-007-H):** `_get_next_subsector()` and `_get_next_topic_category()` replace `random.choice` fallbacks with `tm_yday % len(LIST)` bucketing.
+- **Marketing bulk delete (DI-008-C):** `MarketingView.jsx` gains `useMultiSelect` hook, local `BulkBar`, and `deleteSelected` (calls `/api/files/delete-bulk` with `folder:"marketing"`).
+- **M&A historical scope (DI-011-C):** `HISTORICAL_SCOPE` constant injected into `ma_intelligence_agent.py` system prompt — historical requests from any year are in scope.
+- **Voice latency (DI-022-A mod):** DC-002 threshold tightened to ≤ 1.75 s; `voice_bridge.py` `SILENCE_DURATION` already at 0.5 s (no runtime change required by this CO).
+- **Voice docking fix (DI-035-A):** Added `width:"auto"` to FloatingVoiceWidget docked bar JSX style in `App.jsx`; prevents pixel width set by `onUndock` persisting on re-dock.
+- **Agent tab approval gate (DI-036-A/B/C):** All 10 agents in `AGENT_TAB` now route to `"queue"`; `list_briefings()`, `list_drafts()`, `list_briefs()`, `list_marketing_outputs()` in `server.py` filter output against `mem.get_approved_reviews()`.
+
 ### CO-015 (fix) — C1 Corrective: Fix missing closing paren in Approved-tab JSX (DI-002-K)
 
 - **ReviewView.jsx line 650**: Changed `)))}` — the Approved-tab conditional expression closing `doc => (...)` was missing one paren, causing a Vite parse error after CO-014 unmasked it.
