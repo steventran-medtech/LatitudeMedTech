@@ -50,13 +50,13 @@ Confirm that the first audible TTS byte from Kokoro is delivered within
 ### Record
 | Run | Query | Elapsed (s) | Pass/Fail |
 |---|---|---|---|
-| 1 | | | |
-| 2 | | | |
-| 3 | | | |
-| 4 | | | |
-| 5 | | | |
+| 1 | What is ISO-13485? | 21 | Fail |
+| 2 | How many mergers and acquisitions were there for MedTech in 2024? | 18 | Fail |
+| 3 | What were the main quality roadblocks for Stryker's acquisition of Masimo medical? | 15 | Fail |
+| 4 | What is ISO-14971? | 31 | Fail |
+| 5 | What is an example of biocompatibility standard for medical devices? | 27 | Fail |
 
-**Tester:** \_\_\_\_\_\_\_\_\_\_  **Date:** \_\_\_\_\_\_\_\_\_\_  **Result (Pass/Fail):** \_\_\_\_\_\_\_\_\_\_
+**Tester:** Steven Tran  **Date:** 6/7/2026  **Result (Pass/Fail):** Fail
 
 ---
 

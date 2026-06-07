@@ -32,7 +32,7 @@ Every CO gets a unique ID at kickoff. Assign the next available CO-NNN here befo
 | CO-016 | 2026-06-07 | C2/C3 | 3 | feat/co-016-multi-requirement-batch | DI-003-C (mod), DI-007-G, DI-007-H, DI-008-C, DI-011-C, DI-022-A (mod), DI-035-A, DI-036-A, DI-036-B, DI-036-C | MERGED |
 | CO-017 | 2026-06-07 | C2/C3 | 3 | feat/co-017-approval-gate-audit | DI-035-A (mod), DI-036-A (verified), DI-036-B (verified), DI-036-C (verified), DI-036-D (new), DI-036-E (new); DC-002 bulk status sync; test_DI_036_D, test_DI_036_E added | MERGED (PR #106) |
 | CO-018 | 2026-06-07 | C1/C2 | 3 | chore/co-018-gap-closure-partial-open | DI-007-A, DI-008-A, DI-008-B, DI-010-C, DI-015-F (PARTIAL→VERIFIED: new static tests); DI-019-K, DI-019-L, DI-022-A, DI-023-B/C/D, DI-032-A/B (OPEN→VERIFIED or PARTIAL); iso.org removed from rag_agent.py Tavily include_domains; DI-032-B test bug fixed (wrong di id); DC-002 v3.6, DC-004 v3.4 bulk sync; manual verification protocol created | MERGED (7472984, PR #107) |
-| CO-019 | 2026-06-07 | C2/C3 | 3 | feat/co-019-un-022-voice-timing-live-test | DI-022-B (new); DI-022-A (verification method update, PARTIAL→PARTIAL w/ script) | OPEN |
+| CO-019 | 2026-06-07 | C2/C3 | 3 | feat/co-019-un-022-voice-timing-live-test | DI-022-B (new); DI-022-A (verification method update, PARTIAL→PARTIAL w/ script) | MERGED (e40d5ee, PR #108) |
 
 **Status values:** OPEN · MERGED · ABANDONED  
 **Next available ID:** CO-020
