@@ -77,8 +77,7 @@ const NAV_ITEMS = [
   {id:"marketing", label:"Marketing",        group:"work"},
   {id:"decks",     label:"Decks",            group:"work"},
   {id:"iso",       label:"ISO Case Studies", group:"work"},
-  {id:"documents", label:"Documents",        group:"work"},
-  {id:"review",    label:"Review Queue",     group:"work"},
+  {id:"queue",     label:"Document Queue",    group:"work"},
   {id:"dashboard", label:"Dashboard",        group:"system"},
   {id:"agents",    label:"Run Agents",       group:"system"},
   {id:"hr",        label:"Workforce",        group:"system"},
@@ -148,7 +147,7 @@ function Sidebar({active,setActive,runningAgents,pendingReview,version,onAbout,t
           {orderedItems.map(item=>{
             const isActive   = active===item.id;
             const isAgents   = item.id==="agents";
-            const isReview   = item.id==="review";
+            const isQueue    = item.id==="queue";
             const isDragging = dragId===item.id;
             const isOver     = dragOverId===item.id && dragId!==item.id;
             return(
@@ -182,7 +181,7 @@ function Sidebar({active,setActive,runningAgents,pendingReview,version,onAbout,t
                         boxShadow:"0 0 6px #1A6FA366",animation:"badgePulse 2s ease-in-out infinite",
                       }}>{numRunning}</span>
                     )}
-                    {isReview && pendingReview>0 && (
+                    {isQueue && pendingReview>0 && (
                       <span style={{background:"#C4922A",color:"#fff",borderRadius:10,
                         padding:"1px 6px",fontSize:9,fontWeight:700,letterSpacing:"0.04em",
                         boxShadow:"0 0 6px #C4922A66",animation:"badgePulse 2s ease-in-out infinite",
@@ -2399,9 +2398,8 @@ export default function App(){
     clients:  <ClientsView runningAgents={runningAgents}/>,
     marketing:<MarketingView runningAgents={runningAgents}/>,
     decks:    <DeckView runningAgents={runningAgents}/>,
-    documents:<DocumentsView refreshToken={docRefreshToken}/>,
     iso:      <ISOView runningAgents={runningAgents}/>,
-    review:   <ReviewView reviewRefreshToken={reviewRefreshToken}/>,
+    queue:    <ReviewView reviewRefreshToken={reviewRefreshToken}/>,
     agents:   <AgentsView logs={logs} onRun={runAgent} runningAgents={runningAgents}/>,
     hr:       <HRView runningAgents={runningAgents}/>,
     tokens:   <TokenView data={data}/>,
