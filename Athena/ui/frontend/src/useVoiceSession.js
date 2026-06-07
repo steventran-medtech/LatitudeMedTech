@@ -19,6 +19,7 @@ export function useVoiceSession() {
   const [devices,    setDevices]    = useState([]);
   const [selDev,     setSelDev]     = useState("");
   const [elapsed,    setElapsed]    = useState(0);
+  const [pttRejected, setPttRejected] = useState(false);
 
   const typedYouRef    = useRef("");
   const animCancelRef  = useRef(0);   // increment to cancel in-flight transcript animation
@@ -193,6 +194,14 @@ export function useVoiceSession() {
 
   const triggerListen = () => {
     fetch(`${API}/api/voice/listen`, { method: "POST", headers: authHdr() })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) {
+          // Server rejected PTT (busy/not-listening) — show brief feedback in UI
+          setPttRejected(true);
+          setTimeout(() => setPttRejected(false), 1500);
+        }
+      })
       .catch(() => {});
   };
 
@@ -229,6 +238,6 @@ export function useVoiceSession() {
     running, state, level, query, lastYou, lastAthena, speakingLines,
     streamingText, typedYou,
     log, status, devices, selDev, setSelDev, elapsed, peakRef,
-    startVoice, stopVoice, triggerListen,
+    startVoice, stopVoice, triggerListen, pttRejected,
   };
 }
