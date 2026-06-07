@@ -1,4 +1,4 @@
-# Athena — Standing Orders
+﻿# Athena — Standing Orders
 **Version:** 2026-06-06 v14 · Aligned with `ATHENA_ARCHITECTURE_v2.md` (Constitution)
 **Authority:** Steven Tran, CEO/Managing Partner, Latitude MedTech
 **Purpose:** What Claude reads and operates by before every Athena session. Update after every session. Target: ≤230 lines, every line current.
@@ -234,6 +234,7 @@ Update this file's version line (date + vN) in the same final commit.
 | 2026-06-07 | Version 0.5.5 -- splash bar all-whole-number freeze prevention |  |
 | 2026-06-07 | CO-008 (UN-019 / DI-019-K): removed `$modelTimeout` blocking poll from `start_athena.ps1`; voice models load async in background; warm-start ≤ 10 s | DI-019-K |
 | 2026-06-07 | Version 0.5.6 — async startup, warm-start under 10 s |  |
+| 2026-06-07 | CO-005 (UN-002): Document Queue tab merged Documents + Review Queue into Pending/Approved/Rejected three-filter view; App.jsx NAV_ITEMS consolidated to id:queue | DI-002-E, DI-002-F, DI-002-G |
 | 2026-06-06 | DI-019-J (C2): splash `#dots` now cycles `.`/`..`/`...` via VBScript `TickDots` at 400 ms/state; CSS `dotFlash` wave removed | DI-019-J |
 
 ---

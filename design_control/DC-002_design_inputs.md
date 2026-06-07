@@ -1,5 +1,5 @@
 # DC-002 — Design Inputs
-**Document:** DC-002 · Version 2.6 · 2026-06-07  
+**Document:** DC-002 · Version 2.7 · 2026-06-07  
 **Approved by:** Steven Tran
 
 Design inputs are specific, verifiable requirements derived from the user
@@ -35,7 +35,9 @@ Each entry:
 | DI-002-B | UN-002 | Review queue shall support approve action that marks item final | `POST /api/review/{id}/approve` sets status to "approved" | P0 | VERIFIED |
 | DI-002-C | UN-002 | Review queue shall support reject action that halts delivery | `POST /api/review/{id}/reject` sets status to "rejected" | P0 | VERIFIED |
 | DI-002-D | UN-002 | Review queue shall support edit-and-rewrite via natural language instruction | `POST /api/review/{id}/edit` rewrites content at consulting quality | P1 | VERIFIED |
-| DI-002-E | UN-002 | Only approved items shall appear in the Documents hub — items with any other review status (pending, rejected, or not yet submitted) shall be excluded | `GET /api/documents` cross-references `review_queue` approved set via `get_approved_reviews()` | P0 | VERIFIED |
+| DI-002-E | UN-002 | Approved items shall be surfaced exclusively under the Approved filter of the Document Queue tab; the Approved filter fetches from `GET /api/documents` which gates on `status='approved'` via `get_approved_reviews()` | `ReviewView.jsx` Approved tab calls `fetch(${API}/api/documents)` | P0 | VERIFIED |
+| DI-002-F | UN-002 | The Document Queue tab shall provide three mutually-exclusive filter states: Pending (awaiting review), Approved (finalized), Rejected (declined) | `ReviewView.jsx` uses `useState("pending")` as initial tab state; tabs array contains keys "pending", "approved", "rejected" | P0 | VERIFIED |
+| DI-002-G | UN-002 | `App.jsx` NAV_ITEMS shall contain `id:"queue"` (the Document Queue entry) and shall not contain `id:"documents"` or `id:"review"` (both retired nav entries) | `App.jsx` NAV_ITEMS string search | P0 | VERIFIED |
 
 ### UN-003 — Knowledge Base
 

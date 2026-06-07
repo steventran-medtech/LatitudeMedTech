@@ -1,5 +1,5 @@
 # DC-003 — Design Outputs
-**Document:** DC-003 · Version 1.7 · 2026-06-07  
+**Document:** DC-003 · Version 1.8 · 2026-06-07  
 **Approved by:** Steven Tran
 
 Design outputs are the code artifacts, APIs, data structures, and
@@ -44,8 +44,12 @@ Athena/
 | Approve endpoint | `ui/backend/server.py` | `POST /api/review/{item_id}/approve` | DI-002-B |
 | Reject endpoint | `ui/backend/server.py` | `POST /api/review/{item_id}/reject` | DI-002-C |
 | Edit-and-rewrite endpoint | `ui/backend/server.py` | `POST /api/review/{item_id}/edit` | DI-002-D |
-| Review UI | `ui/frontend/src/ReviewView.jsx` | Full component | DI-002-A through DI-002-D |
+| Review UI | `ui/frontend/src/ReviewView.jsx` | Full component â three-tab Document Queue | DI-002-A through DI-002-G |
 | Submit for review helper | `agents/briefing_agent.py`, `agents/marketing_agent.py` | `submit_for_review()` calls | DI-002-A, DI-012-B |
+| Document Queue nav entry | `ui/frontend/src/App.jsx` | `NAV_ITEMS` â `id:"queue"`, `label:"Document Queue"` replaces Documents + Review Queue | DI-002-G |
+| Approved docs loader | `ui/frontend/src/ReviewView.jsx` | `loadApproved()` â fetches `GET /api/documents` on Approved tab activation | DI-002-E |
+| Rejected docs filter | `ui/frontend/src/ReviewView.jsx` | `histItems.filter(i => i.status === "rejected")` in Rejected tab section | DI-002-F |
+| Approved doc viewer | `ui/frontend/src/ReviewView.jsx` | `FileViewer` render gated on `viewingApproved` state | DI-002-E |
 
 ---
 
@@ -74,6 +78,7 @@ Athena/
 | Kokoro TTS server | `voice/kokoro_server.py`, port 8002 | Sentence-split streaming pipeline | DI-004-C |
 | Intent classification + dispatch | `voice/voice_bridge.py` | Claude Haiku `tool_use` in `_classify_and_dispatch()` | DI-004-D |
 | Voice API | `ui/backend/server.py` | `WebSocket /ws/voice`, `POST /api/voice/query` | DI-004-A through DI-004-D |
+| Shared mic stream per listen/record cycle | `voice/voice_bridge.py` | `_voice_loop` — opens one `sd.InputStream` per query cycle; passes `stream` to `_listen_for_wake(oww_model, stream)` and `_record_query(stream)` | DI-033-A, DI-033-B, DI-033-C |
 
 ---
 

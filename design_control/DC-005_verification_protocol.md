@@ -1,5 +1,5 @@
 # DC-005 — Verification Protocol
-**Document:** DC-005 · Version 1.7 · 2026-06-07  
+**Document:** DC-005 · Version 1.9 · 2026-06-07  
 **Approved by:** Steven Tran
 
 ---
@@ -79,6 +79,20 @@ Fail action: Edit feature removed; P1 — restore in current sprint.
 
 ---
 
+
+**test_DI_002_E** â Approved filter fetches from /api/documents
+Check: `ReviewView.jsx` contains a `fetch` call to `/api/documents` in the `loadApproved` function.
+Fail action: Add `loadApproved()` to `ReviewView.jsx` that calls `GET /api/documents`.
+
+**test_DI_002_F** â Three-state Document Queue tab filter
+Check: `ReviewView.jsx` contains `useState("pending")` and NOT `useState("queue")`; tabs include "pending", "approved", "rejected".
+Fail action: Change `useState('queue')` to `useState('pending')` and update the tabs array.
+
+**test_DI_002_G** â App.jsx NAV_ITEMS Document Queue consolidation
+Check: `App.jsx` NAV_ITEMS has `id:"queue"` and does NOT have `id:"documents"` or `id:"review"`.
+Fail action: Replace the old nav entries with `id:'queue'` in `App.jsx` NAV_ITEMS.
+
+---
 ### DI-003 — Knowledge Base
 
 **test_DI_003_A** — KBQuery importable  
@@ -381,6 +395,22 @@ Fail action: Add the `beforeunload` listener to `initTabGuard()` in `tabGuard.js
 
 ---
 
+
+---
+
+### DI-033 — Voice Query Readiness Latency
+
+**test_DI_033_A** — `_listen_for_wake` accepts stream parameter; no internal `sd.InputStream`  
+Check: `voice_bridge.py` `def _listen_for_wake` signature contains `stream` as a positional parameter after `oww_model`; the function body does not contain `sd.InputStream(`.  
+Fail action: Change `def _listen_for_wake(oww_model)` to `def _listen_for_wake(oww_model, stream)` and remove the `with sd.InputStream(...)` context manager from the function body; read from the caller-supplied `stream` parameter instead.
+
+**test_DI_033_B** — `_record_query` accepts stream parameter; no internal `sd.InputStream`  
+Check: `voice_bridge.py` `def _record_query` signature contains `stream` as a positional parameter; the function body does not contain `sd.InputStream(`.  
+Fail action: Change `def _record_query()` to `def _record_query(stream)` and remove the `with sd.InputStream(...)` context manager from the function body; read from the caller-supplied `stream` parameter instead.
+
+**test_DI_033_C** — `_voice_loop` opens one `sd.InputStream` and passes it to both functions  
+Check: `voice_bridge.py` `_voice_loop` function body contains `with sd.InputStream(` context manager; the calls `_listen_for_wake(oww, stream)` and `_record_query(stream)` both use the shared stream variable.  
+Fail action: Add `with sd.InputStream(device=INPUT_DEVICE, ...) as stream:` inside the `_voice_loop` main while loop; update call sites to `_listen_for_wake(oww, stream)` and `_record_query(stream)`.
 ## CAPA Trigger
 
 If `dc_verify.py` produces 3 or more FAIL results in a single run, open a CAPA:
