@@ -4,6 +4,19 @@
 
 ---
 
+## Change Order Register
+
+Every CO gets a unique ID at kickoff. Assign the next available CO-NNN here before any other step.
+
+| CO ID | Date | Class | Tier | Branch | DIs Affected | Status |
+|---|---|---|---|---|---|---|
+| CO-001 | 2026-06-05 | C2 | — | chore/add-change-order-skill | — | MERGED |
+
+**Status values:** OPEN · MERGED · ABANDONED  
+**Next available ID:** CO-002
+
+---
+
 ## Purpose
 
 This document defines the mandatory process for any change to Athena that
